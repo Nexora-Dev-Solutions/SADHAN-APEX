@@ -1,12 +1,13 @@
 import React, { useState } from 'react';
-import { Search, PlusCircle, DollarSign, FileText, Phone } from 'lucide-react';
+import { Search, PlusCircle, DollarSign, FileText, Phone, Edit3 } from 'lucide-react';
 
 export default function LoansView({
   loans,
   currentUser,
   onOpenNewLoan,
   onOpenPayment,
-  onOpenLoanDetail
+  onOpenLoanDetail,
+  onEditLoan
 }) {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('ALL');
@@ -130,13 +131,24 @@ export default function LoansView({
                       </span>
                     </td>
                     <td style={{ textAlign: 'right' }}>
-                      <div style={{ display: 'inline-flex', gap: '8px' }}>
+                      <div style={{ display: 'inline-flex', gap: '6px' }}>
                         <button
                           className="btn btn-secondary btn-sm"
                           onClick={() => onOpenLoanDetail(loan.id)}
                         >
                           Ledger
                         </button>
+                        {currentUser.role === 'OWNER' && (
+                          <button
+                            className="btn btn-secondary btn-sm"
+                            style={{ gap: '4px' }}
+                            onClick={() => onEditLoan(loan)}
+                            title="Top-Up or Edit Loan"
+                          >
+                            <Edit3 size={14} />
+                            Top-Up
+                          </button>
+                        )}
                         {loan.status === 'ACTIVE' && (
                           <button
                             className="btn btn-success btn-sm"
@@ -231,13 +243,23 @@ export default function LoansView({
                 </div>
 
                 {/* Touch-Friendly Action Buttons */}
-                <div className="mobile-card-actions">
+                <div className="mobile-card-actions" style={{ gridTemplateColumns: currentUser.role === 'OWNER' ? '1fr 1fr 2fr' : '1fr 2fr' }}>
                   <button
                     className="btn btn-secondary"
                     onClick={() => onOpenLoanDetail(loan.id)}
                   >
                     Ledger
                   </button>
+                  {currentUser.role === 'OWNER' && (
+                    <button
+                      className="btn btn-secondary"
+                      style={{ gap: '4px' }}
+                      onClick={() => onEditLoan(loan)}
+                    >
+                      <Edit3 size={14} />
+                      Top-Up
+                    </button>
+                  )}
                   {loan.status === 'ACTIVE' && (
                     <button
                       className="btn btn-success"
@@ -245,7 +267,7 @@ export default function LoansView({
                       onClick={() => onOpenPayment(loan)}
                     >
                       <DollarSign size={16} />
-                      Pay & Receipt
+                      Pay
                     </button>
                   )}
                 </div>

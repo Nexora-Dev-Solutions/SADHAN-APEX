@@ -23,6 +23,8 @@ import CollectionsView from './views/CollectionsView';
 
 import NewLoanModal from './components/NewLoanModal';
 import NewClientModal from './components/NewClientModal';
+import EditClientModal from './components/EditClientModal';
+import EditLoanModal from './components/EditLoanModal';
 import PaymentModal from './components/PaymentModal';
 import LoanDetailModal from './components/LoanDetailModal';
 import ThermalReceipt from './components/ThermalReceipt';
@@ -58,8 +60,11 @@ export default function App() {
   const [showNewClientModal, setShowNewClientModal] = useState(false);
   const [selectedLoanForPayment, setSelectedLoanForPayment] = useState(null);
   const [selectedLoanIdForDetail, setSelectedLoanIdForDetail] = useState(null);
+  const [selectedClientForEdit, setSelectedClientForEdit] = useState(null);
+  const [selectedLoanForEdit, setSelectedLoanForEdit] = useState(null);
   const [activeReceipt, setActiveReceipt] = useState(null);
   const [showNotificationCenter, setShowNotificationCenter] = useState(false);
+
 
   // Auto-login or initial data load
   useEffect(() => {
@@ -465,6 +470,7 @@ export default function App() {
               onOpenNewLoan={() => setShowNewLoanModal(true)}
               onOpenPayment={(loan) => setSelectedLoanForPayment(loan)}
               onOpenLoanDetail={(loanId) => setSelectedLoanIdForDetail(loanId)}
+              onEditLoan={(loan) => setSelectedLoanForEdit(loan)}
             />
           )}
 
@@ -474,6 +480,7 @@ export default function App() {
               currentUser={currentUser}
               onOpenNewClient={() => setShowNewClientModal(true)}
               onOpenNewLoanForClient={(client) => setShowNewLoanModal(true)}
+              onEditClient={(client) => setSelectedClientForEdit(client)}
             />
           )}
 
@@ -558,6 +565,41 @@ export default function App() {
         />
       )}
 
+      {selectedClientForEdit && (
+        <EditClientModal
+          client={selectedClientForEdit}
+          token={token}
+          currentUser={currentUser}
+          onClose={() => setSelectedClientForEdit(null)}
+          onSuccess={() => {
+            setSelectedClientForEdit(null);
+            loadAllData();
+          }}
+          onDeleted={() => {
+            setSelectedClientForEdit(null);
+            loadAllData();
+          }}
+        />
+      )}
+
+      {selectedLoanForEdit && (
+        <EditLoanModal
+          loan={selectedLoanForEdit}
+          token={token}
+          agents={agents}
+          currentUser={currentUser}
+          onClose={() => setSelectedLoanForEdit(null)}
+          onSuccess={() => {
+            setSelectedLoanForEdit(null);
+            loadAllData();
+          }}
+          onDeleted={() => {
+            setSelectedLoanForEdit(null);
+            loadAllData();
+          }}
+        />
+      )}
+
       {selectedLoanForPayment && (
         <PaymentModal
           loan={selectedLoanForPayment}
@@ -571,9 +613,11 @@ export default function App() {
         <LoanDetailModal
           loanId={selectedLoanIdForDetail}
           token={token}
+          currentUser={currentUser}
           onClose={() => setSelectedLoanIdForDetail(null)}
           onOpenPayment={(loan) => setSelectedLoanForPayment(loan)}
           onReprintReceipt={(receipt) => setActiveReceipt(receipt)}
+          onEditLoan={(loan) => setSelectedLoanForEdit(loan)}
         />
       )}
 

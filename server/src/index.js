@@ -132,6 +132,26 @@ app.get('/api/clients/:id', verifyToken, async (req, res) => {
   }
 });
 
+app.put('/api/clients/:id', verifyToken, async (req, res) => {
+  try {
+    const { name, phone, nic_id, address, notes } = req.body;
+    const updated = await db.updateClient(req.params.id, { name, phone, nic_id, address, notes });
+    return res.json({ client: updated, message: 'Client updated successfully' });
+  } catch (err) {
+    return res.status(500).json({ error: err.message || 'Failed to update client' });
+  }
+});
+
+app.delete('/api/clients/:id', verifyToken, requireOwner, async (req, res) => {
+  try {
+    await db.deleteClient(req.params.id);
+    return res.json({ success: true, message: 'Client and associated loans deleted successfully' });
+  } catch (err) {
+    return res.status(500).json({ error: err.message || 'Failed to delete client' });
+  }
+});
+
+
 // LOANS (58 Installment Engine)
 app.get('/api/loans', verifyToken, async (req, res) => {
   try {
@@ -201,6 +221,36 @@ app.post('/api/loans', verifyToken, async (req, res) => {
     return res.status(500).json({ error: err.message || 'Failed to create loan' });
   }
 });
+
+// UPDATE / TOP-UP LOAN
+app.put('/api/loans/:id', verifyToken, requireOwner, async (req, res) => {
+  try {
+    const { principal_amount, topup_amount, interest_rate_pct, assigned_agent_id, status } = req.body;
+    const updated = await db.updateLoan(req.params.id, {
+      principal_amount,
+      topup_amount,
+      interest_rate_pct,
+      assigned_agent_id,
+      status
+    });
+    return res.json({ loan: updated, message: 'Loan updated successfully' });
+  } catch (err) {
+    console.error('Error updating loan:', err);
+    return res.status(500).json({ error: err.message || 'Failed to update loan' });
+  }
+});
+
+// DELETE LOAN
+app.delete('/api/loans/:id', verifyToken, requireOwner, async (req, res) => {
+  try {
+    await db.deleteLoan(req.params.id);
+    return res.json({ success: true, message: 'Loan and its installments deleted successfully' });
+  } catch (err) {
+    console.error('Error deleting loan:', err);
+    return res.status(500).json({ error: err.message || 'Failed to delete loan' });
+  }
+});
+
 
 // PAYMENTS & RECEIPT PRINTING (Full & Partial Payments)
 app.post('/api/payments', verifyToken, async (req, res) => {

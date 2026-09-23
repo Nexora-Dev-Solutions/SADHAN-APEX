@@ -26,7 +26,7 @@
       "phone": "0714567890",
       "nic_id": "198421004521",
       "address": "No 45, Galle Road, Colombo 03",
-      "notes": "Vegetable stall vendor at main market",
+      "notes": "Vegetable stall vendor - Verified KYC",
       "created_by": 1,
       "created_at": "2026-09-22T14:55:09.024Z"
     },
@@ -48,17 +48,17 @@
       "client_id": 1,
       "created_by": 1,
       "assigned_agent_id": 2,
-      "principal_amount": 50000,
+      "principal_amount": 60000,
       "interest_rate_pct": 8,
-      "total_interest": 4000,
-      "total_payable": 54000,
+      "total_interest": 4800,
+      "total_payable": 64800,
       "installment_count": 58,
       "frequency": "DAILY",
-      "installment_amount": 931.03,
+      "installment_amount": 1117.24,
       "start_date": "2026-09-22",
       "end_date": "2026-11-19",
       "total_paid": 3293.09,
-      "remaining_balance": 50706.91,
+      "remaining_balance": 61506.91,
       "status": "ACTIVE",
       "created_at": "2026-09-22T14:55:09.024Z"
     }
@@ -96,7 +96,7 @@
       "loan_id": 1,
       "installment_no": 4,
       "due_date": "2026-09-25",
-      "expected_amount": 931.03,
+      "expected_amount": 1118.31,
       "paid_amount": 500,
       "status": "PARTIAL"
     },
@@ -105,7 +105,7 @@
       "loan_id": 1,
       "installment_no": 5,
       "due_date": "2026-09-26",
-      "expected_amount": 931.03,
+      "expected_amount": 1118.31,
       "paid_amount": 0,
       "status": "PENDING"
     },
@@ -114,7 +114,7 @@
       "loan_id": 1,
       "installment_no": 6,
       "due_date": "2026-09-27",
-      "expected_amount": 931.03,
+      "expected_amount": 1118.31,
       "paid_amount": 0,
       "status": "PENDING"
     },
@@ -123,7 +123,7 @@
       "loan_id": 1,
       "installment_no": 7,
       "due_date": "2026-09-28",
-      "expected_amount": 931.03,
+      "expected_amount": 1118.31,
       "paid_amount": 0,
       "status": "PENDING"
     },
@@ -132,7 +132,7 @@
       "loan_id": 1,
       "installment_no": 8,
       "due_date": "2026-09-29",
-      "expected_amount": 931.03,
+      "expected_amount": 1118.31,
       "paid_amount": 0,
       "status": "PENDING"
     },
@@ -141,7 +141,7 @@
       "loan_id": 1,
       "installment_no": 9,
       "due_date": "2026-09-30",
-      "expected_amount": 931.03,
+      "expected_amount": 1118.31,
       "paid_amount": 0,
       "status": "PENDING"
     },
@@ -150,7 +150,7 @@
       "loan_id": 1,
       "installment_no": 10,
       "due_date": "2026-10-01",
-      "expected_amount": 931.03,
+      "expected_amount": 1118.31,
       "paid_amount": 0,
       "status": "PENDING"
     },
@@ -159,7 +159,7 @@
       "loan_id": 1,
       "installment_no": 11,
       "due_date": "2026-10-02",
-      "expected_amount": 931.03,
+      "expected_amount": 1118.31,
       "paid_amount": 0,
       "status": "PENDING"
     },
@@ -168,7 +168,7 @@
       "loan_id": 1,
       "installment_no": 12,
       "due_date": "2026-10-03",
-      "expected_amount": 931.03,
+      "expected_amount": 1118.31,
       "paid_amount": 0,
       "status": "PENDING"
     },
@@ -177,7 +177,7 @@
       "loan_id": 1,
       "installment_no": 13,
       "due_date": "2026-10-04",
-      "expected_amount": 931.03,
+      "expected_amount": 1118.31,
       "paid_amount": 0,
       "status": "PENDING"
     },
@@ -186,7 +186,7 @@
       "loan_id": 1,
       "installment_no": 14,
       "due_date": "2026-10-05",
-      "expected_amount": 931.03,
+      "expected_amount": 1118.31,
       "paid_amount": 0,
       "status": "PENDING"
     },
@@ -195,7 +195,7 @@
       "loan_id": 1,
       "installment_no": 15,
       "due_date": "2026-10-06",
-      "expected_amount": 931.03,
+      "expected_amount": 1118.31,
       "paid_amount": 0,
       "status": "PENDING"
     },
@@ -204,7 +204,7 @@
       "loan_id": 1,
       "installment_no": 16,
       "due_date": "2026-10-07",
-      "expected_amount": 931.03,
+      "expected_amount": 1118.31,
       "paid_amount": 0,
       "status": "PENDING"
     },
@@ -213,7 +213,7 @@
       "loan_id": 1,
       "installment_no": 17,
       "due_date": "2026-10-08",
-      "expected_amount": 931.03,
+      "expected_amount": 1118.31,
       "paid_amount": 0,
       "status": "PENDING"
     },
@@ -222,7 +222,7 @@
       "loan_id": 1,
       "installment_no": 18,
       "due_date": "2026-10-09",
-      "expected_amount": 931.03,
+      "expected_amount": 1118.31,
       "paid_amount": 0,
       "status": "PENDING"
     },
@@ -231,7 +231,7 @@
       "loan_id": 1,
       "installment_no": 19,
       "due_date": "2026-10-10",
-      "expected_amount": 931.03,
+      "expected_amount": 1118.31,
       "paid_amount": 0,
       "status": "PENDING"
     },
@@ -240,7 +240,7 @@
       "loan_id": 1,
       "installment_no": 20,
       "due_date": "2026-10-11",
-      "expected_amount": 931.03,
+      "expected_amount": 1118.31,
       "paid_amount": 0,
       "status": "PENDING"
     },
@@ -249,7 +249,7 @@
       "loan_id": 1,
       "installment_no": 21,
       "due_date": "2026-10-12",
-      "expected_amount": 931.03,
+      "expected_amount": 1118.31,
       "paid_amount": 0,
       "status": "PENDING"
     },
@@ -258,7 +258,7 @@
       "loan_id": 1,
       "installment_no": 22,
       "due_date": "2026-10-13",
-      "expected_amount": 931.03,
+      "expected_amount": 1118.31,
       "paid_amount": 0,
       "status": "PENDING"
     },
@@ -267,7 +267,7 @@
       "loan_id": 1,
       "installment_no": 23,
       "due_date": "2026-10-14",
-      "expected_amount": 931.03,
+      "expected_amount": 1118.31,
       "paid_amount": 0,
       "status": "PENDING"
     },
@@ -276,7 +276,7 @@
       "loan_id": 1,
       "installment_no": 24,
       "due_date": "2026-10-15",
-      "expected_amount": 931.03,
+      "expected_amount": 1118.31,
       "paid_amount": 0,
       "status": "PENDING"
     },
@@ -285,7 +285,7 @@
       "loan_id": 1,
       "installment_no": 25,
       "due_date": "2026-10-16",
-      "expected_amount": 931.03,
+      "expected_amount": 1118.31,
       "paid_amount": 0,
       "status": "PENDING"
     },
@@ -294,7 +294,7 @@
       "loan_id": 1,
       "installment_no": 26,
       "due_date": "2026-10-17",
-      "expected_amount": 931.03,
+      "expected_amount": 1118.31,
       "paid_amount": 0,
       "status": "PENDING"
     },
@@ -303,7 +303,7 @@
       "loan_id": 1,
       "installment_no": 27,
       "due_date": "2026-10-18",
-      "expected_amount": 931.03,
+      "expected_amount": 1118.31,
       "paid_amount": 0,
       "status": "PENDING"
     },
@@ -312,7 +312,7 @@
       "loan_id": 1,
       "installment_no": 28,
       "due_date": "2026-10-19",
-      "expected_amount": 931.03,
+      "expected_amount": 1118.31,
       "paid_amount": 0,
       "status": "PENDING"
     },
@@ -321,7 +321,7 @@
       "loan_id": 1,
       "installment_no": 29,
       "due_date": "2026-10-20",
-      "expected_amount": 931.03,
+      "expected_amount": 1118.31,
       "paid_amount": 0,
       "status": "PENDING"
     },
@@ -330,7 +330,7 @@
       "loan_id": 1,
       "installment_no": 30,
       "due_date": "2026-10-21",
-      "expected_amount": 931.03,
+      "expected_amount": 1118.31,
       "paid_amount": 0,
       "status": "PENDING"
     },
@@ -339,7 +339,7 @@
       "loan_id": 1,
       "installment_no": 31,
       "due_date": "2026-10-22",
-      "expected_amount": 931.03,
+      "expected_amount": 1118.31,
       "paid_amount": 0,
       "status": "PENDING"
     },
@@ -348,7 +348,7 @@
       "loan_id": 1,
       "installment_no": 32,
       "due_date": "2026-10-23",
-      "expected_amount": 931.03,
+      "expected_amount": 1118.31,
       "paid_amount": 0,
       "status": "PENDING"
     },
@@ -357,7 +357,7 @@
       "loan_id": 1,
       "installment_no": 33,
       "due_date": "2026-10-24",
-      "expected_amount": 931.03,
+      "expected_amount": 1118.31,
       "paid_amount": 0,
       "status": "PENDING"
     },
@@ -366,7 +366,7 @@
       "loan_id": 1,
       "installment_no": 34,
       "due_date": "2026-10-25",
-      "expected_amount": 931.03,
+      "expected_amount": 1118.31,
       "paid_amount": 0,
       "status": "PENDING"
     },
@@ -375,7 +375,7 @@
       "loan_id": 1,
       "installment_no": 35,
       "due_date": "2026-10-26",
-      "expected_amount": 931.03,
+      "expected_amount": 1118.31,
       "paid_amount": 0,
       "status": "PENDING"
     },
@@ -384,7 +384,7 @@
       "loan_id": 1,
       "installment_no": 36,
       "due_date": "2026-10-27",
-      "expected_amount": 931.03,
+      "expected_amount": 1118.31,
       "paid_amount": 0,
       "status": "PENDING"
     },
@@ -393,7 +393,7 @@
       "loan_id": 1,
       "installment_no": 37,
       "due_date": "2026-10-28",
-      "expected_amount": 931.03,
+      "expected_amount": 1118.31,
       "paid_amount": 0,
       "status": "PENDING"
     },
@@ -402,7 +402,7 @@
       "loan_id": 1,
       "installment_no": 38,
       "due_date": "2026-10-29",
-      "expected_amount": 931.03,
+      "expected_amount": 1118.31,
       "paid_amount": 0,
       "status": "PENDING"
     },
@@ -411,7 +411,7 @@
       "loan_id": 1,
       "installment_no": 39,
       "due_date": "2026-10-30",
-      "expected_amount": 931.03,
+      "expected_amount": 1118.31,
       "paid_amount": 0,
       "status": "PENDING"
     },
@@ -420,7 +420,7 @@
       "loan_id": 1,
       "installment_no": 40,
       "due_date": "2026-10-31",
-      "expected_amount": 931.03,
+      "expected_amount": 1118.31,
       "paid_amount": 0,
       "status": "PENDING"
     },
@@ -429,7 +429,7 @@
       "loan_id": 1,
       "installment_no": 41,
       "due_date": "2026-11-01",
-      "expected_amount": 931.03,
+      "expected_amount": 1118.31,
       "paid_amount": 0,
       "status": "PENDING"
     },
@@ -438,7 +438,7 @@
       "loan_id": 1,
       "installment_no": 42,
       "due_date": "2026-11-02",
-      "expected_amount": 931.03,
+      "expected_amount": 1118.31,
       "paid_amount": 0,
       "status": "PENDING"
     },
@@ -447,7 +447,7 @@
       "loan_id": 1,
       "installment_no": 43,
       "due_date": "2026-11-03",
-      "expected_amount": 931.03,
+      "expected_amount": 1118.31,
       "paid_amount": 0,
       "status": "PENDING"
     },
@@ -456,7 +456,7 @@
       "loan_id": 1,
       "installment_no": 44,
       "due_date": "2026-11-04",
-      "expected_amount": 931.03,
+      "expected_amount": 1118.31,
       "paid_amount": 0,
       "status": "PENDING"
     },
@@ -465,7 +465,7 @@
       "loan_id": 1,
       "installment_no": 45,
       "due_date": "2026-11-05",
-      "expected_amount": 931.03,
+      "expected_amount": 1118.31,
       "paid_amount": 0,
       "status": "PENDING"
     },
@@ -474,7 +474,7 @@
       "loan_id": 1,
       "installment_no": 46,
       "due_date": "2026-11-06",
-      "expected_amount": 931.03,
+      "expected_amount": 1118.31,
       "paid_amount": 0,
       "status": "PENDING"
     },
@@ -483,7 +483,7 @@
       "loan_id": 1,
       "installment_no": 47,
       "due_date": "2026-11-07",
-      "expected_amount": 931.03,
+      "expected_amount": 1118.31,
       "paid_amount": 0,
       "status": "PENDING"
     },
@@ -492,7 +492,7 @@
       "loan_id": 1,
       "installment_no": 48,
       "due_date": "2026-11-08",
-      "expected_amount": 931.03,
+      "expected_amount": 1118.31,
       "paid_amount": 0,
       "status": "PENDING"
     },
@@ -501,7 +501,7 @@
       "loan_id": 1,
       "installment_no": 49,
       "due_date": "2026-11-09",
-      "expected_amount": 931.03,
+      "expected_amount": 1118.31,
       "paid_amount": 0,
       "status": "PENDING"
     },
@@ -510,7 +510,7 @@
       "loan_id": 1,
       "installment_no": 50,
       "due_date": "2026-11-10",
-      "expected_amount": 931.03,
+      "expected_amount": 1118.31,
       "paid_amount": 0,
       "status": "PENDING"
     },
@@ -519,7 +519,7 @@
       "loan_id": 1,
       "installment_no": 51,
       "due_date": "2026-11-11",
-      "expected_amount": 931.03,
+      "expected_amount": 1118.31,
       "paid_amount": 0,
       "status": "PENDING"
     },
@@ -528,7 +528,7 @@
       "loan_id": 1,
       "installment_no": 52,
       "due_date": "2026-11-12",
-      "expected_amount": 931.03,
+      "expected_amount": 1118.31,
       "paid_amount": 0,
       "status": "PENDING"
     },
@@ -537,7 +537,7 @@
       "loan_id": 1,
       "installment_no": 53,
       "due_date": "2026-11-13",
-      "expected_amount": 931.03,
+      "expected_amount": 1118.31,
       "paid_amount": 0,
       "status": "PENDING"
     },
@@ -546,7 +546,7 @@
       "loan_id": 1,
       "installment_no": 54,
       "due_date": "2026-11-14",
-      "expected_amount": 931.03,
+      "expected_amount": 1118.31,
       "paid_amount": 0,
       "status": "PENDING"
     },
@@ -555,7 +555,7 @@
       "loan_id": 1,
       "installment_no": 55,
       "due_date": "2026-11-15",
-      "expected_amount": 931.03,
+      "expected_amount": 1118.31,
       "paid_amount": 0,
       "status": "PENDING"
     },
@@ -564,7 +564,7 @@
       "loan_id": 1,
       "installment_no": 56,
       "due_date": "2026-11-16",
-      "expected_amount": 931.03,
+      "expected_amount": 1118.31,
       "paid_amount": 0,
       "status": "PENDING"
     },
@@ -573,7 +573,7 @@
       "loan_id": 1,
       "installment_no": 57,
       "due_date": "2026-11-17",
-      "expected_amount": 931.03,
+      "expected_amount": 1118.31,
       "paid_amount": 0,
       "status": "PENDING"
     },
@@ -582,7 +582,7 @@
       "loan_id": 1,
       "installment_no": 58,
       "due_date": "2026-11-18",
-      "expected_amount": 931.03,
+      "expected_amount": 1118.17,
       "paid_amount": 0,
       "status": "PENDING"
     }

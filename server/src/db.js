@@ -438,6 +438,66 @@ const db = {
     return newClient;
   },
 
+  updateClient: async (id, { name, phone, nic_id, address, notes }) => {
+    const clientId = parseInt(id, 10);
+    if (usePostgres) {
+      const res = await pgPool.query(
+        `UPDATE clients 
+         SET name = COALESCE($1, name),
+             phone = COALESCE($2, phone),
+             nic_id = COALESCE($3, nic_id),
+             address = COALESCE($4, address),
+             notes = COALESCE($5, notes)
+         WHERE id = $6 RETURNING *`,
+        [name, phone, nic_id, address, notes, clientId]
+      );
+      if (res.rows.length === 0) throw new Error('Client not found');
+      return res.rows[0];
+    }
+    loadLocalStore();
+    const c = localStore.clients.find(item => item.id === clientId);
+    if (!c) throw new Error('Client not found');
+    if (name !== undefined) c.name = name;
+    if (phone !== undefined) c.phone = phone;
+    if (nic_id !== undefined) c.nic_id = nic_id;
+    if (address !== undefined) c.address = address;
+    if (notes !== undefined) c.notes = notes;
+    saveLocalStore();
+    return c;
+  },
+
+  deleteClient: async (id) => {
+    const clientId = parseInt(id, 10);
+    if (usePostgres) {
+      const client = await pgPool.connect();
+      try {
+        await client.query('BEGIN');
+        await client.query('DELETE FROM payments WHERE client_id = $1', [clientId]);
+        await client.query('DELETE FROM loans WHERE client_id = $1', [clientId]);
+        const res = await client.query('DELETE FROM clients WHERE id = $1 RETURNING id', [clientId]);
+        if (res.rows.length === 0) throw new Error('Client not found');
+        await client.query('COMMIT');
+        return true;
+      } catch (err) {
+        await client.query('ROLLBACK');
+        throw err;
+      } finally {
+        client.release();
+      }
+    }
+    loadLocalStore();
+    const exists = localStore.clients.some(c => c.id === clientId);
+    if (!exists) throw new Error('Client not found');
+    localStore.payments = localStore.payments.filter(p => p.client_id !== clientId);
+    const clientLoans = localStore.loans.filter(l => l.client_id === clientId).map(l => l.id);
+    localStore.installments = localStore.installments.filter(i => !clientLoans.includes(i.loan_id));
+    localStore.loans = localStore.loans.filter(l => l.client_id !== clientId);
+    localStore.clients = localStore.clients.filter(c => c.id !== clientId);
+    saveLocalStore();
+    return true;
+  },
+
+
   // LOANS & 58-INSTALLMENT ENGINE
   getAllLoans: async (filters = {}) => {
     if (usePostgres) {
@@ -659,6 +719,169 @@ const db = {
     saveLocalStore();
     return newLoan;
   },
+
+  updateLoan: async (id, {
+    principal_amount,
+    topup_amount,
+    interest_rate_pct,
+    assigned_agent_id,
+    status
+  }) => {
+    const loanId = parseInt(id, 10);
+
+    if (usePostgres) {
+      const client = await pgPool.connect();
+      try {
+        await client.query('BEGIN');
+        const loanRes = await client.query('SELECT * FROM loans WHERE id = $1 FOR UPDATE', [loanId]);
+        if (loanRes.rows.length === 0) throw new Error('Loan not found');
+        const loan = loanRes.rows[0];
+
+        const oldPrincipal = parseFloat(loan.principal_amount);
+        let newPrincipal = oldPrincipal;
+        if (topup_amount && parseFloat(topup_amount) > 0) {
+          newPrincipal = oldPrincipal + parseFloat(topup_amount);
+        } else if (principal_amount && parseFloat(principal_amount) > 0) {
+          newPrincipal = parseFloat(principal_amount);
+        }
+
+        const newRate = interest_rate_pct !== undefined ? parseFloat(interest_rate_pct) : parseFloat(loan.interest_rate_pct);
+        const newTotalInterest = Math.round(((newPrincipal * newRate) / 100) * 100) / 100;
+        const newTotalPayable = Math.round((newPrincipal + newTotalInterest) * 100) / 100;
+        const currentPaid = parseFloat(loan.total_paid);
+        const newRemaining = Math.max(0, Math.round((newTotalPayable - currentPaid) * 100) / 100);
+        const count = parseInt(loan.installment_count, 10) || 58;
+        const newInstAmount = Math.round((newTotalPayable / count) * 100) / 100;
+        const newAgent = assigned_agent_id !== undefined ? (assigned_agent_id ? parseInt(assigned_agent_id, 10) : null) : loan.assigned_agent_id;
+        const newStatus = status || (newRemaining <= 0 ? 'COMPLETED' : 'ACTIVE');
+
+        const updatedRes = await client.query(
+          `UPDATE loans 
+           SET principal_amount = $1, interest_rate_pct = $2, total_interest = $3,
+               total_payable = $4, installment_amount = $5, remaining_balance = $6,
+               assigned_agent_id = $7, status = $8
+           WHERE id = $9 RETURNING *`,
+          [
+            newPrincipal, newRate, newTotalInterest,
+            newTotalPayable, newInstAmount, newRemaining,
+            newAgent, newStatus, loanId
+          ]
+        );
+
+        // Rebalance remaining unpaid installments
+        const unpaidRes = await client.query(
+          `SELECT * FROM installments WHERE loan_id = $1 AND status != 'PAID' ORDER BY installment_no ASC`,
+          [loanId]
+        );
+
+        if (unpaidRes.rows.length > 0) {
+          const unpaidCount = unpaidRes.rows.length;
+          const adjustedExpected = Math.round((newRemaining / unpaidCount) * 100) / 100;
+          for (let i = 0; i < unpaidCount; i++) {
+            const inst = unpaidRes.rows[i];
+            const isLast = (i === unpaidCount - 1);
+            // On last unpaid, reconcile any cent rounding
+            const exp = isLast 
+              ? Math.round((newRemaining - (adjustedExpected * (unpaidCount - 1))) * 100) / 100
+              : adjustedExpected;
+            await client.query(
+              `UPDATE installments SET expected_amount = $1 WHERE id = $2`,
+              [Math.max(0, exp), inst.id]
+            );
+          }
+        }
+
+        await client.query('COMMIT');
+        return updatedRes.rows[0];
+      } catch (err) {
+        await client.query('ROLLBACK');
+        throw err;
+      } finally {
+        client.release();
+      }
+    }
+
+    loadLocalStore();
+    const loan = localStore.loans.find(l => l.id === loanId);
+    if (!loan) throw new Error('Loan not found');
+
+    const oldPrincipal = parseFloat(loan.principal_amount);
+    let newPrincipal = oldPrincipal;
+    if (topup_amount && parseFloat(topup_amount) > 0) {
+      newPrincipal = oldPrincipal + parseFloat(topup_amount);
+    } else if (principal_amount && parseFloat(principal_amount) > 0) {
+      newPrincipal = parseFloat(principal_amount);
+    }
+
+    const newRate = interest_rate_pct !== undefined ? parseFloat(interest_rate_pct) : parseFloat(loan.interest_rate_pct);
+    const newTotalInterest = Math.round(((newPrincipal * newRate) / 100) * 100) / 100;
+    const newTotalPayable = Math.round((newPrincipal + newTotalInterest) * 100) / 100;
+    const currentPaid = parseFloat(loan.total_paid);
+    const newRemaining = Math.max(0, Math.round((newTotalPayable - currentPaid) * 100) / 100);
+    const count = parseInt(loan.installment_count, 10) || 58;
+    const newInstAmount = Math.round((newTotalPayable / count) * 100) / 100;
+
+    loan.principal_amount = newPrincipal;
+    loan.interest_rate_pct = newRate;
+    loan.total_interest = newTotalInterest;
+    loan.total_payable = newTotalPayable;
+    loan.installment_amount = newInstAmount;
+    loan.remaining_balance = newRemaining;
+    if (assigned_agent_id !== undefined) loan.assigned_agent_id = assigned_agent_id ? parseInt(assigned_agent_id, 10) : null;
+    if (status) loan.status = status;
+    else if (newRemaining <= 0) loan.status = 'COMPLETED';
+
+    // Rebalance unpaid installments
+    const unpaidInsts = localStore.installments
+      .filter(i => i.loan_id === loanId && i.status !== 'PAID')
+      .sort((a, b) => a.installment_no - b.installment_no);
+
+    if (unpaidInsts.length > 0) {
+      const unpaidCount = unpaidInsts.length;
+      const adjustedExpected = Math.round((newRemaining / unpaidCount) * 100) / 100;
+      for (let i = 0; i < unpaidCount; i++) {
+        const inst = unpaidInsts[i];
+        const isLast = (i === unpaidCount - 1);
+        const exp = isLast 
+          ? Math.round((newRemaining - (adjustedExpected * (unpaidCount - 1))) * 100) / 100
+          : adjustedExpected;
+        inst.expected_amount = Math.max(0, exp);
+      }
+    }
+
+    saveLocalStore();
+    return loan;
+  },
+
+  deleteLoan: async (id) => {
+    const loanId = parseInt(id, 10);
+    if (usePostgres) {
+      const client = await pgPool.connect();
+      try {
+        await client.query('BEGIN');
+        await client.query('DELETE FROM payments WHERE loan_id = $1', [loanId]);
+        await client.query('DELETE FROM installments WHERE loan_id = $1', [loanId]);
+        const res = await client.query('DELETE FROM loans WHERE id = $1 RETURNING id', [loanId]);
+        if (res.rows.length === 0) throw new Error('Loan not found');
+        await client.query('COMMIT');
+        return true;
+      } catch (err) {
+        await client.query('ROLLBACK');
+        throw err;
+      } finally {
+        client.release();
+      }
+    }
+    loadLocalStore();
+    const exists = localStore.loans.some(l => l.id === loanId);
+    if (!exists) throw new Error('Loan not found');
+    localStore.payments = localStore.payments.filter(p => p.loan_id !== loanId);
+    localStore.installments = localStore.installments.filter(i => i.loan_id !== loanId);
+    localStore.loans = localStore.loans.filter(l => l.id !== loanId);
+    saveLocalStore();
+    return true;
+  },
+
 
   // PAYMENTS & RECEIPT ENGINE (Full & Partial Payments)
   recordPayment: async ({

@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
-import { Users, UserPlus, Phone, MapPin, PlusCircle, Search } from 'lucide-react';
+import { Users, UserPlus, Phone, MapPin, PlusCircle, Search, Edit3 } from 'lucide-react';
 
 export default function ClientsView({
   clients,
   currentUser,
   onOpenNewClient,
-  onOpenNewLoanForClient
+  onOpenNewLoanForClient,
+  onEditClient
 }) {
   const [searchTerm, setSearchTerm] = useState('');
 
@@ -113,16 +114,27 @@ export default function ClientsView({
                       Rs. {Number(client.total_outstanding || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                     </td>
                     <td style={{ textAlign: 'right' }}>
-                      {currentUser.role === 'OWNER' && (
+                      <div style={{ display: 'inline-flex', gap: '6px' }}>
                         <button
                           className="btn btn-secondary btn-sm"
-                          style={{ gap: '6px' }}
-                          onClick={() => onOpenNewLoanForClient(client)}
+                          style={{ gap: '4px' }}
+                          onClick={() => onEditClient(client)}
+                          title="Edit Client Info"
                         >
-                          <PlusCircle size={14} />
-                          Issue Loan
+                          <Edit3 size={14} />
+                          Edit
                         </button>
-                      )}
+                        {currentUser.role === 'OWNER' && (
+                          <button
+                            className="btn btn-primary btn-sm"
+                            style={{ gap: '4px' }}
+                            onClick={() => onOpenNewLoanForClient(client)}
+                          >
+                            <PlusCircle size={14} />
+                            Issue Loan
+                          </button>
+                        )}
+                      </div>
                     </td>
                   </tr>
                 ))
@@ -155,9 +167,18 @@ export default function ClientsView({
                   )}
                 </div>
 
-                <span className={`status-badge ${client.active_loans > 0 ? 'badge-active' : 'badge-pending'}`}>
-                  {client.active_loans || 0} Active Loans
-                </span>
+                <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
+                  <span className={`status-badge ${client.active_loans > 0 ? 'badge-active' : 'badge-pending'}`}>
+                    {client.active_loans || 0} Loans
+                  </span>
+                  <button
+                    className="btn btn-secondary btn-sm"
+                    style={{ padding: '6px 8px' }}
+                    onClick={() => onEditClient(client)}
+                  >
+                    <Edit3 size={14} />
+                  </button>
+                </div>
               </div>
 
               <div className="mobile-card-stats">

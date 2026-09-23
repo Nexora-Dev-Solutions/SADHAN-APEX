@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { FileText, X, DollarSign, Printer, Calendar, CheckCircle2, Clock, AlertTriangle } from 'lucide-react';
+import { FileText, X, DollarSign, Printer, Calendar, CheckCircle2, Clock, AlertTriangle, Edit3 } from 'lucide-react';
 
-export default function LoanDetailModal({ loanId, token, onClose, onOpenPayment, onReprintReceipt }) {
+export default function LoanDetailModal({ loanId, token, currentUser, onClose, onOpenPayment, onReprintReceipt, onEditLoan }) {
   const [loan, setLoan] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -225,21 +225,37 @@ export default function LoanDetailModal({ loanId, token, onClose, onOpenPayment,
           <button className="btn btn-secondary" onClick={onClose}>
             Close
           </button>
-          {loan.status === 'ACTIVE' && (
-            <button
-              className="btn btn-success"
-              style={{ gap: '8px' }}
-              onClick={() => {
-                onClose();
-                onOpenPayment(loan);
-              }}
-            >
-              <DollarSign size={18} />
-              Record Repayment
-            </button>
-          )}
+          <div style={{ display: 'flex', gap: '8px' }}>
+            {currentUser?.role === 'OWNER' && onEditLoan && (
+              <button
+                className="btn btn-secondary"
+                style={{ gap: '6px' }}
+                onClick={() => {
+                  onClose();
+                  onEditLoan(loan);
+                }}
+              >
+                <Edit3 size={16} />
+                Top-Up / Edit Loan
+              </button>
+            )}
+            {loan.status === 'ACTIVE' && (
+              <button
+                className="btn btn-success"
+                style={{ gap: '8px' }}
+                onClick={() => {
+                  onClose();
+                  onOpenPayment(loan);
+                }}
+              >
+                <DollarSign size={18} />
+                Record Repayment
+              </button>
+            )}
+          </div>
         </div>
       </div>
     </div>
   );
 }
+
