@@ -558,15 +558,7 @@ export default function App() {
           )}
 
           {/* System Footer & Copyright (Visible on Mobile & All Views) */}
-          <footer style={{
-            marginTop: '36px',
-            paddingTop: '16px',
-            borderTop: '1px solid var(--surface-border)',
-            textAlign: 'center',
-            fontSize: '0.72rem',
-            color: 'var(--text-muted)',
-            lineHeight: '1.6'
-          }}>
+          <footer className="system-footer">
             <div style={{ color: '#94a3b8' }}>
               © {new Date().getFullYear()} <strong>Nexora Software Solutions</strong> • All Rights Reserved
             </div>

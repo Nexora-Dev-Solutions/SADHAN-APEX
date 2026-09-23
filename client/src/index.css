@@ -284,6 +284,19 @@ body {
   max-width: 1400px;
   width: 100%;
   margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+}
+
+.system-footer {
+  margin-top: auto;
+  padding-top: 24px;
+  padding-bottom: 8px;
+  border-top: 1px solid var(--surface-border);
+  text-align: center;
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  line-height: 1.6;
 }
 
 /* METRIC STATS CARDS */
@@ -985,14 +998,7 @@ table.data-table tr:hover td {
     height: auto !important;
   }
 
-  /* 2. Hide everything by default */
-  body * {
-    visibility: hidden !important;
-  }
-
-  /* 3. Completely remove non-receipt elements from print layout */
-  .app-container,
-  .main-wrapper,
+  /* 2. Completely remove non-receipt elements from print layout */
   .sidebar,
   .top-bar,
   .content-body,
@@ -1000,24 +1006,38 @@ table.data-table tr:hover td {
   .modal-overlay:not(.thermal-receipt-modal),
   .modal-header,
   .modal-footer,
+  .system-footer,
   .btn,
   .no-print {
     display: none !important;
   }
 
-  /* 4. Make ONLY the thermal receipt and its children visible */
-  .thermal-receipt-container,
-  .thermal-receipt-container * {
-    visibility: visible !important;
+  /* 3. Keep layout wrapper transparent and unconstrained */
+  #root,
+  .app-container,
+  .main-wrapper {
+    display: block !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    width: 100% !important;
+    min-height: auto !important;
+    height: auto !important;
+    border: none !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    overflow: visible !important;
   }
 
-  /* 5. Cleanly position receipt with zero background leakage */
+  /* 4. Display thermal receipt modal */
   .thermal-receipt-modal {
     position: static !important;
+    display: block !important;
     background: transparent !important;
     backdrop-filter: none !important;
     padding: 0 !important;
-    display: block !important;
+    margin: 0 auto !important;
+    width: 100% !important;
+    height: auto !important;
   }
 
   .thermal-receipt-modal .modal-content {
@@ -1026,7 +1046,8 @@ table.data-table tr:hover td {
     box-shadow: none !important;
     background: transparent !important;
     max-width: 100% !important;
-    margin: 0 !important;
+    width: 100% !important;
+    margin: 0 auto !important;
     padding: 0 !important;
     overflow: visible !important;
   }
@@ -1034,25 +1055,33 @@ table.data-table tr:hover td {
   .thermal-receipt-modal .modal-body {
     background: transparent !important;
     padding: 0 !important;
-    margin: 0 !important;
+    margin: 0 auto !important;
   }
 
+  /* 5. Cleanly style the receipt slip (Centered on A4 PDF, Full-fit on 80mm roll) */
   .thermal-receipt-container {
-    position: absolute !important;
-    top: 0 !important;
-    left: 0 !important;
-    width: 72mm !important;
-    max-width: 72mm !important;
-    margin: 0 !important;
-    padding: 2mm 3mm !important;
-    border: none !important;
+    position: relative !important;
+    width: 78mm !important;
+    max-width: 78mm !important;
+    margin: 12px auto !important;
+    padding: 6mm 5mm !important;
+    border: 1px solid #d1d5db !important;
+    border-radius: 4px !important;
     box-shadow: none !important;
     background: #ffffff !important;
     color: #000000 !important;
+    box-sizing: border-box !important;
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+    visibility: visible !important;
+  }
+
+  .thermal-receipt-container * {
+    visibility: visible !important;
   }
 
   @page {
-    size: 80mm auto;
-    margin: 0mm;
+    size: auto;
+    margin: 0;
   }
 }
