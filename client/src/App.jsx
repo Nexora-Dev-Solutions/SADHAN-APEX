@@ -290,10 +290,7 @@ export default function App() {
             </div>
 
             <div style={{ textAlign: 'center', marginTop: '18px', fontSize: '0.72rem', color: 'var(--text-muted)' }}>
-              © {new Date().getFullYear()} Sadhan Apex (Pvt) Ltd
-              <div style={{ marginTop: '2px', color: '#94a3b8' }}>
-                System Solution: <strong>Nexora Software Solutions</strong>
-              </div>
+              © {new Date().getFullYear()} <strong>Nexora Software Solutions</strong> • All Rights Reserved
             </div>
           </div>
         </div>
@@ -415,10 +412,7 @@ export default function App() {
           textAlign: 'center',
           lineHeight: '1.4'
         }}>
-          <div>SADHAN APEX (PVT) LTD</div>
-          <div style={{ color: '#94a3b8', marginTop: '2px' }}>
-            Powered by <strong>Nexora Software Solutions</strong>
-          </div>
+          <div>© {new Date().getFullYear()} <strong>Nexora Software Solutions</strong></div>
         </div>
       </aside>
 
@@ -573,14 +567,8 @@ export default function App() {
             color: 'var(--text-muted)',
             lineHeight: '1.6'
           }}>
-            <div style={{ fontWeight: '700', color: 'var(--text-secondary)' }}>
-              SADHAN APEX (PVT) LTD • 58-INSTALLMENT MICRO LOANS
-            </div>
-            <div style={{ color: '#60a5fa', fontSize: '0.72rem', fontWeight: '600', marginTop: '2px' }}>
-              📞 0702263041 / 0743150900
-            </div>
-            <div style={{ marginTop: '4px', color: '#94a3b8' }}>
-              © {new Date().getFullYear()} Sadhan Apex (Pvt) Ltd • System Solution: <strong>Nexora Software Solutions</strong>
+            <div style={{ color: '#94a3b8' }}>
+              © {new Date().getFullYear()} <strong>Nexora Software Solutions</strong> • All Rights Reserved
             </div>
           </footer>
         </main>
