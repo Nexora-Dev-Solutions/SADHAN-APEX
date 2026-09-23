@@ -1420,6 +1420,245 @@ const db = {
       today_collected_amount: Math.round(todayCollected * 100) / 100,
       today_payments_count: todayPayments.length
     };
+  },
+
+  // MONTHLY FINANCIAL REPORT & ANALYTICS
+  getMonthlyReport: async (yearMonth) => {
+    loadLocalStore();
+    const targetMonth = yearMonth || new Date().toISOString().slice(0, 7);
+
+    if (usePostgres) {
+      const totalsRes = await pgPool.query(`
+        SELECT 
+          COALESCE(SUM(amount_paid), 0) AS total_collected,
+          COUNT(*) AS total_payments_count,
+          COUNT(DISTINCT client_id) AS unique_clients_paid
+        FROM payments
+        WHERE TO_CHAR(created_at, 'YYYY-MM') = $1
+      `, [targetMonth]);
+
+      const loansRes = await pgPool.query(`
+        SELECT 
+          COALESCE(SUM(principal_amount), 0) AS total_disbursed,
+          COALESCE(SUM(total_interest), 0) AS total_interest_earned,
+          COUNT(*) AS new_loans_count
+        FROM loans
+        WHERE TO_CHAR(created_at, 'YYYY-MM') = $1
+      `, [targetMonth]);
+
+      const dailyRes = await pgPool.query(`
+        SELECT 
+          EXTRACT(DAY FROM created_at)::int AS day,
+          TO_CHAR(created_at, 'YYYY-MM-DD') AS date,
+          COALESCE(SUM(amount_paid), 0) AS amount,
+          COUNT(*) AS count
+        FROM payments
+        WHERE TO_CHAR(created_at, 'YYYY-MM') = $1
+        GROUP BY EXTRACT(DAY FROM created_at), TO_CHAR(created_at, 'YYYY-MM-DD')
+        ORDER BY day ASC
+      `, [targetMonth]);
+
+      const collectorRes = await pgPool.query(`
+        SELECT 
+          p.collector_id,
+          COALESCE(u.name, 'Unknown') AS collector_name,
+          COALESCE(SUM(p.amount_paid), 0) AS total_collected,
+          COUNT(*) AS receipts_count
+        FROM payments p
+        LEFT JOIN users u ON p.collector_id = u.id
+        WHERE TO_CHAR(p.created_at, 'YYYY-MM') = $1
+        GROUP BY p.collector_id, u.name
+        ORDER BY total_collected DESC
+      `, [targetMonth]);
+
+      const methodRes = await pgPool.query(`
+        SELECT 
+          payment_method,
+          COALESCE(SUM(amount_paid), 0) AS amount,
+          COUNT(*) AS count
+        FROM payments
+        WHERE TO_CHAR(created_at, 'YYYY-MM') = $1
+        GROUP BY payment_method
+      `, [targetMonth]);
+
+      return {
+        month: targetMonth,
+        total_collected: parseFloat(totalsRes.rows[0]?.total_collected || 0),
+        total_payments_count: parseInt(totalsRes.rows[0]?.total_payments_count || 0, 10),
+        unique_clients_paid: parseInt(totalsRes.rows[0]?.unique_clients_paid || 0, 10),
+        total_disbursed: parseFloat(loansRes.rows[0]?.total_disbursed || 0),
+        total_interest_earned: parseFloat(loansRes.rows[0]?.total_interest_earned || 0),
+        new_loans_count: parseInt(loansRes.rows[0]?.new_loans_count || 0, 10),
+        daily_breakdown: dailyRes.rows.map(r => ({
+          day: r.day,
+          date: r.date,
+          amount: parseFloat(r.amount),
+          count: parseInt(r.count, 10)
+        })),
+        collectors_breakdown: collectorRes.rows.map(r => ({
+          collector_id: r.collector_id,
+          collector_name: r.collector_name,
+          total_collected: parseFloat(r.total_collected),
+          receipts_count: parseInt(r.receipts_count, 10)
+        })),
+        methods_breakdown: methodRes.rows.map(r => ({
+          payment_method: r.payment_method,
+          amount: parseFloat(r.amount),
+          count: parseInt(r.count, 10)
+        }))
+      };
+    }
+
+    // LocalStore fallback
+    const monthPayments = localStore.payments.filter(p => (p.created_at || '').startsWith(targetMonth));
+    const monthLoans = localStore.loans.filter(l => (l.created_at || '').startsWith(targetMonth));
+
+    const totalCollected = monthPayments.reduce((acc, p) => acc + parseFloat(p.amount_paid || 0), 0);
+    const uniqueClients = new Set(monthPayments.map(p => p.client_id)).size;
+    const totalDisbursed = monthLoans.reduce((acc, l) => acc + parseFloat(l.principal_amount || 0), 0);
+    const totalInterestEarned = monthLoans.reduce((acc, l) => acc + parseFloat(l.total_interest || 0), 0);
+
+    const dailyMap = {};
+    for (const p of monthPayments) {
+      const dateStr = (p.created_at || '').slice(0, 10);
+      const day = parseInt(dateStr.slice(8, 10), 10) || 1;
+      if (!dailyMap[day]) {
+        dailyMap[day] = { day, date: dateStr, amount: 0, count: 0 };
+      }
+      dailyMap[day].amount += parseFloat(p.amount_paid || 0);
+      dailyMap[day].count += 1;
+    }
+    const dailyBreakdown = Object.values(dailyMap).sort((a, b) => a.day - b.day);
+
+    const collectorMap = {};
+    for (const p of monthPayments) {
+      const cId = p.collector_id;
+      if (!collectorMap[cId]) {
+        const u = localStore.users.find(usr => usr.id === cId);
+        collectorMap[cId] = {
+          collector_id: cId,
+          collector_name: u ? u.name : 'Collector',
+          total_collected: 0,
+          receipts_count: 0
+        };
+      }
+      collectorMap[cId].total_collected += parseFloat(p.amount_paid || 0);
+      collectorMap[cId].receipts_count += 1;
+    }
+    const collectorsBreakdown = Object.values(collectorMap).sort((a, b) => b.total_collected - a.total_collected);
+
+    const methodMap = {};
+    for (const p of monthPayments) {
+      const m = p.payment_method || 'CASH';
+      if (!methodMap[m]) methodMap[m] = { payment_method: m, amount: 0, count: 0 };
+      methodMap[m].amount += parseFloat(p.amount_paid || 0);
+      methodMap[m].count += 1;
+    }
+
+    return {
+      month: targetMonth,
+      total_collected: Math.round(totalCollected * 100) / 100,
+      total_payments_count: monthPayments.length,
+      unique_clients_paid: uniqueClients,
+      total_disbursed: Math.round(totalDisbursed * 100) / 100,
+      total_interest_earned: Math.round(totalInterestEarned * 100) / 100,
+      new_loans_count: monthLoans.length,
+      daily_breakdown: dailyBreakdown,
+      collectors_breakdown: collectorsBreakdown,
+      methods_breakdown: Object.values(methodMap)
+    };
+  },
+
+  // MASTER TRANSACTIONS & RECEIPTS LEDGER
+  getAllTransactions: async ({ month, search, payment_method, limit = 200, offset = 0 } = {}) => {
+    loadLocalStore();
+
+    if (usePostgres) {
+      let query = `
+        SELECT 
+          p.*,
+          l.loan_code,
+          l.installment_amount,
+          l.installment_count,
+          c.name AS client_name,
+          c.phone AS client_phone,
+          c.nic_id AS client_nic,
+          COALESCE(u.name, 'Collector') AS collector_name
+        FROM payments p
+        JOIN loans l ON p.loan_id = l.id
+        JOIN clients c ON p.client_id = c.id
+        LEFT JOIN users u ON p.collector_id = u.id
+        WHERE 1=1
+      `;
+      const params = [];
+
+      if (month && month !== 'ALL') {
+        params.push(month);
+        query += ` AND TO_CHAR(p.created_at, 'YYYY-MM') = $${params.length}`;
+      }
+
+      if (payment_method && payment_method !== 'ALL') {
+        params.push(payment_method);
+        query += ` AND p.payment_method = $${params.length}`;
+      }
+
+      if (search && search.trim()) {
+        params.push(`%${search.trim().toLowerCase()}%`);
+        query += ` AND (
+          LOWER(p.receipt_no) LIKE $${params.length} OR
+          LOWER(c.name) LIKE $${params.length} OR
+          LOWER(c.phone) LIKE $${params.length} OR
+          LOWER(COALESCE(c.nic_id, '')) LIKE $${params.length} OR
+          LOWER(l.loan_code) LIKE $${params.length} OR
+          LOWER(COALESCE(u.name, '')) LIKE $${params.length}
+        )`;
+      }
+
+      query += ` ORDER BY p.created_at DESC, p.id DESC LIMIT ${parseInt(limit, 10)} OFFSET ${parseInt(offset, 10)}`;
+
+      const res = await pgPool.query(query, params);
+      return res.rows;
+    }
+
+    // LocalStore fallback
+    let transactions = localStore.payments.map(p => {
+      const loan = localStore.loans.find(l => l.id === p.loan_id) || {};
+      const client = localStore.clients.find(c => c.id === p.client_id) || {};
+      const user = localStore.users.find(u => u.id === p.collector_id) || {};
+      return {
+        ...p,
+        loan_code: loan.loan_code || 'LN-UNKNOWN',
+        installment_amount: loan.installment_amount || 0,
+        installment_count: loan.installment_count || 58,
+        client_name: client.name || 'Unknown Client',
+        client_phone: client.phone || '',
+        client_nic: client.nic_id || '',
+        collector_name: user.name || 'Collector'
+      };
+    });
+
+    if (month && month !== 'ALL') {
+      transactions = transactions.filter(t => (t.created_at || '').startsWith(month));
+    }
+
+    if (payment_method && payment_method !== 'ALL') {
+      transactions = transactions.filter(t => t.payment_method === payment_method);
+    }
+
+    if (search && search.trim()) {
+      const q = search.trim().toLowerCase();
+      transactions = transactions.filter(t => 
+        (t.receipt_no || '').toLowerCase().includes(q) ||
+        (t.client_name || '').toLowerCase().includes(q) ||
+        (t.client_phone || '').toLowerCase().includes(q) ||
+        (t.client_nic || '').toLowerCase().includes(q) ||
+        (t.loan_code || '').toLowerCase().includes(q) ||
+        (t.collector_name || '').toLowerCase().includes(q)
+      );
+    }
+
+    transactions.sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0));
+    return transactions.slice(offset, offset + limit);
   }
 };
 

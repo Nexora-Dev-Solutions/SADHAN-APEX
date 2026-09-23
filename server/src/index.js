@@ -325,6 +325,36 @@ app.get('/api/dashboard', verifyToken, async (req, res) => {
   }
 });
 
+// MONTHLY FINANCIAL REPORT & ANALYTICS
+app.get('/api/reports/monthly', verifyToken, async (req, res) => {
+  try {
+    const month = req.query.month || new Date().toISOString().slice(0, 7);
+    const report = await db.getMonthlyReport(month);
+    return res.json({ report });
+  } catch (err) {
+    console.error('Error fetching monthly report:', err);
+    return res.status(500).json({ error: 'Failed to load monthly report' });
+  }
+});
+
+// MASTER TRANSACTIONS & RECEIPTS LEDGER
+app.get('/api/payments', verifyToken, async (req, res) => {
+  try {
+    const { month, search, payment_method, limit = 200, offset = 0 } = req.query;
+    const transactions = await db.getAllTransactions({
+      month,
+      search,
+      payment_method,
+      limit: parseInt(limit, 10) || 200,
+      offset: parseInt(offset, 10) || 0
+    });
+    return res.json({ transactions });
+  } catch (err) {
+    console.error('Error fetching transactions:', err);
+    return res.status(500).json({ error: 'Failed to load transactions' });
+  }
+});
+
 const path = require('path');
 const clientDist = path.join(__dirname, '..', '..', 'client', 'dist');
 if (require('fs').existsSync(clientDist)) {

@@ -13,13 +13,15 @@ import {
   Printer,
   Smartphone,
   Laptop,
-  Tv
+  Tv,
+  BarChart3
 } from 'lucide-react';
 
 import DashboardView from './views/DashboardView';
 import LoansView from './views/LoansView';
 import ClientsView from './views/ClientsView';
 import CollectionsView from './views/CollectionsView';
+import ReportsView from './views/ReportsView';
 
 import NewLoanModal from './components/NewLoanModal';
 import NewClientModal from './components/NewClientModal';
@@ -328,6 +330,14 @@ export default function App() {
               <span className="nav-badge">{reminderCount}</span>
             )}
           </li>
+
+          <li
+            className={`nav-item ${currentView === 'reports' ? 'active' : ''}`}
+            onClick={() => setCurrentView('reports')}
+          >
+            <BarChart3 size={18} />
+            <span>Reports & Ledger</span>
+          </li>
         </ul>
 
         {/* Quick Role Switcher for Testing */}
@@ -388,6 +398,7 @@ export default function App() {
               {currentView === 'loans' && '58-Installment Portfolio'}
               {currentView === 'clients' && 'Client Directory'}
               {currentView === 'collections' && 'Field Collections Queue'}
+              {currentView === 'reports' && 'Monthly Reports & Master Ledger'}
             </h2>
             <p>Real-time sync • ATM Thermal Print Ready</p>
           </div>
@@ -490,6 +501,14 @@ export default function App() {
               onOpenPayment={(loan) => setSelectedLoanForPayment(loan)}
             />
           )}
+
+          {currentView === 'reports' && (
+            <ReportsView
+              token={token}
+              currentUser={currentUser}
+              onReprintReceipt={(receipt) => setActiveReceipt(receipt)}
+            />
+          )}
         </main>
       </div>
 
@@ -536,6 +555,14 @@ export default function App() {
         >
           <Users size={20} />
           <span>Clients</span>
+        </div>
+
+        <div
+          className={`mobile-nav-item ${currentView === 'reports' ? 'active' : ''}`}
+          onClick={() => setCurrentView('reports')}
+        >
+          <BarChart3 size={20} />
+          <span>Reports</span>
         </div>
       </nav>
 
