@@ -33,9 +33,18 @@ export default function ThermalReceipt({ receipt, onClose }) {
           {/* Thermal Receipt Paper representation */}
           <div className="thermal-receipt-container">
             <div className="receipt-header">
-              <div className="receipt-title">MICRO LOAN SERVICE</div>
-              <div className="receipt-subtitle">58-INSTALLMENT MICRO LOANS</div>
-              <div style={{ fontSize: '10px', color: '#555' }}>FIELD COLLECTION RECEIPT</div>
+              <div className="receipt-title" style={{ fontSize: '14px', fontWeight: '800', letterSpacing: '0.04em' }}>
+                SADHAN APEX (PVT) LTD
+              </div>
+              <div className="receipt-subtitle" style={{ fontSize: '11px', fontWeight: '600', marginTop: '2px' }}>
+                58-INSTALLMENT MICRO LOANS
+              </div>
+              <div style={{ fontSize: '10px', color: '#333', fontWeight: '600', marginTop: '3px' }}>
+                TEL: 0702263041 / 0743150900
+              </div>
+              <div style={{ fontSize: '9px', color: '#666', marginTop: '1px' }}>
+                OFFICIAL REPAYMENT RECEIPT
+              </div>
             </div>
 
             <div className="receipt-divider"></div>
@@ -139,9 +148,19 @@ export default function ThermalReceipt({ receipt, onClose }) {
             </div>
 
             <div className="receipt-footer">
-              <div>Thank you for your payment!</div>
+              <div style={{ fontWeight: '700' }}>Thank you for your payment!</div>
               <div style={{ fontSize: '9px', marginTop: '2px', color: '#666' }}>
                 Keep this receipt for your records.
+              </div>
+              <div style={{
+                fontSize: '8px',
+                marginTop: '8px',
+                color: '#777',
+                borderTop: '1px dashed #ccc',
+                paddingTop: '5px',
+                letterSpacing: '0.02em'
+              }}>
+                © Nexora Software Solutions • All Rights Reserved
               </div>
             </div>
           </div>

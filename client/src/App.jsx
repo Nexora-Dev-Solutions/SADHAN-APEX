@@ -211,13 +211,18 @@ export default function App() {
           backdropFilter: 'blur(16px)',
           boxShadow: 'var(--shadow-lg)'
         }}>
-          <div style={{ textAlign: 'center', marginBottom: '28px' }}>
-            <div className="brand-logo" style={{ margin: '0 auto 16px', width: '54px', height: '54px' }}>
+          <div style={{ textAlign: 'center', marginBottom: '24px' }}>
+            <div className="brand-logo" style={{ margin: '0 auto 14px', width: '54px', height: '54px' }}>
               <CreditCard size={28} />
             </div>
-            <h1 style={{ fontSize: '1.6rem', fontWeight: '800', color: '#f8fafc', marginBottom: '6px' }}>LoanPro Manager</h1>
-            <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>
-              58-Installment Micro Loans & Field Collection PWA
+            <h1 style={{ fontSize: '1.45rem', fontWeight: '800', color: '#f8fafc', marginBottom: '4px', letterSpacing: '0.02em' }}>
+              SADHAN APEX (PVT) LTD
+            </h1>
+            <div style={{ fontSize: '0.82rem', color: '#60a5fa', fontWeight: '700', marginBottom: '4px' }}>
+              📞 0702263041 / 0743150900
+            </div>
+            <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>
+              58-Installment Micro Loans & Field Collection Terminal
             </p>
           </div>
 
@@ -283,6 +288,13 @@ export default function App() {
                 Agent Mode
               </button>
             </div>
+
+            <div style={{ textAlign: 'center', marginTop: '18px', fontSize: '0.72rem', color: 'var(--text-muted)' }}>
+              © {new Date().getFullYear()} Sadhan Apex (Pvt) Ltd
+              <div style={{ marginTop: '2px', color: '#94a3b8' }}>
+                System Solution: <strong>Nexora Software Solutions</strong>
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -298,8 +310,8 @@ export default function App() {
             <CreditCard size={22} />
           </div>
           <div className="brand-info">
-            <h1>LoanPro</h1>
-            <span>58-Plan • 8% Rate</span>
+            <h1 style={{ fontSize: '0.92rem', fontWeight: '800', lineHeight: 1.2 }}>SADHAN APEX</h1>
+            <span style={{ fontSize: '0.7rem', color: '#60a5fa' }}>(PVT) LTD • 58-Plan</span>
           </div>
         </div>
 
@@ -393,6 +405,21 @@ export default function App() {
             </div>
           </div>
         </div>
+
+        {/* System Copyright */}
+        <div style={{
+          padding: '10px 14px',
+          borderTop: '1px solid var(--surface-border)',
+          fontSize: '0.68rem',
+          color: 'var(--text-muted)',
+          textAlign: 'center',
+          lineHeight: '1.4'
+        }}>
+          <div>SADHAN APEX (PVT) LTD</div>
+          <div style={{ color: '#94a3b8', marginTop: '2px' }}>
+            Powered by <strong>Nexora Software Solutions</strong>
+          </div>
+        </div>
       </aside>
 
       {/* MAIN WRAPPER */}
@@ -407,7 +434,7 @@ export default function App() {
               {currentView === 'collections' && 'Field Collections Queue'}
               {currentView === 'reports' && 'Monthly Reports & Master Ledger'}
             </h2>
-            <p>Real-time sync • ATM Thermal Print Ready</p>
+            <p>SADHAN APEX (PVT) LTD • 📞 0702263041 / 0743150900 • Powered by Nexora</p>
           </div>
 
           <div className="top-actions">
