@@ -84,17 +84,45 @@ export default function PaymentModal({ loan, token, onClose, onSuccess }) {
               padding: '14px 18px',
               marginBottom: '20px'
             }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px' }}>
-                <span style={{ fontSize: '0.82rem', color: 'var(--text-muted)' }}>CLIENT</span>
-                <span style={{ fontSize: '0.92rem', fontWeight: '700', color: 'var(--text-primary)' }}>
-                  {loan.client_name}
-                </span>
-              </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px' }}>
-                <span style={{ fontSize: '0.82rem', color: 'var(--text-muted)' }}>LOAN CODE</span>
-                <span style={{ fontSize: '0.88rem', fontFamily: 'var(--font-mono)', color: 'var(--accent-primary)' }}>
-                  {loan.loan_code}
-                </span>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '10px', paddingBottom: '10px', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+                {loan.photo_url ? (
+                  <img
+                    src={loan.photo_url}
+                    alt={loan.client_name}
+                    style={{
+                      width: '44px',
+                      height: '44px',
+                      borderRadius: '50%',
+                      objectFit: 'cover',
+                      border: '2px solid var(--accent-primary)',
+                      flexShrink: 0
+                    }}
+                  />
+                ) : (
+                  <div style={{
+                    width: '44px',
+                    height: '44px',
+                    borderRadius: '50%',
+                    background: 'rgba(59, 130, 246, 0.15)',
+                    color: 'var(--accent-primary)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    flexShrink: 0,
+                    fontWeight: '800',
+                    fontSize: '1rem'
+                  }}>
+                    {loan.client_name ? loan.client_name.charAt(0) : 'C'}
+                  </div>
+                )}
+                <div>
+                  <div style={{ fontSize: '0.96rem', fontWeight: '800', color: 'var(--text-primary)' }}>
+                    {loan.client_name}
+                  </div>
+                  <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>
+                    KYC Verified Borrower • <span style={{ fontFamily: 'var(--font-mono)', color: 'var(--accent-primary)' }}>{loan.loan_code}</span>
+                  </div>
+                </div>
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px' }}>
                 <span style={{ fontSize: '0.82rem', color: 'var(--text-muted)' }}>STANDARD INSTALLMENT</span>

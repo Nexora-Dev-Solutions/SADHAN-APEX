@@ -934,11 +934,21 @@ table.data-table tr:hover td {
     display: none !important;
   }
 
+  .modal-overlay {
+    padding: 0 !important;
+    align-items: flex-end !important;
+  }
+
   .modal-content {
     margin-top: auto;
-    border-bottom-left-radius: 0;
-    border-bottom-right-radius: 0;
-    max-height: 85vh;
+    border-bottom-left-radius: 0 !important;
+    border-bottom-right-radius: 0 !important;
+    border-top-left-radius: var(--radius-xl) !important;
+    border-top-right-radius: var(--radius-xl) !important;
+    max-height: 90vh;
+    width: 100% !important;
+    max-width: 100% !important;
+    overflow-x: hidden;
   }
 }
 

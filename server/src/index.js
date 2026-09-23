@@ -9,7 +9,7 @@ const app = express();
 const PORT = process.env.PORT || 5000;
 
 app.use(cors());
-app.use(express.json());
+app.use(express.json({ limit: '10mb' }));
 
 // Request logger
 app.use((req, res, next) => {
@@ -105,8 +105,7 @@ app.post('/api/clients', verifyToken, async (req, res) => {
   try {
     const {
       name, phone, nic_id, address, notes,
-      guarantor_name, guarantor_phone, guarantor_nic, guarantor_relation,
-      business_type, kyc_status, kyc_notes
+      business_type, kyc_status, kyc_notes, photo_url
     } = req.body;
     if (!name || !phone) {
       return res.status(400).json({ error: 'Client name and phone number are required' });
@@ -118,13 +117,10 @@ app.post('/api/clients', verifyToken, async (req, res) => {
       nic_id: nic_id || '',
       address: address || '',
       notes: notes || '',
-      guarantor_name: guarantor_name || '',
-      guarantor_phone: guarantor_phone || '',
-      guarantor_nic: guarantor_nic || '',
-      guarantor_relation: guarantor_relation || '',
       business_type: business_type || '',
       kyc_status: kyc_status || 'VERIFIED',
       kyc_notes: kyc_notes || '',
+      photo_url: photo_url || '',
       created_by: req.user.id
     });
     return res.status(201).json({ client: newClient });
@@ -148,13 +144,11 @@ app.put('/api/clients/:id', verifyToken, async (req, res) => {
   try {
     const {
       name, phone, nic_id, address, notes,
-      guarantor_name, guarantor_phone, guarantor_nic, guarantor_relation,
-      business_type, kyc_status, kyc_notes
+      business_type, kyc_status, kyc_notes, photo_url
     } = req.body;
     const updated = await db.updateClient(req.params.id, {
       name, phone, nic_id, address, notes,
-      guarantor_name, guarantor_phone, guarantor_nic, guarantor_relation,
-      business_type, kyc_status, kyc_notes
+      business_type, kyc_status, kyc_notes, photo_url
     });
     return res.json({ client: updated, message: 'Client updated successfully' });
   } catch (err) {

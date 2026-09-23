@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
-import { Edit3, X, Trash2, Check, AlertTriangle, ShieldCheck, UserCheck, ChevronDown, ChevronUp } from 'lucide-react';
+import { Edit3, X, Trash2, Check, AlertTriangle, ShieldCheck } from 'lucide-react';
 import { parseSriLankanNic } from '../utils/nicHelper';
+import ClientPhotoCapture from './ClientPhotoCapture';
 
 // Sri Lankan NIC format: 9 digits + V/X (Old) OR 12 digits (New)
 function validateSriLankanNic(val) {
@@ -26,19 +27,13 @@ function validateSriLankanPhone(val) {
 export default function EditClientModal({ client, token, currentUser, onClose, onSuccess, onDeleted }) {
   if (!client) return null;
 
+  const [photoUrl, setPhotoUrl] = useState(client.photo_url || '');
   const [name, setName] = useState(client.name || '');
   const [phone, setPhone] = useState(client.phone || '');
   const [nicId, setNicId] = useState(client.nic_id || '');
   const [address, setAddress] = useState(client.address || '');
   const [notes, setNotes] = useState(client.notes || '');
   const [businessType, setBusinessType] = useState(client.business_type || '');
-
-  // KYC & Guarantor
-  const [showGuarantor, setShowGuarantor] = useState(Boolean(client.guarantor_name));
-  const [guarantorName, setGuarantorName] = useState(client.guarantor_name || '');
-  const [guarantorPhone, setGuarantorPhone] = useState(client.guarantor_phone || '');
-  const [guarantorNic, setGuarantorNic] = useState(client.guarantor_nic || '');
-  const [guarantorRelation, setGuarantorRelation] = useState(client.guarantor_relation || '');
   const [kycStatus, setKycStatus] = useState(client.kyc_status || 'VERIFIED');
   const [kycNotes, setKycNotes] = useState(client.kyc_notes || '');
 
@@ -87,10 +82,7 @@ export default function EditClientModal({ client, token, currentUser, onClose, o
           address: address.trim(),
           notes: notes.trim(),
           business_type: businessType.trim(),
-          guarantor_name: guarantorName.trim(),
-          guarantor_phone: guarantorPhone.trim(),
-          guarantor_nic: guarantorNic.trim(),
-          guarantor_relation: guarantorRelation.trim(),
+          photo_url: photoUrl,
           kyc_status: kycStatus,
           kyc_notes: kycNotes.trim()
         })
@@ -165,6 +157,12 @@ export default function EditClientModal({ client, token, currentUser, onClose, o
                 </div>
               </div>
             )}
+
+            <ClientPhotoCapture
+              photoUrl={photoUrl}
+              onPhotoChange={setPhotoUrl}
+              label="Borrower Photo"
+            />
 
             <div className="form-group">
               <label className="form-label">Full Name *</label>
@@ -289,87 +287,6 @@ export default function EditClientModal({ client, token, currentUser, onClose, o
                 value={address}
                 onChange={(e) => setAddress(e.target.value)}
               />
-            </div>
-
-            {/* Guarantor Details Section */}
-            <div style={{
-              marginTop: '12px',
-              marginBottom: '16px',
-              border: '1px solid var(--surface-border)',
-              borderRadius: 'var(--radius-md)',
-              background: 'rgba(255, 255, 255, 0.02)',
-              overflow: 'hidden'
-            }}>
-              <div
-                style={{
-                  padding: '10px 14px',
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'center',
-                  cursor: 'pointer',
-                  background: 'rgba(255, 255, 255, 0.03)'
-                }}
-                onClick={() => setShowGuarantor(!showGuarantor)}
-              >
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.88rem', fontWeight: '700' }}>
-                  <UserCheck size={16} color="#10b981" />
-                  <span>Guarantor / Surety Details (ඇපකරු)</span>
-                  {guarantorName && <span style={{ fontSize: '0.72rem', color: '#10b981' }}>({guarantorName})</span>}
-                </div>
-                {showGuarantor ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
-              </div>
-
-              {showGuarantor && (
-                <div style={{ padding: '14px', borderTop: '1px solid var(--surface-border)' }}>
-                  <div className="form-row">
-                    <div className="form-group">
-                      <label className="form-label">Guarantor Full Name</label>
-                      <input
-                        type="text"
-                        className="form-input"
-                        placeholder="e.g. Bandara Perera"
-                        value={guarantorName}
-                        onChange={(e) => setGuarantorName(e.target.value)}
-                      />
-                    </div>
-
-                    <div className="form-group">
-                      <label className="form-label">Relationship to Client</label>
-                      <input
-                        type="text"
-                        className="form-input"
-                        placeholder="e.g. Spouse, Brother, Business Partner"
-                        value={guarantorRelation}
-                        onChange={(e) => setGuarantorRelation(e.target.value)}
-                      />
-                    </div>
-                  </div>
-
-                  <div className="form-row">
-                    <div className="form-group">
-                      <label className="form-label">Guarantor Phone</label>
-                      <input
-                        type="tel"
-                        className="form-input"
-                        placeholder="0779876543"
-                        value={guarantorPhone}
-                        onChange={(e) => setGuarantorPhone(e.target.value)}
-                      />
-                    </div>
-
-                    <div className="form-group">
-                      <label className="form-label">Guarantor NIC</label>
-                      <input
-                        type="text"
-                        className="form-input"
-                        placeholder="781234567V"
-                        value={guarantorNic}
-                        onChange={(e) => setGuarantorNic(e.target.value.toUpperCase())}
-                      />
-                    </div>
-                  </div>
-                </div>
-              )}
             </div>
 
             <div className="form-group">

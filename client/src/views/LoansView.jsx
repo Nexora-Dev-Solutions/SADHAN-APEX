@@ -122,8 +122,23 @@ export default function LoansView({
                       {loan.loan_code}
                     </td>
                     <td>
-                      <div style={{ fontWeight: '600' }}>{loan.client_name}</div>
-                      <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{loan.client_phone}</div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                        {loan.photo_url ? (
+                          <img
+                            src={loan.photo_url}
+                            alt={loan.client_name}
+                            style={{ width: '36px', height: '36px', borderRadius: '50%', objectFit: 'cover', border: '1.5px solid var(--accent-primary)', flexShrink: 0 }}
+                          />
+                        ) : (
+                          <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: 'rgba(59, 130, 246, 0.15)', color: 'var(--accent-primary)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, fontWeight: '800', fontSize: '0.85rem' }}>
+                            {loan.client_name ? loan.client_name.charAt(0) : 'C'}
+                          </div>
+                        )}
+                        <div>
+                          <div style={{ fontWeight: '600' }}>{loan.client_name}</div>
+                          <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{loan.client_phone}</div>
+                        </div>
+                      </div>
                     </td>
                     <td>
                       <div>Rs. {Number(loan.principal_amount).toLocaleString()}</div>
@@ -207,17 +222,30 @@ export default function LoansView({
             return (
               <div key={`mob-loan-${loan.id}`} className="mobile-card">
                 <div className="mobile-card-header">
-                  <div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '2px' }}>
-                      <span style={{ fontWeight: '800', color: 'var(--accent-primary)', fontFamily: 'var(--font-mono)', fontSize: '0.88rem' }}>
-                        {loan.loan_code}
-                      </span>
-                      <span className={`status-badge badge-${loan.status.toLowerCase()}`}>
-                        {loan.status}
-                      </span>
-                    </div>
-                    <div style={{ fontSize: '1.05rem', fontWeight: '800', color: 'var(--text-primary)' }}>
-                      {loan.client_name}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    {loan.photo_url ? (
+                      <img
+                        src={loan.photo_url}
+                        alt={loan.client_name}
+                        style={{ width: '40px', height: '40px', borderRadius: '50%', objectFit: 'cover', border: '2px solid var(--accent-primary)', flexShrink: 0 }}
+                      />
+                    ) : (
+                      <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: 'rgba(59, 130, 246, 0.15)', color: 'var(--accent-primary)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, fontWeight: '800', fontSize: '0.95rem' }}>
+                        {loan.client_name ? loan.client_name.charAt(0) : 'C'}
+                      </div>
+                    )}
+                    <div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '2px' }}>
+                        <span style={{ fontWeight: '800', color: 'var(--accent-primary)', fontFamily: 'var(--font-mono)', fontSize: '0.88rem' }}>
+                          {loan.loan_code}
+                        </span>
+                        <span className={`status-badge badge-${loan.status.toLowerCase()}`}>
+                          {loan.status}
+                        </span>
+                      </div>
+                      <div style={{ fontSize: '1.05rem', fontWeight: '800', color: 'var(--text-primary)' }}>
+                        {loan.client_name}
+                      </div>
                     </div>
                   </div>
 

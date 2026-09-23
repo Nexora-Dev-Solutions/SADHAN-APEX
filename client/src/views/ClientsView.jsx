@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Users, UserPlus, Phone, MapPin, PlusCircle, Search, Edit3, ShieldCheck, AlertTriangle, UserCheck, Briefcase } from 'lucide-react';
+import { Users, UserPlus, Phone, MapPin, PlusCircle, Search, Edit3, ShieldCheck, AlertTriangle, Briefcase, Camera } from 'lucide-react';
 import { parseSriLankanNic } from '../utils/nicHelper';
 
 export default function ClientsView({
@@ -17,7 +17,6 @@ export default function ClientsView({
       c.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       c.phone.includes(searchTerm) ||
       (c.nic_id && c.nic_id.toLowerCase().includes(searchTerm.toLowerCase())) ||
-      (c.guarantor_name && c.guarantor_name.toLowerCase().includes(searchTerm.toLowerCase())) ||
       (c.business_type && c.business_type.toLowerCase().includes(searchTerm.toLowerCase()));
 
     const matchesKyc =
@@ -34,7 +33,7 @@ export default function ClientsView({
         <div>
           <h2 style={{ fontSize: '1.25rem', fontWeight: '800' }}>Client & KYC Directory</h2>
           <p style={{ fontSize: '0.82rem', color: 'var(--text-muted)' }}>
-            Client contacts, identity verification (KYC), guarantors, and credit
+            Client contacts, photo KYC verification, and active credit accounts
           </p>
         </div>
 
@@ -51,7 +50,7 @@ export default function ClientsView({
           <input
             type="text"
             className="form-input"
-            placeholder="Search name, phone, NIC, guarantor, shop..."
+            placeholder="Search name, phone, NIC, business..."
             style={{ paddingLeft: '38px' }}
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
@@ -79,10 +78,9 @@ export default function ClientsView({
           <table className="data-table">
             <thead>
               <tr>
-                <th>Client Name & Identity</th>
+                <th>Borrower & Photo KYC</th>
                 <th>Phone</th>
                 <th>KYC Status</th>
-                <th>Guarantor (ඇපකරු)</th>
                 <th>Address & Notes</th>
                 <th>Active Loans</th>
                 <th>Total Debt</th>
@@ -92,7 +90,7 @@ export default function ClientsView({
             <tbody>
               {filteredClients.length === 0 ? (
                 <tr>
-                  <td colSpan="8" style={{ textAlign: 'center', padding: '36px', color: 'var(--text-muted)' }}>
+                  <td colSpan="7" style={{ textAlign: 'center', padding: '36px', color: 'var(--text-muted)' }}>
                     No clients match your criteria.
                   </td>
                 </tr>
@@ -104,23 +102,57 @@ export default function ClientsView({
                   return (
                     <tr key={client.id}>
                       <td>
-                        <div style={{ fontWeight: '700', fontSize: '0.95rem' }}>{client.name}</div>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '2px' }}>
-                          <span style={{ fontFamily: 'var(--font-mono)', fontSize: '0.78rem', color: 'var(--accent-primary)' }}>
-                            {client.nic_id || 'No NIC'}
-                          </span>
-                          {demo && (
-                            <span style={{ fontSize: '0.72rem', color: '#93c5fd' }}>
-                              • {demo.gender}, ~{demo.approximateAge}y
-                            </span>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                          {client.photo_url ? (
+                            <img
+                              src={client.photo_url}
+                              alt={client.name}
+                              style={{
+                                width: '42px',
+                                height: '42px',
+                                borderRadius: '50%',
+                                objectFit: 'cover',
+                                border: '2px solid var(--accent-primary)',
+                                flexShrink: 0
+                              }}
+                            />
+                          ) : (
+                            <div style={{
+                              width: '42px',
+                              height: '42px',
+                              borderRadius: '50%',
+                              background: 'rgba(59, 130, 246, 0.15)',
+                              color: 'var(--accent-primary)',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              flexShrink: 0,
+                              fontWeight: '800',
+                              fontSize: '1rem'
+                            }}>
+                              {client.name ? client.name.charAt(0) : 'C'}
+                            </div>
                           )}
-                        </div>
-                        {client.business_type && (
-                          <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '4px', marginTop: '2px' }}>
-                            <Briefcase size={11} />
-                            {client.business_type}
+                          <div>
+                            <div style={{ fontWeight: '700', fontSize: '0.95rem' }}>{client.name}</div>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '2px' }}>
+                              <span style={{ fontFamily: 'var(--font-mono)', fontSize: '0.78rem', color: 'var(--accent-primary)' }}>
+                                {client.nic_id || 'No NIC'}
+                              </span>
+                              {demo && (
+                                <span style={{ fontSize: '0.72rem', color: '#93c5fd' }}>
+                                  • {demo.gender}, ~{demo.approximateAge}y
+                                </span>
+                              )}
+                            </div>
+                            {client.business_type && (
+                              <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '4px', marginTop: '2px' }}>
+                                <Briefcase size={11} />
+                                {client.business_type}
+                              </div>
+                            )}
                           </div>
-                        )}
+                        </div>
                       </td>
                       <td>
                         <a
@@ -152,31 +184,6 @@ export default function ClientsView({
                         )}
                       </td>
                       <td>
-                        {client.guarantor_name ? (
-                          <div style={{ fontSize: '0.82rem' }}>
-                            <div style={{ fontWeight: '600', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                              <UserCheck size={13} color="#10b981" />
-                              {client.guarantor_name}
-                              {client.guarantor_relation && (
-                                <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>
-                                  ({client.guarantor_relation})
-                                </span>
-                              )}
-                            </div>
-                            {client.guarantor_phone && (
-                              <a
-                                href={`tel:${client.guarantor_phone}`}
-                                style={{ fontSize: '0.72rem', color: '#60a5fa', textDecoration: 'none' }}
-                              >
-                                {client.guarantor_phone}
-                              </a>
-                            )}
-                          </div>
-                        ) : (
-                          <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>None recorded</span>
-                        )}
-                      </td>
-                      <td>
                         <div style={{ fontSize: '0.82rem' }}>{client.address || '—'}</div>
                         {client.notes && (
                           <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', fontStyle: 'italic', marginTop: '2px' }}>
@@ -198,10 +205,10 @@ export default function ClientsView({
                             className="btn btn-secondary btn-sm"
                             style={{ gap: '4px' }}
                             onClick={() => onEditClient(client)}
-                            title="Edit Client & KYC"
+                            title="Edit Client & Photo"
                           >
                             <Edit3 size={14} />
-                            Edit / KYC
+                            Edit
                           </button>
                           {currentUser.role === 'OWNER' && (
                             <button
@@ -240,19 +247,51 @@ export default function ClientsView({
             return (
               <div key={`mob-client-${client.id}`} className="mobile-card">
                 <div className="mobile-card-header">
-                  <div>
-                    <div style={{ fontSize: '1.05rem', fontWeight: '800', color: 'var(--text-primary)' }}>
-                      {client.name}
-                    </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '2px' }}>
-                      <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontFamily: 'var(--font-mono)' }}>
-                        {client.nic_id || 'No NIC'}
-                      </span>
-                      {demo && (
-                        <span style={{ fontSize: '0.72rem', color: '#93c5fd' }}>
-                          • {demo.gender}, ~{demo.approximateAge}y
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    {client.photo_url ? (
+                      <img
+                        src={client.photo_url}
+                        alt={client.name}
+                        style={{
+                          width: '42px',
+                          height: '42px',
+                          borderRadius: '50%',
+                          objectFit: 'cover',
+                          border: '2px solid var(--accent-primary)',
+                          flexShrink: 0
+                        }}
+                      />
+                    ) : (
+                      <div style={{
+                        width: '42px',
+                        height: '42px',
+                        borderRadius: '50%',
+                        background: 'rgba(59, 130, 246, 0.15)',
+                        color: 'var(--accent-primary)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        flexShrink: 0,
+                        fontWeight: '800',
+                        fontSize: '1rem'
+                      }}>
+                        {client.name ? client.name.charAt(0) : 'C'}
+                      </div>
+                    )}
+                    <div>
+                      <div style={{ fontSize: '1.05rem', fontWeight: '800', color: 'var(--text-primary)' }}>
+                        {client.name}
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '2px' }}>
+                        <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontFamily: 'var(--font-mono)' }}>
+                          {client.nic_id || 'No NIC'}
                         </span>
-                      )}
+                        {demo && (
+                          <span style={{ fontSize: '0.72rem', color: '#93c5fd' }}>
+                            • {demo.gender}, ~{demo.approximateAge}y
+                          </span>
+                        )}
+                      </div>
                     </div>
                   </div>
 
@@ -291,34 +330,6 @@ export default function ClientsView({
                     </div>
                   </div>
                 </div>
-
-                {/* Guarantor Info on Mobile */}
-                {client.guarantor_name && (
-                  <div style={{
-                    fontSize: '0.78rem',
-                    background: 'rgba(16, 185, 129, 0.06)',
-                    border: '1px solid rgba(16, 185, 129, 0.2)',
-                    padding: '8px 10px',
-                    borderRadius: '6px',
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'center'
-                  }}>
-                    <div>
-                      <span style={{ color: 'var(--text-muted)' }}>Guarantor: </span>
-                      <strong>{client.guarantor_name}</strong>
-                      {client.guarantor_relation && <span style={{ color: 'var(--text-muted)' }}> ({client.guarantor_relation})</span>}
-                    </div>
-                    {client.guarantor_phone && (
-                      <a
-                        href={`tel:${client.guarantor_phone}`}
-                        style={{ color: '#10b981', textDecoration: 'none', fontWeight: '700', display: 'flex', alignItems: 'center', gap: '3px' }}
-                      >
-                        <Phone size={12} /> Call
-                      </a>
-                    )}
-                  </div>
-                )}
 
                 {client.address && (
                   <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>

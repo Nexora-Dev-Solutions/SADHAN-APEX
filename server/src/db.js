@@ -141,13 +141,10 @@ async function initPostgresSchema() {
     CREATE UNIQUE INDEX IF NOT EXISTS idx_clients_unique_nic ON clients (UPPER(TRIM(nic_id))) WHERE nic_id IS NOT NULL AND TRIM(nic_id) != '';
     CREATE UNIQUE INDEX IF NOT EXISTS idx_clients_unique_phone ON clients (TRIM(phone)) WHERE phone IS NOT NULL AND TRIM(phone) != '';
 
-    ALTER TABLE clients ADD COLUMN IF NOT EXISTS guarantor_name VARCHAR(100);
-    ALTER TABLE clients ADD COLUMN IF NOT EXISTS guarantor_phone VARCHAR(20);
-    ALTER TABLE clients ADD COLUMN IF NOT EXISTS guarantor_nic VARCHAR(50);
-    ALTER TABLE clients ADD COLUMN IF NOT EXISTS guarantor_relation VARCHAR(50);
     ALTER TABLE clients ADD COLUMN IF NOT EXISTS business_type VARCHAR(100);
     ALTER TABLE clients ADD COLUMN IF NOT EXISTS kyc_status VARCHAR(20) DEFAULT 'VERIFIED';
     ALTER TABLE clients ADD COLUMN IF NOT EXISTS kyc_notes TEXT;
+    ALTER TABLE clients ADD COLUMN IF NOT EXISTS photo_url TEXT;
   `;
   await pgPool.query(schemaSql);
 }
@@ -427,8 +424,7 @@ const db = {
 
   createClient: async ({
     name, phone, nic_id, address, notes,
-    guarantor_name, guarantor_phone, guarantor_nic, guarantor_relation,
-    business_type, kyc_status, kyc_notes,
+    business_type, kyc_status, kyc_notes, photo_url,
     created_by
   }) => {
     // Normalize and validate phone
@@ -452,13 +448,6 @@ const db = {
         throw new Error(`Invalid NIC format '${cleanNic}'. Sri Lankan NIC must be 9 digits with V/X (e.g. 842100452V) or 12 digits (e.g. 198421004521).`);
       }
     }
-
-    // Normalize and validate guarantor phone / NIC if provided
-    let cleanGuarPhone = guarantor_phone ? guarantor_phone.trim().replace(/[\s\-()]/g, '') : '';
-    if (cleanGuarPhone.startsWith('+94')) cleanGuarPhone = '0' + cleanGuarPhone.slice(3);
-    else if (cleanGuarPhone.startsWith('94') && cleanGuarPhone.length === 11) cleanGuarPhone = '0' + cleanGuarPhone.slice(2);
-
-    const cleanGuarNic = guarantor_nic ? guarantor_nic.trim().toUpperCase() : '';
 
     if (usePostgres) {
       // Check for duplicate NIC
@@ -489,23 +478,19 @@ const db = {
         const res = await pgPool.query(
           `INSERT INTO clients (
              name, phone, nic_id, address, notes,
-             guarantor_name, guarantor_phone, guarantor_nic, guarantor_relation,
-             business_type, kyc_status, kyc_notes,
+             business_type, kyc_status, kyc_notes, photo_url,
              created_by
-           ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13) RETURNING *`,
+           ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) RETURNING *`,
           [
             name ? name.trim() : '',
             cleanPhone,
             cleanNic,
             address ? address.trim() : '',
             notes ? notes.trim() : '',
-            guarantor_name ? guarantor_name.trim() : '',
-            cleanGuarPhone,
-            cleanGuarNic,
-            guarantor_relation ? guarantor_relation.trim() : '',
             business_type ? business_type.trim() : '',
             kyc_status || 'VERIFIED',
             kyc_notes ? kyc_notes.trim() : '',
+            photo_url || '',
             created_by
           ]
         );
@@ -548,13 +533,10 @@ const db = {
       nic_id: cleanNic,
       address: address ? address.trim() : '',
       notes: notes ? notes.trim() : '',
-      guarantor_name: guarantor_name ? guarantor_name.trim() : '',
-      guarantor_phone: cleanGuarPhone,
-      guarantor_nic: cleanGuarNic,
-      guarantor_relation: guarantor_relation ? guarantor_relation.trim() : '',
       business_type: business_type ? business_type.trim() : '',
       kyc_status: kyc_status || 'VERIFIED',
       kyc_notes: kyc_notes ? kyc_notes.trim() : '',
+      photo_url: photo_url || '',
       created_by,
       created_at: new Date().toISOString()
     };
@@ -565,8 +547,7 @@ const db = {
 
   updateClient: async (id, {
     name, phone, nic_id, address, notes,
-    guarantor_name, guarantor_phone, guarantor_nic, guarantor_relation,
-    business_type, kyc_status, kyc_notes
+    business_type, kyc_status, kyc_notes, photo_url
   }) => {
     const clientId = parseInt(id, 10);
     
@@ -630,27 +611,21 @@ const db = {
                nic_id = COALESCE($3, nic_id),
                address = COALESCE($4, address),
                notes = COALESCE($5, notes),
-               guarantor_name = COALESCE($6, guarantor_name),
-               guarantor_phone = COALESCE($7, guarantor_phone),
-               guarantor_nic = COALESCE($8, guarantor_nic),
-               guarantor_relation = COALESCE($9, guarantor_relation),
-               business_type = COALESCE($10, business_type),
-               kyc_status = COALESCE($11, kyc_status),
-               kyc_notes = COALESCE($12, kyc_notes)
-           WHERE id = $13 RETURNING *`,
+               business_type = COALESCE($6, business_type),
+               kyc_status = COALESCE($7, kyc_status),
+               kyc_notes = COALESCE($8, kyc_notes),
+               photo_url = COALESCE($9, photo_url)
+           WHERE id = $10 RETURNING *`,
           [
             name ? name.trim() : null,
             cleanPhone,
             cleanNic,
             address ? address.trim() : null,
             notes ? notes.trim() : null,
-            guarantor_name !== undefined ? (guarantor_name ? guarantor_name.trim() : '') : null,
-            guarantor_phone !== undefined ? (guarantor_phone ? guarantor_phone.trim() : '') : null,
-            guarantor_nic !== undefined ? (guarantor_nic ? guarantor_nic.trim().toUpperCase() : '') : null,
-            guarantor_relation !== undefined ? (guarantor_relation ? guarantor_relation.trim() : '') : null,
             business_type !== undefined ? (business_type ? business_type.trim() : '') : null,
             kyc_status !== undefined ? kyc_status : null,
             kyc_notes !== undefined ? (kyc_notes ? kyc_notes.trim() : '') : null,
+            photo_url !== undefined ? photo_url : null,
             clientId
           ]
         );
@@ -692,13 +667,10 @@ const db = {
     if (cleanNic !== undefined) c.nic_id = cleanNic;
     if (address !== undefined) c.address = address.trim();
     if (notes !== undefined) c.notes = notes.trim();
-    if (guarantor_name !== undefined) c.guarantor_name = guarantor_name.trim();
-    if (guarantor_phone !== undefined) c.guarantor_phone = guarantor_phone.trim();
-    if (guarantor_nic !== undefined) c.guarantor_nic = guarantor_nic.trim().toUpperCase();
-    if (guarantor_relation !== undefined) c.guarantor_relation = guarantor_relation.trim();
     if (business_type !== undefined) c.business_type = business_type.trim();
     if (kyc_status !== undefined) c.kyc_status = kyc_status;
     if (kyc_notes !== undefined) c.kyc_notes = kyc_notes.trim();
+    if (photo_url !== undefined) c.photo_url = photo_url;
     saveLocalStore();
     return c;
   },
@@ -739,7 +711,7 @@ const db = {
   getAllLoans: async (filters = {}) => {
     if (usePostgres) {
       let query = `
-        SELECT l.*, c.name AS client_name, c.phone AS client_phone, c.nic_id,
+        SELECT l.*, c.name AS client_name, c.phone AS client_phone, c.nic_id, c.photo_url,
                u.name AS collector_name
         FROM loans l
         JOIN clients c ON l.client_id = c.id
@@ -771,6 +743,7 @@ const db = {
         client_name: client.name || 'Unknown',
         client_phone: client.phone || '',
         nic_id: client.nic_id || '',
+        photo_url: client.photo_url || '',
         collector_name: agent.name || 'Unassigned'
       };
     });
@@ -787,7 +760,7 @@ const db = {
   getLoanById: async (id) => {
     if (usePostgres) {
       const loanRes = await pgPool.query(`
-        SELECT l.*, c.name AS client_name, c.phone AS client_phone, c.nic_id, c.address AS client_address,
+        SELECT l.*, c.name AS client_name, c.phone AS client_phone, c.nic_id, c.address AS client_address, c.photo_url,
                u.name AS collector_name
         FROM loans l
         JOIN clients c ON l.client_id = c.id
@@ -838,6 +811,7 @@ const db = {
       client_phone: client.phone,
       nic_id: client.nic_id,
       client_address: client.address,
+      photo_url: client.photo_url || '',
       collector_name: agent.name,
       installments,
       payments

@@ -39,6 +39,20 @@
       "notes": "Grocery shop owner",
       "created_by": 1,
       "created_at": "2026-09-22T14:55:09.024Z"
+    },
+    {
+      "id": 3,
+      "name": "Nimal Jayawardena",
+      "phone": "0714445566",
+      "nic_id": "912345678V",
+      "address": "",
+      "notes": "Market vendor",
+      "business_type": "Bakery Shop",
+      "kyc_status": "VERIFIED",
+      "kyc_notes": "",
+      "photo_url": "data:image/jpeg;base64,samplefacephoto123",
+      "created_by": 1,
+      "created_at": "2026-09-23T18:13:25.910Z"
     }
   ],
   "loans": [
@@ -61,6 +75,26 @@
       "remaining_balance": 61506.91,
       "status": "ACTIVE",
       "created_at": "2026-09-22T14:55:09.024Z"
+    },
+    {
+      "id": 2,
+      "loan_code": "LN-2026-6657",
+      "client_id": 3,
+      "created_by": 1,
+      "assigned_agent_id": null,
+      "principal_amount": 50000,
+      "interest_rate_pct": 8,
+      "total_interest": 4000,
+      "total_payable": 54000,
+      "installment_count": 58,
+      "frequency": "DAILY",
+      "installment_amount": 931.03,
+      "start_date": "2026-09-24",
+      "end_date": "2026-11-21",
+      "total_paid": 0,
+      "remaining_balance": 54000,
+      "status": "ACTIVE",
+      "created_at": "2026-09-23T18:13:46.658Z"
     }
   ],
   "installments": [
@@ -583,6 +617,528 @@
       "installment_no": 58,
       "due_date": "2026-11-18",
       "expected_amount": 1118.17,
+      "paid_amount": 0,
+      "status": "PENDING"
+    },
+    {
+      "id": 59,
+      "loan_id": 2,
+      "installment_no": 1,
+      "due_date": "2026-09-24",
+      "expected_amount": 931.03,
+      "paid_amount": 0,
+      "status": "PENDING"
+    },
+    {
+      "id": 60,
+      "loan_id": 2,
+      "installment_no": 2,
+      "due_date": "2026-09-25",
+      "expected_amount": 931.03,
+      "paid_amount": 0,
+      "status": "PENDING"
+    },
+    {
+      "id": 61,
+      "loan_id": 2,
+      "installment_no": 3,
+      "due_date": "2026-09-26",
+      "expected_amount": 931.03,
+      "paid_amount": 0,
+      "status": "PENDING"
+    },
+    {
+      "id": 62,
+      "loan_id": 2,
+      "installment_no": 4,
+      "due_date": "2026-09-27",
+      "expected_amount": 931.03,
+      "paid_amount": 0,
+      "status": "PENDING"
+    },
+    {
+      "id": 63,
+      "loan_id": 2,
+      "installment_no": 5,
+      "due_date": "2026-09-28",
+      "expected_amount": 931.03,
+      "paid_amount": 0,
+      "status": "PENDING"
+    },
+    {
+      "id": 64,
+      "loan_id": 2,
+      "installment_no": 6,
+      "due_date": "2026-09-29",
+      "expected_amount": 931.03,
+      "paid_amount": 0,
+      "status": "PENDING"
+    },
+    {
+      "id": 65,
+      "loan_id": 2,
+      "installment_no": 7,
+      "due_date": "2026-09-30",
+      "expected_amount": 931.03,
+      "paid_amount": 0,
+      "status": "PENDING"
+    },
+    {
+      "id": 66,
+      "loan_id": 2,
+      "installment_no": 8,
+      "due_date": "2026-10-01",
+      "expected_amount": 931.03,
+      "paid_amount": 0,
+      "status": "PENDING"
+    },
+    {
+      "id": 67,
+      "loan_id": 2,
+      "installment_no": 9,
+      "due_date": "2026-10-02",
+      "expected_amount": 931.03,
+      "paid_amount": 0,
+      "status": "PENDING"
+    },
+    {
+      "id": 68,
+      "loan_id": 2,
+      "installment_no": 10,
+      "due_date": "2026-10-03",
+      "expected_amount": 931.03,
+      "paid_amount": 0,
+      "status": "PENDING"
+    },
+    {
+      "id": 69,
+      "loan_id": 2,
+      "installment_no": 11,
+      "due_date": "2026-10-04",
+      "expected_amount": 931.03,
+      "paid_amount": 0,
+      "status": "PENDING"
+    },
+    {
+      "id": 70,
+      "loan_id": 2,
+      "installment_no": 12,
+      "due_date": "2026-10-05",
+      "expected_amount": 931.03,
+      "paid_amount": 0,
+      "status": "PENDING"
+    },
+    {
+      "id": 71,
+      "loan_id": 2,
+      "installment_no": 13,
+      "due_date": "2026-10-06",
+      "expected_amount": 931.03,
+      "paid_amount": 0,
+      "status": "PENDING"
+    },
+    {
+      "id": 72,
+      "loan_id": 2,
+      "installment_no": 14,
+      "due_date": "2026-10-07",
+      "expected_amount": 931.03,
+      "paid_amount": 0,
+      "status": "PENDING"
+    },
+    {
+      "id": 73,
+      "loan_id": 2,
+      "installment_no": 15,
+      "due_date": "2026-10-08",
+      "expected_amount": 931.03,
+      "paid_amount": 0,
+      "status": "PENDING"
+    },
+    {
+      "id": 74,
+      "loan_id": 2,
+      "installment_no": 16,
+      "due_date": "2026-10-09",
+      "expected_amount": 931.03,
+      "paid_amount": 0,
+      "status": "PENDING"
+    },
+    {
+      "id": 75,
+      "loan_id": 2,
+      "installment_no": 17,
+      "due_date": "2026-10-10",
+      "expected_amount": 931.03,
+      "paid_amount": 0,
+      "status": "PENDING"
+    },
+    {
+      "id": 76,
+      "loan_id": 2,
+      "installment_no": 18,
+      "due_date": "2026-10-11",
+      "expected_amount": 931.03,
+      "paid_amount": 0,
+      "status": "PENDING"
+    },
+    {
+      "id": 77,
+      "loan_id": 2,
+      "installment_no": 19,
+      "due_date": "2026-10-12",
+      "expected_amount": 931.03,
+      "paid_amount": 0,
+      "status": "PENDING"
+    },
+    {
+      "id": 78,
+      "loan_id": 2,
+      "installment_no": 20,
+      "due_date": "2026-10-13",
+      "expected_amount": 931.03,
+      "paid_amount": 0,
+      "status": "PENDING"
+    },
+    {
+      "id": 79,
+      "loan_id": 2,
+      "installment_no": 21,
+      "due_date": "2026-10-14",
+      "expected_amount": 931.03,
+      "paid_amount": 0,
+      "status": "PENDING"
+    },
+    {
+      "id": 80,
+      "loan_id": 2,
+      "installment_no": 22,
+      "due_date": "2026-10-15",
+      "expected_amount": 931.03,
+      "paid_amount": 0,
+      "status": "PENDING"
+    },
+    {
+      "id": 81,
+      "loan_id": 2,
+      "installment_no": 23,
+      "due_date": "2026-10-16",
+      "expected_amount": 931.03,
+      "paid_amount": 0,
+      "status": "PENDING"
+    },
+    {
+      "id": 82,
+      "loan_id": 2,
+      "installment_no": 24,
+      "due_date": "2026-10-17",
+      "expected_amount": 931.03,
+      "paid_amount": 0,
+      "status": "PENDING"
+    },
+    {
+      "id": 83,
+      "loan_id": 2,
+      "installment_no": 25,
+      "due_date": "2026-10-18",
+      "expected_amount": 931.03,
+      "paid_amount": 0,
+      "status": "PENDING"
+    },
+    {
+      "id": 84,
+      "loan_id": 2,
+      "installment_no": 26,
+      "due_date": "2026-10-19",
+      "expected_amount": 931.03,
+      "paid_amount": 0,
+      "status": "PENDING"
+    },
+    {
+      "id": 85,
+      "loan_id": 2,
+      "installment_no": 27,
+      "due_date": "2026-10-20",
+      "expected_amount": 931.03,
+      "paid_amount": 0,
+      "status": "PENDING"
+    },
+    {
+      "id": 86,
+      "loan_id": 2,
+      "installment_no": 28,
+      "due_date": "2026-10-21",
+      "expected_amount": 931.03,
+      "paid_amount": 0,
+      "status": "PENDING"
+    },
+    {
+      "id": 87,
+      "loan_id": 2,
+      "installment_no": 29,
+      "due_date": "2026-10-22",
+      "expected_amount": 931.03,
+      "paid_amount": 0,
+      "status": "PENDING"
+    },
+    {
+      "id": 88,
+      "loan_id": 2,
+      "installment_no": 30,
+      "due_date": "2026-10-23",
+      "expected_amount": 931.03,
+      "paid_amount": 0,
+      "status": "PENDING"
+    },
+    {
+      "id": 89,
+      "loan_id": 2,
+      "installment_no": 31,
+      "due_date": "2026-10-24",
+      "expected_amount": 931.03,
+      "paid_amount": 0,
+      "status": "PENDING"
+    },
+    {
+      "id": 90,
+      "loan_id": 2,
+      "installment_no": 32,
+      "due_date": "2026-10-25",
+      "expected_amount": 931.03,
+      "paid_amount": 0,
+      "status": "PENDING"
+    },
+    {
+      "id": 91,
+      "loan_id": 2,
+      "installment_no": 33,
+      "due_date": "2026-10-26",
+      "expected_amount": 931.03,
+      "paid_amount": 0,
+      "status": "PENDING"
+    },
+    {
+      "id": 92,
+      "loan_id": 2,
+      "installment_no": 34,
+      "due_date": "2026-10-27",
+      "expected_amount": 931.03,
+      "paid_amount": 0,
+      "status": "PENDING"
+    },
+    {
+      "id": 93,
+      "loan_id": 2,
+      "installment_no": 35,
+      "due_date": "2026-10-28",
+      "expected_amount": 931.03,
+      "paid_amount": 0,
+      "status": "PENDING"
+    },
+    {
+      "id": 94,
+      "loan_id": 2,
+      "installment_no": 36,
+      "due_date": "2026-10-29",
+      "expected_amount": 931.03,
+      "paid_amount": 0,
+      "status": "PENDING"
+    },
+    {
+      "id": 95,
+      "loan_id": 2,
+      "installment_no": 37,
+      "due_date": "2026-10-30",
+      "expected_amount": 931.03,
+      "paid_amount": 0,
+      "status": "PENDING"
+    },
+    {
+      "id": 96,
+      "loan_id": 2,
+      "installment_no": 38,
+      "due_date": "2026-10-31",
+      "expected_amount": 931.03,
+      "paid_amount": 0,
+      "status": "PENDING"
+    },
+    {
+      "id": 97,
+      "loan_id": 2,
+      "installment_no": 39,
+      "due_date": "2026-11-01",
+      "expected_amount": 931.03,
+      "paid_amount": 0,
+      "status": "PENDING"
+    },
+    {
+      "id": 98,
+      "loan_id": 2,
+      "installment_no": 40,
+      "due_date": "2026-11-02",
+      "expected_amount": 931.03,
+      "paid_amount": 0,
+      "status": "PENDING"
+    },
+    {
+      "id": 99,
+      "loan_id": 2,
+      "installment_no": 41,
+      "due_date": "2026-11-03",
+      "expected_amount": 931.03,
+      "paid_amount": 0,
+      "status": "PENDING"
+    },
+    {
+      "id": 100,
+      "loan_id": 2,
+      "installment_no": 42,
+      "due_date": "2026-11-04",
+      "expected_amount": 931.03,
+      "paid_amount": 0,
+      "status": "PENDING"
+    },
+    {
+      "id": 101,
+      "loan_id": 2,
+      "installment_no": 43,
+      "due_date": "2026-11-05",
+      "expected_amount": 931.03,
+      "paid_amount": 0,
+      "status": "PENDING"
+    },
+    {
+      "id": 102,
+      "loan_id": 2,
+      "installment_no": 44,
+      "due_date": "2026-11-06",
+      "expected_amount": 931.03,
+      "paid_amount": 0,
+      "status": "PENDING"
+    },
+    {
+      "id": 103,
+      "loan_id": 2,
+      "installment_no": 45,
+      "due_date": "2026-11-07",
+      "expected_amount": 931.03,
+      "paid_amount": 0,
+      "status": "PENDING"
+    },
+    {
+      "id": 104,
+      "loan_id": 2,
+      "installment_no": 46,
+      "due_date": "2026-11-08",
+      "expected_amount": 931.03,
+      "paid_amount": 0,
+      "status": "PENDING"
+    },
+    {
+      "id": 105,
+      "loan_id": 2,
+      "installment_no": 47,
+      "due_date": "2026-11-09",
+      "expected_amount": 931.03,
+      "paid_amount": 0,
+      "status": "PENDING"
+    },
+    {
+      "id": 106,
+      "loan_id": 2,
+      "installment_no": 48,
+      "due_date": "2026-11-10",
+      "expected_amount": 931.03,
+      "paid_amount": 0,
+      "status": "PENDING"
+    },
+    {
+      "id": 107,
+      "loan_id": 2,
+      "installment_no": 49,
+      "due_date": "2026-11-11",
+      "expected_amount": 931.03,
+      "paid_amount": 0,
+      "status": "PENDING"
+    },
+    {
+      "id": 108,
+      "loan_id": 2,
+      "installment_no": 50,
+      "due_date": "2026-11-12",
+      "expected_amount": 931.03,
+      "paid_amount": 0,
+      "status": "PENDING"
+    },
+    {
+      "id": 109,
+      "loan_id": 2,
+      "installment_no": 51,
+      "due_date": "2026-11-13",
+      "expected_amount": 931.03,
+      "paid_amount": 0,
+      "status": "PENDING"
+    },
+    {
+      "id": 110,
+      "loan_id": 2,
+      "installment_no": 52,
+      "due_date": "2026-11-14",
+      "expected_amount": 931.03,
+      "paid_amount": 0,
+      "status": "PENDING"
+    },
+    {
+      "id": 111,
+      "loan_id": 2,
+      "installment_no": 53,
+      "due_date": "2026-11-15",
+      "expected_amount": 931.03,
+      "paid_amount": 0,
+      "status": "PENDING"
+    },
+    {
+      "id": 112,
+      "loan_id": 2,
+      "installment_no": 54,
+      "due_date": "2026-11-16",
+      "expected_amount": 931.03,
+      "paid_amount": 0,
+      "status": "PENDING"
+    },
+    {
+      "id": 113,
+      "loan_id": 2,
+      "installment_no": 55,
+      "due_date": "2026-11-17",
+      "expected_amount": 931.03,
+      "paid_amount": 0,
+      "status": "PENDING"
+    },
+    {
+      "id": 114,
+      "loan_id": 2,
+      "installment_no": 56,
+      "due_date": "2026-11-18",
+      "expected_amount": 931.03,
+      "paid_amount": 0,
+      "status": "PENDING"
+    },
+    {
+      "id": 115,
+      "loan_id": 2,
+      "installment_no": 57,
+      "due_date": "2026-11-19",
+      "expected_amount": 931.03,
+      "paid_amount": 0,
+      "status": "PENDING"
+    },
+    {
+      "id": 116,
+      "loan_id": 2,
+      "installment_no": 58,
+      "due_date": "2026-11-20",
+      "expected_amount": 931.03,
       "paid_amount": 0,
       "status": "PENDING"
     }
