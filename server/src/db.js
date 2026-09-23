@@ -137,6 +137,9 @@ async function initPostgresSchema() {
       due_date DATE,
       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     );
+
+    CREATE UNIQUE INDEX IF NOT EXISTS idx_clients_unique_nic ON clients (UPPER(TRIM(nic_id))) WHERE nic_id IS NOT NULL AND TRIM(nic_id) != '';
+    CREATE UNIQUE INDEX IF NOT EXISTS idx_clients_unique_phone ON clients (TRIM(phone)) WHERE phone IS NOT NULL AND TRIM(phone) != '';
   `;
   await pgPool.query(schemaSql);
 }
@@ -415,21 +418,97 @@ const db = {
   },
 
   createClient: async ({ name, phone, nic_id, address, notes, created_by }) => {
-    if (usePostgres) {
-      const res = await pgPool.query(
-        'INSERT INTO clients (name, phone, nic_id, address, notes, created_by) VALUES ($1, $2, $3, $4, $5, $6) RETURNING *',
-        [name, phone, nic_id, address, notes, created_by]
-      );
-      return res.rows[0];
+    // Normalize and validate phone
+    let cleanPhone = phone ? phone.trim().replace(/[\s\-()]/g, '') : '';
+    if (cleanPhone.startsWith('+94')) {
+      cleanPhone = '0' + cleanPhone.slice(3);
+    } else if (cleanPhone.startsWith('94') && cleanPhone.length === 11) {
+      cleanPhone = '0' + cleanPhone.slice(2);
     }
+
+    if (!cleanPhone || !/^0[0-9]{9}$/.test(cleanPhone)) {
+      throw new Error(`Invalid Phone Number '${phone}'. Must be a 10-digit Sri Lankan phone number (e.g., 0771234567).`);
+    }
+
+    // Normalize and validate NIC (if provided)
+    const cleanNic = nic_id ? nic_id.trim().toUpperCase() : '';
+    if (cleanNic) {
+      const oldNicPattern = /^[0-9]{9}[VX]$/;
+      const newNicPattern = /^[0-9]{12}$/;
+      if (!oldNicPattern.test(cleanNic) && !newNicPattern.test(cleanNic)) {
+        throw new Error(`Invalid NIC format '${cleanNic}'. Sri Lankan NIC must be 9 digits with V/X (e.g. 842100452V) or 12 digits (e.g. 198421004521).`);
+      }
+    }
+
+    if (usePostgres) {
+      // Check for duplicate NIC
+      if (cleanNic) {
+        const nicCheck = await pgPool.query(
+          'SELECT id, name, phone, nic_id FROM clients WHERE UPPER(TRIM(nic_id)) = $1',
+          [cleanNic]
+        );
+        if (nicCheck.rows.length > 0) {
+          const dup = nicCheck.rows[0];
+          throw new Error(`Duplicate NIC: Client with NIC '${cleanNic}' is already registered (${dup.name}, Phone: ${dup.phone}).`);
+        }
+      }
+
+      // Check for duplicate phone
+      if (cleanPhone) {
+        const phoneCheck = await pgPool.query(
+          'SELECT id, name, phone, nic_id FROM clients WHERE TRIM(phone) = $1',
+          [cleanPhone]
+        );
+        if (phoneCheck.rows.length > 0) {
+          const dup = phoneCheck.rows[0];
+          throw new Error(`Duplicate Phone: Number '${cleanPhone}' is already registered to client ${dup.name}.`);
+        }
+      }
+
+      try {
+        const res = await pgPool.query(
+          'INSERT INTO clients (name, phone, nic_id, address, notes, created_by) VALUES ($1, $2, $3, $4, $5, $6) RETURNING *',
+          [name ? name.trim() : '', cleanPhone, cleanNic, address ? address.trim() : '', notes ? notes.trim() : '', created_by]
+        );
+        return res.rows[0];
+      } catch (insertErr) {
+        if (insertErr.code === '23505') {
+          if (insertErr.constraint === 'idx_clients_unique_nic' || (insertErr.detail && insertErr.detail.includes('nic_id'))) {
+            throw new Error(`Duplicate NIC: Client with NIC '${cleanNic}' is already registered.`);
+          }
+          if (insertErr.constraint === 'idx_clients_unique_phone' || (insertErr.detail && insertErr.detail.includes('phone'))) {
+            throw new Error(`Duplicate Phone: Number '${cleanPhone}' is already registered.`);
+          }
+        }
+        throw insertErr;
+      }
+    }
+
     loadLocalStore();
+
+    // Check duplicate NIC in local store
+    if (cleanNic) {
+      const dupNic = localStore.clients.find(c => c.nic_id && c.nic_id.trim().toUpperCase() === cleanNic);
+      if (dupNic) {
+        throw new Error(`Duplicate NIC: Client with NIC '${cleanNic}' is already registered (${dupNic.name}, Phone: ${dupNic.phone}).`);
+      }
+    }
+
+    // Check duplicate phone in local store
+    if (cleanPhone) {
+      const dupPhone = localStore.clients.find(c => c.phone && c.phone.trim().replace(/[\s\-()]/g, '') === cleanPhone);
+      if (dupPhone) {
+        throw new Error(`Duplicate Phone: Number '${cleanPhone}' is already registered to client ${dupPhone.name}.`);
+      }
+    }
+
     const newClient = {
       id: localStore.clients.length ? Math.max(...localStore.clients.map(c => c.id)) + 1 : 1,
-      name,
-      phone,
-      nic_id,
-      address,
-      notes,
+      name: name ? name.trim() : '',
+      phone: cleanPhone,
+      nic_id: cleanNic,
+      address: address ? address.trim() : '',
+      notes: notes ? notes.trim() : '',
       created_by,
       created_at: new Date().toISOString()
     };
@@ -440,28 +519,108 @@ const db = {
 
   updateClient: async (id, { name, phone, nic_id, address, notes }) => {
     const clientId = parseInt(id, 10);
-    if (usePostgres) {
-      const res = await pgPool.query(
-        `UPDATE clients 
-         SET name = COALESCE($1, name),
-             phone = COALESCE($2, phone),
-             nic_id = COALESCE($3, nic_id),
-             address = COALESCE($4, address),
-             notes = COALESCE($5, notes)
-         WHERE id = $6 RETURNING *`,
-        [name, phone, nic_id, address, notes, clientId]
-      );
-      if (res.rows.length === 0) throw new Error('Client not found');
-      return res.rows[0];
+    
+    // Normalize and validate phone if provided
+    let cleanPhone = undefined;
+    if (phone !== undefined) {
+      cleanPhone = phone.trim().replace(/[\s\-()]/g, '');
+      if (cleanPhone.startsWith('+94')) {
+        cleanPhone = '0' + cleanPhone.slice(3);
+      } else if (cleanPhone.startsWith('94') && cleanPhone.length === 11) {
+        cleanPhone = '0' + cleanPhone.slice(2);
+      }
+      if (!cleanPhone || !/^0[0-9]{9}$/.test(cleanPhone)) {
+        throw new Error(`Invalid Phone Number '${phone}'. Must be a 10-digit Sri Lankan phone number (e.g., 0771234567).`);
+      }
     }
+
+    // Normalize and validate NIC if provided
+    let cleanNic = undefined;
+    if (nic_id !== undefined) {
+      cleanNic = nic_id.trim().toUpperCase();
+      if (cleanNic) {
+        const oldNicPattern = /^[0-9]{9}[VX]$/;
+        const newNicPattern = /^[0-9]{12}$/;
+        if (!oldNicPattern.test(cleanNic) && !newNicPattern.test(cleanNic)) {
+          throw new Error(`Invalid NIC format '${cleanNic}'. Sri Lankan NIC must be 9 digits with V/X (e.g. 842100452V) or 12 digits (e.g. 198421004521).`);
+        }
+      }
+    }
+
+    if (usePostgres) {
+      // Check duplicate NIC for other clients
+      if (cleanNic) {
+        const nicCheck = await pgPool.query(
+          'SELECT id, name, phone, nic_id FROM clients WHERE UPPER(TRIM(nic_id)) = $1 AND id != $2',
+          [cleanNic, clientId]
+        );
+        if (nicCheck.rows.length > 0) {
+          const dup = nicCheck.rows[0];
+          throw new Error(`Duplicate NIC: NIC '${cleanNic}' is already registered to another client (${dup.name}, Phone: ${dup.phone}).`);
+        }
+      }
+
+      // Check duplicate Phone for other clients
+      if (cleanPhone) {
+        const phoneCheck = await pgPool.query(
+          'SELECT id, name, phone, nic_id FROM clients WHERE TRIM(phone) = $1 AND id != $2',
+          [cleanPhone, clientId]
+        );
+        if (phoneCheck.rows.length > 0) {
+          const dup = phoneCheck.rows[0];
+          throw new Error(`Duplicate Phone: Number '${cleanPhone}' is already registered to another client (${dup.name}).`);
+        }
+      }
+
+      try {
+        const res = await pgPool.query(
+          `UPDATE clients 
+           SET name = COALESCE($1, name),
+               phone = COALESCE($2, phone),
+               nic_id = COALESCE($3, nic_id),
+               address = COALESCE($4, address),
+               notes = COALESCE($5, notes)
+           WHERE id = $6 RETURNING *`,
+          [name ? name.trim() : null, cleanPhone, cleanNic, address ? address.trim() : null, notes ? notes.trim() : null, clientId]
+        );
+        if (res.rows.length === 0) throw new Error('Client not found');
+        return res.rows[0];
+      } catch (updateErr) {
+        if (updateErr.code === '23505') {
+          if (updateErr.constraint === 'idx_clients_unique_nic' || (updateErr.detail && updateErr.detail.includes('nic_id'))) {
+            throw new Error(`Duplicate NIC: Client with NIC '${cleanNic}' already exists in the system.`);
+          }
+          if (updateErr.constraint === 'idx_clients_unique_phone' || (updateErr.detail && updateErr.detail.includes('phone'))) {
+            throw new Error(`Duplicate Phone: Number '${cleanPhone}' already exists in the system.`);
+          }
+        }
+        throw updateErr;
+      }
+    }
+
     loadLocalStore();
     const c = localStore.clients.find(item => item.id === clientId);
     if (!c) throw new Error('Client not found');
-    if (name !== undefined) c.name = name;
-    if (phone !== undefined) c.phone = phone;
-    if (nic_id !== undefined) c.nic_id = nic_id;
-    if (address !== undefined) c.address = address;
-    if (notes !== undefined) c.notes = notes;
+
+    if (cleanNic) {
+      const dupNic = localStore.clients.find(item => item.id !== clientId && item.nic_id && item.nic_id.trim().toUpperCase() === cleanNic);
+      if (dupNic) {
+        throw new Error(`Duplicate NIC: NIC '${cleanNic}' is already registered to another client (${dupNic.name}, Phone: ${dupNic.phone}).`);
+      }
+    }
+
+    if (cleanPhone) {
+      const dupPhone = localStore.clients.find(item => item.id !== clientId && item.phone && item.phone.trim().replace(/[\s\-()]/g, '') === cleanPhone);
+      if (dupPhone) {
+        throw new Error(`Duplicate Phone: Number '${cleanPhone}' is already registered to another client (${dupPhone.name}).`);
+      }
+    }
+
+    if (name !== undefined) c.name = name.trim();
+    if (cleanPhone !== undefined) c.phone = cleanPhone;
+    if (cleanNic !== undefined) c.nic_id = cleanNic;
+    if (address !== undefined) c.address = address.trim();
+    if (notes !== undefined) c.notes = notes.trim();
     saveLocalStore();
     return c;
   },

@@ -22,6 +22,10 @@ CREATE TABLE IF NOT EXISTS clients (
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
+-- Unique index to prevent duplicate NICs and Phones
+CREATE UNIQUE INDEX IF NOT EXISTS idx_clients_unique_nic ON clients (UPPER(TRIM(nic_id))) WHERE nic_id IS NOT NULL AND TRIM(nic_id) != '';
+CREATE UNIQUE INDEX IF NOT EXISTS idx_clients_unique_phone ON clients (TRIM(phone)) WHERE phone IS NOT NULL AND TRIM(phone) != '';
+
 CREATE TABLE IF NOT EXISTS loans (
   id SERIAL PRIMARY KEY,
   loan_code VARCHAR(30) UNIQUE NOT NULL,

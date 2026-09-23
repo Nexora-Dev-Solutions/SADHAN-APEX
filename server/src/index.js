@@ -118,7 +118,8 @@ app.post('/api/clients', verifyToken, async (req, res) => {
     });
     return res.status(201).json({ client: newClient });
   } catch (err) {
-    return res.status(500).json({ error: 'Failed to register client' });
+    console.error('Error creating client:', err.message);
+    return res.status(400).json({ error: err.message || 'Failed to register client' });
   }
 });
 
@@ -138,7 +139,8 @@ app.put('/api/clients/:id', verifyToken, async (req, res) => {
     const updated = await db.updateClient(req.params.id, { name, phone, nic_id, address, notes });
     return res.json({ client: updated, message: 'Client updated successfully' });
   } catch (err) {
-    return res.status(500).json({ error: err.message || 'Failed to update client' });
+    console.error('Error updating client:', err.message);
+    return res.status(400).json({ error: err.message || 'Failed to update client' });
   }
 });
 
