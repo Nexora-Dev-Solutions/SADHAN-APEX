@@ -147,13 +147,13 @@ export default function ThermalReceipt({ receipt, onClose }) {
           </div>
         </div>
 
-        <div className="modal-footer no-print" style={{ justifyContent: 'space-between' }}>
-          <button className="btn btn-secondary" onClick={onClose}>
+        <div className="modal-footer no-print" style={{ display: 'flex', gap: '8px', width: '100%', padding: '12px 16px' }}>
+          <button className="btn btn-secondary" style={{ flex: 1, justifyContent: 'center' }} onClick={onClose}>
             Done
           </button>
-          <button className="btn btn-primary" onClick={handlePrint} style={{ gap: '10px' }}>
+          <button className="btn btn-primary" style={{ flex: 1.5, justifyContent: 'center', gap: '8px', whiteSpace: 'nowrap' }} onClick={handlePrint}>
             <Printer size={18} />
-            Print Thermal Receipt
+            Print Receipt
           </button>
         </div>
       </div>

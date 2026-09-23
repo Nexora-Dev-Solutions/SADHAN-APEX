@@ -163,8 +163,8 @@ export default function NotificationCenter({ reminders, onClose, onQuickPay }) {
           )}
         </div>
 
-        <div className="modal-footer">
-          <button className="btn btn-secondary" onClick={onClose}>
+        <div className="modal-footer" style={{ padding: '12px 16px' }}>
+          <button className="btn btn-secondary" style={{ width: '100%', justifyContent: 'center' }} onClick={onClose}>
             Close
           </button>
         </div>

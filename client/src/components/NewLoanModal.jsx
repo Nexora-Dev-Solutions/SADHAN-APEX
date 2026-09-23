@@ -218,42 +218,53 @@ export default function NewLoanModal({ token, clients, agents, currentUser, onCl
               <div style={{ fontSize: '0.8rem', fontWeight: '700', color: '#93c5fd', textTransform: 'uppercase', marginBottom: '10px' }}>
                 📊 Automatic Calculation Breakdown
               </div>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', fontSize: '0.88rem' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: '10px', fontSize: '0.85rem' }}>
                 <div>
-                  <div style={{ color: 'var(--text-muted)', fontSize: '0.78rem' }}>Principal:</div>
+                  <div style={{ color: 'var(--text-muted)', fontSize: '0.76rem' }}>Principal:</div>
                   <div style={{ fontWeight: '600' }}>Rs. {parsedPrincipal.toLocaleString()}</div>
                 </div>
                 <div>
-                  <div style={{ color: 'var(--text-muted)', fontSize: '0.78rem' }}>Interest (8%):</div>
+                  <div style={{ color: 'var(--text-muted)', fontSize: '0.76rem' }}>Interest (8%):</div>
                   <div style={{ fontWeight: '600', color: '#34d399' }}>+ Rs. {totalInterest.toLocaleString()}</div>
                 </div>
                 <div>
-                  <div style={{ color: 'var(--text-muted)', fontSize: '0.78rem' }}>Total To Pay Back:</div>
-                  <div style={{ fontWeight: '800', color: '#f8fafc', fontSize: '1rem' }}>Rs. {totalPayable.toLocaleString()}</div>
+                  <div style={{ color: 'var(--text-muted)', fontSize: '0.76rem' }}>Total To Pay Back:</div>
+                  <div style={{ fontWeight: '800', color: '#f8fafc', fontSize: '0.98rem' }}>Rs. {totalPayable.toLocaleString()}</div>
                 </div>
                 <div>
-                  <div style={{ color: 'var(--text-muted)', fontSize: '0.78rem' }}>Per Installment ({parsedCount}x):</div>
-                  <div style={{ fontWeight: '800', color: '#38bdf8', fontSize: '1.05rem' }}>Rs. {installmentAmount}</div>
+                  <div style={{ color: 'var(--text-muted)', fontSize: '0.76rem' }}>Per Installment ({parsedCount}x):</div>
+                  <div style={{ fontWeight: '800', color: '#38bdf8', fontSize: '1.02rem', wordBreak: 'break-word' }}>Rs. {installmentAmount}</div>
                 </div>
                 <div>
-                  <div style={{ color: 'var(--text-muted)', fontSize: '0.78rem' }}>Plan Duration:</div>
+                  <div style={{ color: 'var(--text-muted)', fontSize: '0.76rem' }}>Plan Duration:</div>
                   <div style={{ fontWeight: '500' }}>{parsedCount} {frequency.toLowerCase()}s</div>
                 </div>
                 <div>
-                  <div style={{ color: 'var(--text-muted)', fontSize: '0.78rem' }}>Estimated Maturity:</div>
+                  <div style={{ color: 'var(--text-muted)', fontSize: '0.76rem' }}>Estimated Maturity:</div>
                   <div style={{ fontWeight: '500' }}>{endDate}</div>
                 </div>
               </div>
             </div>
           </div>
 
-          <div className="modal-footer">
-            <button type="button" className="btn btn-secondary" onClick={onClose} disabled={isSubmitting}>
+          <div className="modal-footer" style={{ display: 'flex', gap: '8px', width: '100%', padding: '12px 16px' }}>
+            <button
+              type="button"
+              className="btn btn-secondary"
+              style={{ flex: 1, justifyContent: 'center' }}
+              onClick={onClose}
+              disabled={isSubmitting}
+            >
               Cancel
             </button>
-            <button type="submit" className="btn btn-primary" disabled={isSubmitting} style={{ gap: '8px' }}>
+            <button
+              type="submit"
+              className="btn btn-primary"
+              disabled={isSubmitting}
+              style={{ flex: 1.5, justifyContent: 'center', gap: '8px', whiteSpace: 'nowrap' }}
+            >
               <PlusCircle size={18} />
-              {isSubmitting ? 'Generating Schedule...' : 'Approve & Create 58-Plan'}
+              {isSubmitting ? 'Creating...' : 'Create 58-Day Plan'}
             </button>
           </div>
         </form>

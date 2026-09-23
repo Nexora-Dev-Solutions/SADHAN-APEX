@@ -127,22 +127,38 @@ export default function EditLoanModal({ loan, token, agents, currentUser, onClos
         </div>
 
         {/* Tab switch between Top-Up Cash & Edit Terms */}
-        <div style={{ display: 'flex', borderBottom: '1px solid var(--surface-border)', padding: '0 20px', background: 'rgba(0,0,0,0.15)' }}>
+        <div style={{ display: 'flex', borderBottom: '1px solid var(--surface-border)', padding: '8px 16px 0 16px', background: 'rgba(0,0,0,0.15)', gap: '8px' }}>
           <button
             type="button"
             className={`btn btn-sm ${activeTab === 'topup' ? 'btn-primary' : 'btn-secondary'}`}
-            style={{ borderRadius: '0', borderBottom: 'none', marginRight: '8px' }}
+            style={{
+              flex: 1,
+              padding: '9px 8px',
+              fontSize: '0.84rem',
+              justifyContent: 'center',
+              borderRadius: 'var(--radius-sm) var(--radius-sm) 0 0',
+              borderBottom: 'none',
+              whiteSpace: 'nowrap'
+            }}
             onClick={() => setActiveTab('topup')}
           >
-            💰 Top-Up Loan (+ Extra Cash)
+            💰 Top-Up Cash
           </button>
           <button
             type="button"
             className={`btn btn-sm ${activeTab === 'edit' ? 'btn-primary' : 'btn-secondary'}`}
-            style={{ borderRadius: '0', borderBottom: 'none' }}
+            style={{
+              flex: 1,
+              padding: '9px 8px',
+              fontSize: '0.84rem',
+              justifyContent: 'center',
+              borderRadius: 'var(--radius-sm) var(--radius-sm) 0 0',
+              borderBottom: 'none',
+              whiteSpace: 'nowrap'
+            }}
             onClick={() => setActiveTab('edit')}
           >
-            ✏️ Edit Loan Terms & Collector
+            ✏️ Edit Terms
           </button>
         </div>
 
@@ -261,38 +277,38 @@ export default function EditLoanModal({ loan, token, agents, currentUser, onClos
               background: 'linear-gradient(135deg, rgba(30, 41, 59, 0.7) 0%, rgba(15, 23, 42, 0.9) 100%)',
               border: '1px solid rgba(59, 130, 246, 0.3)',
               borderRadius: 'var(--radius-lg)',
-              padding: '16px',
+              padding: '14px 16px',
               marginTop: '12px'
             }}>
               <div style={{ fontSize: '0.75rem', fontWeight: '700', color: '#93c5fd', textTransform: 'uppercase', marginBottom: '8px' }}>
                 📊 Updated Ledger Breakdown
               </div>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', fontSize: '0.85rem' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: '10px', fontSize: '0.84rem' }}>
                 <div>
-                  <span style={{ color: 'var(--text-muted)' }}>Updated Principal:</span>
+                  <div style={{ color: 'var(--text-muted)', fontSize: '0.76rem' }}>Updated Principal:</div>
                   <div style={{ fontWeight: '700' }}>Rs. {calculatedNewPrincipal.toLocaleString()}</div>
                 </div>
                 <div>
-                  <span style={{ color: 'var(--text-muted)' }}>Interest ({calculatedRate}%):</span>
+                  <div style={{ color: 'var(--text-muted)', fontSize: '0.76rem' }}>Interest ({calculatedRate}%):</div>
                   <div style={{ fontWeight: '700', color: '#34d399' }}>+ Rs. {calculatedInterest.toLocaleString()}</div>
                 </div>
                 <div>
-                  <span style={{ color: 'var(--text-muted)' }}>Total Payable:</span>
+                  <div style={{ color: 'var(--text-muted)', fontSize: '0.76rem' }}>Total Payable:</div>
                   <div style={{ fontWeight: '800', color: '#f8fafc' }}>Rs. {calculatedTotalPayable.toLocaleString()}</div>
                 </div>
                 <div>
-                  <span style={{ color: 'var(--text-muted)' }}>Already Repaid:</span>
+                  <div style={{ color: 'var(--text-muted)', fontSize: '0.76rem' }}>Already Repaid:</div>
                   <div style={{ fontWeight: '600', color: '#10b981' }}>- Rs. {currentPaid.toLocaleString()}</div>
                 </div>
                 <div>
-                  <span style={{ color: 'var(--text-muted)' }}>New Balance to Recover:</span>
-                  <div style={{ fontWeight: '800', color: '#f87171', fontSize: '1.05rem' }}>
+                  <div style={{ color: 'var(--text-muted)', fontSize: '0.76rem' }}>New Balance to Recover:</div>
+                  <div style={{ fontWeight: '800', color: '#f87171', fontSize: '1rem', wordBreak: 'break-word' }}>
                     Rs. {calculatedNewRemaining.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                   </div>
                 </div>
                 <div>
-                  <span style={{ color: 'var(--text-muted)' }}>Per Installment ({currentCount}x):</span>
-                  <div style={{ fontWeight: '800', color: '#38bdf8', fontSize: '1.05rem' }}>
+                  <div style={{ color: 'var(--text-muted)', fontSize: '0.76rem' }}>Per Installment ({currentCount}x):</div>
+                  <div style={{ fontWeight: '800', color: '#38bdf8', fontSize: '1rem', wordBreak: 'break-word' }}>
                     Rs. {calculatedNewInstAmt.toFixed(2)}
                   </div>
                 </div>
@@ -321,13 +337,15 @@ export default function EditLoanModal({ loan, token, agents, currentUser, onClos
                     className="btn btn-danger btn-sm"
                     onClick={handleDelete}
                     disabled={isDeleting}
+                    style={{ flex: 1, justifyContent: 'center' }}
                   >
-                    {isDeleting ? 'Deleting...' : 'Yes, Permanently Delete Loan'}
+                    {isDeleting ? 'Deleting...' : 'Yes, Delete Loan'}
                   </button>
                   <button
                     type="button"
                     className="btn btn-secondary btn-sm"
                     onClick={() => setShowDeleteConfirm(false)}
+                    style={{ flex: 1, justifyContent: 'center' }}
                   >
                     Cancel
                   </button>
@@ -336,12 +354,40 @@ export default function EditLoanModal({ loan, token, agents, currentUser, onClos
             )}
           </div>
 
-          <div className="modal-footer" style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', justifyContent: 'space-between', alignItems: 'center' }}>
+          <div className="modal-footer" style={{ display: 'flex', flexDirection: 'column', gap: '8px', width: '100%', padding: '12px 16px' }}>
+            <div style={{ display: 'flex', gap: '8px', width: '100%' }}>
+              <button
+                type="button"
+                className="btn btn-secondary"
+                style={{ flex: 1, justifyContent: 'center' }}
+                onClick={onClose}
+                disabled={isSubmitting}
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                className="btn btn-primary"
+                style={{ flex: 1.5, justifyContent: 'center', gap: '6px' }}
+                disabled={isSubmitting}
+              >
+                <Check size={16} />
+                {isSubmitting ? 'Updating...' : (activeTab === 'topup' ? 'Apply Top-Up' : 'Save Changes')}
+              </button>
+            </div>
             {isOwner && !showDeleteConfirm && (
               <button
                 type="button"
                 className="btn btn-danger btn-sm"
-                style={{ gap: '6px' }}
+                style={{
+                  width: '100%',
+                  justifyContent: 'center',
+                  gap: '6px',
+                  background: 'rgba(239, 68, 68, 0.1)',
+                  color: '#f87171',
+                  border: '1px solid rgba(239, 68, 68, 0.25)',
+                  padding: '9px 12px'
+                }}
                 onClick={() => setShowDeleteConfirm(true)}
                 disabled={isSubmitting}
               >
@@ -349,16 +395,6 @@ export default function EditLoanModal({ loan, token, agents, currentUser, onClos
                 Delete Loan
               </button>
             )}
-
-            <div style={{ display: 'flex', gap: '8px', marginLeft: 'auto', flexWrap: 'wrap' }}>
-              <button type="button" className="btn btn-secondary" onClick={onClose} disabled={isSubmitting}>
-                Cancel
-              </button>
-              <button type="submit" className="btn btn-primary" disabled={isSubmitting} style={{ gap: '6px' }}>
-                <Check size={16} />
-                {isSubmitting ? 'Updating...' : (activeTab === 'topup' ? 'Apply Top-Up' : 'Save Changes')}
-              </button>
-            </div>
           </div>
         </form>
       </div>

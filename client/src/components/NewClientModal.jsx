@@ -277,15 +277,21 @@ export default function NewClientModal({ token, onClose, onSuccess }) {
             </div>
           </div>
 
-          <div className="modal-footer">
-            <button type="button" className="btn btn-secondary" onClick={onClose} disabled={isSubmitting}>
+          <div className="modal-footer" style={{ display: 'flex', gap: '8px', width: '100%', padding: '12px 16px' }}>
+            <button
+              type="button"
+              className="btn btn-secondary"
+              style={{ flex: 1, justifyContent: 'center' }}
+              onClick={onClose}
+              disabled={isSubmitting}
+            >
               Cancel
             </button>
             <button
               type="submit"
               className="btn btn-primary"
               disabled={isSubmitting || (nicId.trim() && !nicValidation.valid) || (phone.trim() && !phoneValidation.valid)}
-              style={{ gap: '8px' }}
+              style={{ flex: 1.5, justifyContent: 'center', gap: '8px', whiteSpace: 'nowrap' }}
             >
               <Check size={18} />
               {isSubmitting ? 'Saving...' : 'Register Client'}

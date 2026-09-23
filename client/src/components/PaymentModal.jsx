@@ -158,27 +158,30 @@ export default function PaymentModal({ loan, token, onClose, onSuccess }) {
             {/* Quick Presets */}
             <div style={{ marginBottom: '14px' }}>
               <label className="form-label">Quick Amount Presets</label>
-              <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(110px, 1fr))', gap: '8px' }}>
                 <button
                   type="button"
                   className="btn btn-secondary btn-sm"
+                  style={{ justifyContent: 'center', padding: '8px 4px', fontSize: '0.8rem' }}
                   onClick={() => setAmountPaid(installmentAmt.toFixed(2))}
                 >
-                  Full Installment (Rs. {installmentAmt.toFixed(2)})
+                  Full (Rs. {installmentAmt.toFixed(0)})
                 </button>
                 <button
                   type="button"
                   className="btn btn-secondary btn-sm"
+                  style={{ justifyContent: 'center', padding: '8px 4px', fontSize: '0.8rem' }}
                   onClick={() => setAmountPaid((installmentAmt / 2).toFixed(2))}
                 >
-                  Half (Rs. {(installmentAmt / 2).toFixed(2)})
+                  Half (Rs. {(installmentAmt / 2).toFixed(0)})
                 </button>
                 <button
                   type="button"
                   className="btn btn-secondary btn-sm"
+                  style={{ justifyContent: 'center', padding: '8px 4px', fontSize: '0.8rem' }}
                   onClick={() => setAmountPaid(remainingBal.toFixed(2))}
                 >
-                  Full Loan Payoff (Rs. {remainingBal.toFixed(2)})
+                  Payoff (Rs. {remainingBal.toFixed(0)})
                 </button>
               </div>
             </div>
@@ -233,13 +236,24 @@ export default function PaymentModal({ loan, token, onClose, onSuccess }) {
             </div>
           </div>
 
-          <div className="modal-footer">
-            <button type="button" className="btn btn-secondary" onClick={onClose} disabled={isSubmitting}>
+          <div className="modal-footer" style={{ display: 'flex', gap: '8px', width: '100%', padding: '12px 16px' }}>
+            <button
+              type="button"
+              className="btn btn-secondary"
+              style={{ flex: 1, justifyContent: 'center' }}
+              onClick={onClose}
+              disabled={isSubmitting}
+            >
               Cancel
             </button>
-            <button type="submit" className="btn btn-success" disabled={isSubmitting} style={{ gap: '8px' }}>
+            <button
+              type="submit"
+              className="btn btn-success"
+              disabled={isSubmitting}
+              style={{ flex: 1.5, justifyContent: 'center', gap: '8px', whiteSpace: 'nowrap' }}
+            >
               <Check size={18} />
-              {isSubmitting ? 'Recording...' : 'Collect & Print Receipt'}
+              {isSubmitting ? 'Recording...' : 'Collect & Receipt'}
             </button>
           </div>
         </form>

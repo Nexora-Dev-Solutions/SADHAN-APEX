@@ -52,7 +52,7 @@ export default function CollectionsView({
                 <span>OVERDUE ACCOUNTS ({overdueList.length})</span>
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '14px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 280px), 1fr))', gap: '14px' }}>
                 {overdueList.map((item, idx) => (
                   <div
                     key={`col-overdue-${idx}`}
@@ -148,7 +148,7 @@ export default function CollectionsView({
                 <span>SCHEDULED FOR TODAY ({dueTodayList.length})</span>
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '14px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 280px), 1fr))', gap: '14px' }}>
                 {dueTodayList.map((item, idx) => (
                   <div
                     key={`col-today-${idx}`}

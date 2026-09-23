@@ -321,13 +321,15 @@ export default function EditClientModal({ client, token, currentUser, onClose, o
                     className="btn btn-danger btn-sm"
                     onClick={handleDelete}
                     disabled={isDeleting}
+                    style={{ flex: 1, justifyContent: 'center' }}
                   >
-                    {isDeleting ? 'Deleting...' : 'Yes, Delete Client & All Data'}
+                    {isDeleting ? 'Deleting...' : 'Yes, Delete Client'}
                   </button>
                   <button
                     type="button"
                     className="btn btn-secondary btn-sm"
                     onClick={() => setShowDeleteConfirm(false)}
+                    style={{ flex: 1, justifyContent: 'center' }}
                   >
                     Cancel
                   </button>
@@ -336,12 +338,40 @@ export default function EditClientModal({ client, token, currentUser, onClose, o
             )}
           </div>
 
-          <div className="modal-footer" style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', justifyContent: 'space-between', alignItems: 'center' }}>
+          <div className="modal-footer" style={{ display: 'flex', flexDirection: 'column', gap: '8px', width: '100%', padding: '12px 16px' }}>
+            <div style={{ display: 'flex', gap: '8px', width: '100%' }}>
+              <button
+                type="button"
+                className="btn btn-secondary"
+                style={{ flex: 1, justifyContent: 'center' }}
+                onClick={onClose}
+                disabled={isSubmitting}
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                className="btn btn-primary"
+                style={{ flex: 1.5, justifyContent: 'center', gap: '6px' }}
+                disabled={isSubmitting || (nicId.trim() && !nicValidation.valid) || (phone.trim() && !phoneValidation.valid)}
+              >
+                <Check size={16} />
+                {isSubmitting ? 'Saving...' : 'Save Changes'}
+              </button>
+            </div>
             {isOwner && !showDeleteConfirm && (
               <button
                 type="button"
                 className="btn btn-danger btn-sm"
-                style={{ gap: '6px' }}
+                style={{
+                  width: '100%',
+                  justifyContent: 'center',
+                  gap: '6px',
+                  background: 'rgba(239, 68, 68, 0.1)',
+                  color: '#f87171',
+                  border: '1px solid rgba(239, 68, 68, 0.25)',
+                  padding: '9px 12px'
+                }}
                 onClick={() => setShowDeleteConfirm(true)}
                 disabled={isSubmitting}
               >
@@ -349,21 +379,6 @@ export default function EditClientModal({ client, token, currentUser, onClose, o
                 Delete Client
               </button>
             )}
-
-            <div style={{ display: 'flex', gap: '8px', marginLeft: 'auto', flexWrap: 'wrap' }}>
-              <button type="button" className="btn btn-secondary" onClick={onClose} disabled={isSubmitting}>
-                Cancel
-              </button>
-              <button
-                type="submit"
-                className="btn btn-primary"
-                disabled={isSubmitting || (nicId.trim() && !nicValidation.valid) || (phone.trim() && !phoneValidation.valid)}
-                style={{ gap: '6px' }}
-              >
-                <Check size={16} />
-                {isSubmitting ? 'Saving...' : 'Save Changes'}
-              </button>
-            </div>
           </div>
         </form>
       </div>
