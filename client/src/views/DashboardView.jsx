@@ -10,7 +10,8 @@ import {
   UserPlus,
   ArrowUpRight,
   Tv,
-  Phone
+  Phone,
+  LogOut
 } from 'lucide-react';
 
 export default function DashboardView({
@@ -23,7 +24,8 @@ export default function DashboardView({
   onOpenNewClient,
   onOpenPayment,
   onOpenLoanDetail,
-  onOpenReminders
+  onOpenReminders,
+  onLogout
 }) {
   const m = metrics || {};
   const isOwner = currentUser?.role === 'OWNER';
@@ -89,6 +91,20 @@ export default function DashboardView({
             <button className="btn btn-secondary btn-sm" onClick={onOpenNewClient} style={{ gap: '6px' }}>
               <UserPlus size={16} />
               Add Client
+            </button>
+            <button
+              className="btn btn-secondary btn-sm"
+              onClick={onLogout}
+              style={{
+                gap: '6px',
+                color: '#f87171',
+                border: '1px solid rgba(239, 68, 68, 0.25)',
+                background: 'rgba(239, 68, 68, 0.08)'
+              }}
+              title="Log Out of Terminal"
+            >
+              <LogOut size={15} />
+              Logout
             </button>
           </div>
         </div>

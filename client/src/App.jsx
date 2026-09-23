@@ -68,15 +68,25 @@ export default function App() {
   const [showNotificationCenter, setShowNotificationCenter] = useState(false);
 
 
-  // Auto-login or initial data load
+  const isOwner = (currentUser?.role || '').toUpperCase() === 'OWNER';
+
+  // Auto-login on very first visit only; respect explicit logout
   useEffect(() => {
+    const hasExplicitlyLoggedOut = localStorage.getItem('loan_logged_out') === 'true';
     if (token) {
       loadAllData();
-    } else {
-      // Auto-login with default Owner account for immediate demo
+    } else if (!hasExplicitlyLoggedOut && !localStorage.getItem('loan_token')) {
+      // First visit convenience login
       handleLogin('owner', 'owner123');
     }
   }, [token]);
+
+  // If user is Agent and view is on reports, switch immediately to dashboard
+  useEffect(() => {
+    if (currentUser && !isOwner && currentView === 'reports') {
+      setCurrentView('dashboard');
+    }
+  }, [currentUser, isOwner, currentView]);
 
   // Smart TV real-time auto-polling
   useEffect(() => {
@@ -91,6 +101,7 @@ export default function App() {
     setIsLoggingIn(true);
     setLoginError('');
     try {
+      localStorage.removeItem('loan_logged_out');
       const res = await fetch('/api/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -114,10 +125,12 @@ export default function App() {
   };
 
   const handleLogout = () => {
+    localStorage.setItem('loan_logged_out', 'true');
     setToken('');
     setCurrentUser(null);
     localStorage.removeItem('loan_token');
     localStorage.removeItem('loan_user');
+    setCurrentView('dashboard');
   };
 
   const quickSwitchUser = (targetRole) => {
@@ -447,7 +460,26 @@ export default function App() {
               )}
             </button>
 
-            {currentUser.role === 'OWNER' && (
+            {/* Mobile / Global Log Out Button */}
+            <button
+              className="btn btn-secondary btn-sm"
+              onClick={handleLogout}
+              title={`Logged in as ${currentUser.name} (${currentUser.role}). Click to Log Out`}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '5px',
+                padding: '6px 10px',
+                background: 'rgba(239, 68, 68, 0.12)',
+                border: '1px solid rgba(239, 68, 68, 0.3)',
+                color: '#f87171'
+              }}
+            >
+              <LogOut size={15} />
+              <span style={{ fontSize: '0.75rem', fontWeight: '700' }}>Logout</span>
+            </button>
+
+            {isOwner && (
               <button
                 className="btn btn-primary btn-sm no-mobile-btn"
                 onClick={() => setShowNewLoanModal(true)}
@@ -474,6 +506,7 @@ export default function App() {
               onOpenPayment={(loan) => setSelectedLoanForPayment(loan)}
               onOpenLoanDetail={(loanId) => setSelectedLoanIdForDetail(loanId)}
               onOpenReminders={() => setShowNotificationCenter(true)}
+              onLogout={handleLogout}
             />
           )}
 
@@ -537,19 +570,21 @@ export default function App() {
           className={`mobile-nav-item ${currentView === 'collections' ? 'active' : ''}`}
           onClick={() => setCurrentView('collections')}
         >
-          <CalendarCheck size={20} />
+          <div style={{ position: 'relative', display: 'inline-flex' }}>
+            <CalendarCheck size={20} />
+            {reminderCount > 0 && (
+              <span style={{
+                position: 'absolute',
+                top: '-2px',
+                right: '-4px',
+                background: 'var(--danger)',
+                width: '8px',
+                height: '8px',
+                borderRadius: '50%'
+              }}></span>
+            )}
+          </div>
           <span>Dues</span>
-          {reminderCount > 0 && (
-            <span style={{
-              position: 'absolute',
-              top: '4px',
-              right: '18px',
-              background: 'var(--danger)',
-              width: '8px',
-              height: '8px',
-              borderRadius: '50%'
-            }}></span>
-          )}
         </div>
 
         <div
@@ -560,7 +595,7 @@ export default function App() {
           <span>Clients</span>
         </div>
 
-        {currentUser?.role === 'OWNER' && (
+        {isOwner && (
           <div
             className={`mobile-nav-item ${currentView === 'reports' ? 'active' : ''}`}
             onClick={() => setCurrentView('reports')}
