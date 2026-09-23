@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { UserPlus, X, Check, AlertCircle, AlertTriangle, ShieldCheck } from 'lucide-react';
+import { UserPlus, X, Check, AlertTriangle, ShieldCheck, UserCheck, ChevronDown, ChevronUp, Briefcase } from 'lucide-react';
+import { parseSriLankanNic } from '../utils/nicHelper';
 
 // Sri Lankan NIC format: 9 digits + V/X (Old) OR 12 digits (New)
 export function validateSriLankanNic(val) {
@@ -28,11 +29,22 @@ export default function NewClientModal({ token, onClose, onSuccess }) {
   const [nicId, setNicId] = useState('');
   const [address, setAddress] = useState('');
   const [notes, setNotes] = useState('');
+  const [businessType, setBusinessType] = useState('');
+
+  // KYC & Guarantor
+  const [showGuarantor, setShowGuarantor] = useState(false);
+  const [guarantorName, setGuarantorName] = useState('');
+  const [guarantorPhone, setGuarantorPhone] = useState('');
+  const [guarantorNic, setGuarantorNic] = useState('');
+  const [guarantorRelation, setGuarantorRelation] = useState('');
+  const [kycStatus, setKycStatus] = useState('VERIFIED');
+
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState('');
 
   const nicValidation = validateSriLankanNic(nicId);
   const phoneValidation = validateSriLankanPhone(phone);
+  const nicDemographics = parseSriLankanNic(nicId);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -66,7 +78,13 @@ export default function NewClientModal({ token, onClose, onSuccess }) {
           phone: phoneValidation.clean,
           nic_id: nicValidation.clean,
           address: address.trim(),
-          notes: notes.trim()
+          notes: notes.trim(),
+          business_type: businessType.trim(),
+          guarantor_name: guarantorName.trim(),
+          guarantor_phone: guarantorPhone.trim(),
+          guarantor_nic: guarantorNic.trim(),
+          guarantor_relation: guarantorRelation.trim(),
+          kyc_status: kycStatus
         })
       });
 
@@ -85,11 +103,11 @@ export default function NewClientModal({ token, onClose, onSuccess }) {
 
   return (
     <div className="modal-overlay">
-      <div className="modal-content">
+      <div className="modal-content" style={{ maxWidth: '640px' }}>
         <div className="modal-header">
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             <UserPlus size={22} color="#3b82f6" />
-            <h3 style={{ fontSize: '1.15rem', fontWeight: '700' }}>Register New Client</h3>
+            <h3 style={{ fontSize: '1.15rem', fontWeight: '700' }}>Register Client & KYC</h3>
           </div>
           <button className="btn btn-secondary btn-sm" onClick={onClose}>
             <X size={16} />
@@ -97,7 +115,7 @@ export default function NewClientModal({ token, onClose, onSuccess }) {
         </div>
 
         <form onSubmit={handleSubmit}>
-          <div className="modal-body">
+          <div className="modal-body" style={{ maxHeight: '74vh', overflowY: 'auto' }}>
             {error && (
               <div style={{
                 background: 'rgba(239, 68, 68, 0.12)',
@@ -186,29 +204,156 @@ export default function NewClientModal({ token, onClose, onSuccess }) {
                     borderColor: nicId.trim() ? (nicValidation.valid ? 'rgba(16, 185, 129, 0.5)' : 'rgba(239, 68, 68, 0.5)') : undefined
                   }}
                 />
-                <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginTop: '4px', display: 'block' }}>
-                  Sri Lankan NIC (9 digits + V/X or 12 digits). Strictly checked for duplicates.
-                </span>
+              </div>
+            </div>
+
+            {/* Extracted NIC Demographics Card */}
+            {nicDemographics && (
+              <div style={{
+                background: 'rgba(59, 130, 246, 0.08)',
+                border: '1px solid rgba(59, 130, 246, 0.25)',
+                borderRadius: 'var(--radius-md)',
+                padding: '10px 14px',
+                marginBottom: '16px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '12px',
+                fontSize: '0.8rem',
+                color: '#93c5fd'
+              }}>
+                <ShieldCheck size={18} color="#3b82f6" />
+                <div>
+                  <strong>NIC Identity Verified:</strong>
+                  <span style={{ marginLeft: '6px', color: 'var(--text-primary)' }}>
+                    {nicDemographics.gender} • Born {nicDemographics.birthYear} (Age ~{nicDemographics.approximateAge})
+                  </span>
+                </div>
+              </div>
+            )}
+
+            <div className="form-row">
+              <div className="form-group">
+                <label className="form-label">Business / Profession</label>
+                <input
+                  type="text"
+                  className="form-input"
+                  placeholder="e.g. Vegetable vendor, Grocery, Taxi driver"
+                  value={businessType}
+                  onChange={(e) => setBusinessType(e.target.value)}
+                />
+              </div>
+
+              <div className="form-group">
+                <label className="form-label">KYC Verification Status</label>
+                <select
+                  className="form-select"
+                  value={kycStatus}
+                  onChange={(e) => setKycStatus(e.target.value)}
+                >
+                  <option value="VERIFIED">VERIFIED (KYC Complete)</option>
+                  <option value="PENDING">PENDING (Documents Pending)</option>
+                </select>
               </div>
             </div>
 
             <div className="form-group">
-              <label className="form-label">Physical Address</label>
+              <label className="form-label">Physical Residence Address</label>
               <input
                 type="text"
                 className="form-input"
-                placeholder="Shop No, Street, City"
+                placeholder="House No, Street, Village / City"
                 value={address}
                 onChange={(e) => setAddress(e.target.value)}
               />
             </div>
 
+            {/* Guarantor Details Section (Collapsible) */}
+            <div style={{
+              marginTop: '12px',
+              marginBottom: '16px',
+              border: '1px solid var(--surface-border)',
+              borderRadius: 'var(--radius-md)',
+              background: 'rgba(255, 255, 255, 0.02)',
+              overflow: 'hidden'
+            }}>
+              <div
+                style={{
+                  padding: '10px 14px',
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  cursor: 'pointer',
+                  background: 'rgba(255, 255, 255, 0.03)'
+                }}
+                onClick={() => setShowGuarantor(!showGuarantor)}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.88rem', fontWeight: '700' }}>
+                  <UserCheck size={16} color="#10b981" />
+                  <span>Guarantor / Surety Details (ඇපකරු)</span>
+                  {guarantorName && <span style={{ fontSize: '0.72rem', color: '#10b981' }}>({guarantorName})</span>}
+                </div>
+                {showGuarantor ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+              </div>
+
+              {showGuarantor && (
+                <div style={{ padding: '14px', borderTop: '1px solid var(--surface-border)' }}>
+                  <div className="form-row">
+                    <div className="form-group">
+                      <label className="form-label">Guarantor Full Name</label>
+                      <input
+                        type="text"
+                        className="form-input"
+                        placeholder="e.g. Bandara Perera"
+                        value={guarantorName}
+                        onChange={(e) => setGuarantorName(e.target.value)}
+                      />
+                    </div>
+
+                    <div className="form-group">
+                      <label className="form-label">Relationship to Client</label>
+                      <input
+                        type="text"
+                        className="form-input"
+                        placeholder="e.g. Spouse, Brother, Business Partner"
+                        value={guarantorRelation}
+                        onChange={(e) => setGuarantorRelation(e.target.value)}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="form-row">
+                    <div className="form-group">
+                      <label className="form-label">Guarantor Phone</label>
+                      <input
+                        type="tel"
+                        className="form-input"
+                        placeholder="0779876543"
+                        value={guarantorPhone}
+                        onChange={(e) => setGuarantorPhone(e.target.value)}
+                      />
+                    </div>
+
+                    <div className="form-group">
+                      <label className="form-label">Guarantor NIC</label>
+                      <input
+                        type="text"
+                        className="form-input"
+                        placeholder="781234567V"
+                        value={guarantorNic}
+                        onChange={(e) => setGuarantorNic(e.target.value.toUpperCase())}
+                      />
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+
             <div className="form-group">
-              <label className="form-label">Business / Notes</label>
+              <label className="form-label">Notes & KYC Observation</label>
               <textarea
                 className="form-textarea"
                 rows="2"
-                placeholder="e.g. Vegetable stall vendor at main market"
+                placeholder="e.g. Visited vegetable stall at Maharagama market. Verified daily cash flow."
                 value={notes}
                 onChange={(e) => setNotes(e.target.value)}
               />

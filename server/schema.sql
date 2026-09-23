@@ -18,6 +18,13 @@ CREATE TABLE IF NOT EXISTS clients (
   nic_id VARCHAR(50),
   address TEXT,
   notes TEXT,
+  guarantor_name VARCHAR(100),
+  guarantor_phone VARCHAR(20),
+  guarantor_nic VARCHAR(50),
+  guarantor_relation VARCHAR(50),
+  business_type VARCHAR(100),
+  kyc_status VARCHAR(20) DEFAULT 'VERIFIED',
+  kyc_notes TEXT,
   created_by INT,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );

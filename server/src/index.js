@@ -103,7 +103,11 @@ app.get('/api/clients', verifyToken, async (req, res) => {
 
 app.post('/api/clients', verifyToken, async (req, res) => {
   try {
-    const { name, phone, nic_id, address, notes } = req.body;
+    const {
+      name, phone, nic_id, address, notes,
+      guarantor_name, guarantor_phone, guarantor_nic, guarantor_relation,
+      business_type, kyc_status, kyc_notes
+    } = req.body;
     if (!name || !phone) {
       return res.status(400).json({ error: 'Client name and phone number are required' });
     }
@@ -114,6 +118,13 @@ app.post('/api/clients', verifyToken, async (req, res) => {
       nic_id: nic_id || '',
       address: address || '',
       notes: notes || '',
+      guarantor_name: guarantor_name || '',
+      guarantor_phone: guarantor_phone || '',
+      guarantor_nic: guarantor_nic || '',
+      guarantor_relation: guarantor_relation || '',
+      business_type: business_type || '',
+      kyc_status: kyc_status || 'VERIFIED',
+      kyc_notes: kyc_notes || '',
       created_by: req.user.id
     });
     return res.status(201).json({ client: newClient });
@@ -135,8 +146,16 @@ app.get('/api/clients/:id', verifyToken, async (req, res) => {
 
 app.put('/api/clients/:id', verifyToken, async (req, res) => {
   try {
-    const { name, phone, nic_id, address, notes } = req.body;
-    const updated = await db.updateClient(req.params.id, { name, phone, nic_id, address, notes });
+    const {
+      name, phone, nic_id, address, notes,
+      guarantor_name, guarantor_phone, guarantor_nic, guarantor_relation,
+      business_type, kyc_status, kyc_notes
+    } = req.body;
+    const updated = await db.updateClient(req.params.id, {
+      name, phone, nic_id, address, notes,
+      guarantor_name, guarantor_phone, guarantor_nic, guarantor_relation,
+      business_type, kyc_status, kyc_notes
+    });
     return res.json({ client: updated, message: 'Client updated successfully' });
   } catch (err) {
     console.error('Error updating client:', err.message);
@@ -160,10 +179,8 @@ app.get('/api/loans', verifyToken, async (req, res) => {
     const filters = {};
     if (req.query.status) filters.status = req.query.status;
 
-    // If logged in as field collection agent, filter to their assigned loans or show active collection queue
-    if (req.user.role === 'AGENT') {
-      filters.agent_id = req.user.id;
-    } else if (req.query.agent_id) {
+    // Optional agent filter if explicitly requested via query param ?agent_id=...
+    if (req.query.agent_id) {
       filters.agent_id = req.query.agent_id;
     }
 

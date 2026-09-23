@@ -11,6 +11,7 @@ export default function LoansView({
 }) {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('ALL');
+  const [scopeFilter, setScopeFilter] = useState('ALL'); // 'ALL' | 'MINE'
 
   const filteredLoans = loans.filter((l) => {
     const matchesSearch =
@@ -21,7 +22,10 @@ export default function LoansView({
     const matchesStatus =
       statusFilter === 'ALL' || l.status === statusFilter;
 
-    return matchesSearch && matchesStatus;
+    const matchesScope =
+      scopeFilter === 'ALL' || (scopeFilter === 'MINE' && l.assigned_agent_id === currentUser.id);
+
+    return matchesSearch && matchesStatus && matchesScope;
   });
 
   return (
@@ -43,7 +47,7 @@ export default function LoansView({
       </div>
 
       {/* Filters & Search Toolbar */}
-      <div style={{ display: 'flex', gap: '10px', marginBottom: '18px', flexWrap: 'wrap' }}>
+      <div style={{ display: 'flex', gap: '10px', marginBottom: '18px', flexWrap: 'wrap', alignItems: 'center' }}>
         <div style={{ position: 'relative', flex: 1, minWidth: '200px' }}>
           <Search size={18} color="var(--text-muted)" style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)' }} />
           <input
@@ -55,6 +59,23 @@ export default function LoansView({
             onChange={(e) => setSearchTerm(e.target.value)}
           />
         </div>
+
+        {currentUser.role === 'AGENT' && (
+          <div style={{ display: 'flex', gap: '6px' }}>
+            <button
+              className={`btn btn-sm ${scopeFilter === 'ALL' ? 'btn-primary' : 'btn-secondary'}`}
+              onClick={() => setScopeFilter('ALL')}
+            >
+              All Loans ({loans.length})
+            </button>
+            <button
+              className={`btn btn-sm ${scopeFilter === 'MINE' ? 'btn-primary' : 'btn-secondary'}`}
+              onClick={() => setScopeFilter('MINE')}
+            >
+              My Assigned
+            </button>
+          </div>
+        )}
 
         <div style={{ display: 'flex', gap: '6px' }}>
           {['ALL', 'ACTIVE', 'COMPLETED'].map((status) => (

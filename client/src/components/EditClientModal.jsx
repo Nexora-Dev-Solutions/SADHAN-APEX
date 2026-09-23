@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { Edit3, X, Trash2, Check, AlertTriangle, ShieldCheck } from 'lucide-react';
+import { Edit3, X, Trash2, Check, AlertTriangle, ShieldCheck, UserCheck, ChevronDown, ChevronUp } from 'lucide-react';
+import { parseSriLankanNic } from '../utils/nicHelper';
 
 // Sri Lankan NIC format: 9 digits + V/X (Old) OR 12 digits (New)
 function validateSriLankanNic(val) {
@@ -30,6 +31,16 @@ export default function EditClientModal({ client, token, currentUser, onClose, o
   const [nicId, setNicId] = useState(client.nic_id || '');
   const [address, setAddress] = useState(client.address || '');
   const [notes, setNotes] = useState(client.notes || '');
+  const [businessType, setBusinessType] = useState(client.business_type || '');
+
+  // KYC & Guarantor
+  const [showGuarantor, setShowGuarantor] = useState(Boolean(client.guarantor_name));
+  const [guarantorName, setGuarantorName] = useState(client.guarantor_name || '');
+  const [guarantorPhone, setGuarantorPhone] = useState(client.guarantor_phone || '');
+  const [guarantorNic, setGuarantorNic] = useState(client.guarantor_nic || '');
+  const [guarantorRelation, setGuarantorRelation] = useState(client.guarantor_relation || '');
+  const [kycStatus, setKycStatus] = useState(client.kyc_status || 'VERIFIED');
+  const [kycNotes, setKycNotes] = useState(client.kyc_notes || '');
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -40,6 +51,7 @@ export default function EditClientModal({ client, token, currentUser, onClose, o
 
   const nicValidation = validateSriLankanNic(nicId);
   const phoneValidation = validateSriLankanPhone(phone);
+  const nicDemographics = parseSriLankanNic(nicId);
 
   const handleUpdate = async (e) => {
     e.preventDefault();
@@ -73,7 +85,14 @@ export default function EditClientModal({ client, token, currentUser, onClose, o
           phone: phoneValidation.clean,
           nic_id: nicValidation.clean,
           address: address.trim(),
-          notes: notes.trim()
+          notes: notes.trim(),
+          business_type: businessType.trim(),
+          guarantor_name: guarantorName.trim(),
+          guarantor_phone: guarantorPhone.trim(),
+          guarantor_nic: guarantorNic.trim(),
+          guarantor_relation: guarantorRelation.trim(),
+          kyc_status: kycStatus,
+          kyc_notes: kycNotes.trim()
         })
       });
 
@@ -112,11 +131,11 @@ export default function EditClientModal({ client, token, currentUser, onClose, o
 
   return (
     <div className="modal-overlay">
-      <div className="modal-content">
+      <div className="modal-content" style={{ maxWidth: '640px' }}>
         <div className="modal-header">
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             <Edit3 size={20} color="#3b82f6" />
-            <h3 style={{ fontSize: '1.15rem', fontWeight: '700' }}>Edit Client Details</h3>
+            <h3 style={{ fontSize: '1.15rem', fontWeight: '700' }}>Edit Client Details & KYC</h3>
           </div>
           <button className="btn btn-secondary btn-sm" onClick={onClose}>
             <X size={16} />
@@ -124,7 +143,7 @@ export default function EditClientModal({ client, token, currentUser, onClose, o
         </div>
 
         <form onSubmit={handleUpdate}>
-          <div className="modal-body">
+          <div className="modal-body" style={{ maxHeight: '74vh', overflowY: 'auto' }}>
             {error && (
               <div style={{
                 background: 'rgba(239, 68, 68, 0.12)',
@@ -210,9 +229,55 @@ export default function EditClientModal({ client, token, currentUser, onClose, o
                     borderColor: nicId.trim() ? (nicValidation.valid ? 'rgba(16, 185, 129, 0.5)' : 'rgba(239, 68, 68, 0.5)') : undefined
                   }}
                 />
-                <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginTop: '4px', display: 'block' }}>
-                  Sri Lankan NIC (9 digits + V/X or 12 digits). Strictly checked for duplicates.
-                </span>
+              </div>
+            </div>
+
+            {/* Extracted NIC Demographics Card */}
+            {nicDemographics && (
+              <div style={{
+                background: 'rgba(59, 130, 246, 0.08)',
+                border: '1px solid rgba(59, 130, 246, 0.25)',
+                borderRadius: 'var(--radius-md)',
+                padding: '10px 14px',
+                marginBottom: '16px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '12px',
+                fontSize: '0.8rem',
+                color: '#93c5fd'
+              }}>
+                <ShieldCheck size={18} color="#3b82f6" />
+                <div>
+                  <strong>NIC Identity Verified:</strong>
+                  <span style={{ marginLeft: '6px', color: 'var(--text-primary)' }}>
+                    {nicDemographics.gender} • Born {nicDemographics.birthYear} (Age ~{nicDemographics.approximateAge})
+                  </span>
+                </div>
+              </div>
+            )}
+
+            <div className="form-row">
+              <div className="form-group">
+                <label className="form-label">Business / Profession</label>
+                <input
+                  type="text"
+                  className="form-input"
+                  value={businessType}
+                  onChange={(e) => setBusinessType(e.target.value)}
+                  placeholder="e.g. Retail shop, Market vendor"
+                />
+              </div>
+
+              <div className="form-group">
+                <label className="form-label">KYC Status</label>
+                <select
+                  className="form-select"
+                  value={kycStatus}
+                  onChange={(e) => setKycStatus(e.target.value)}
+                >
+                  <option value="VERIFIED">VERIFIED (KYC Complete)</option>
+                  <option value="PENDING">PENDING (Documents Pending)</option>
+                </select>
               </div>
             </div>
 
@@ -224,6 +289,87 @@ export default function EditClientModal({ client, token, currentUser, onClose, o
                 value={address}
                 onChange={(e) => setAddress(e.target.value)}
               />
+            </div>
+
+            {/* Guarantor Details Section */}
+            <div style={{
+              marginTop: '12px',
+              marginBottom: '16px',
+              border: '1px solid var(--surface-border)',
+              borderRadius: 'var(--radius-md)',
+              background: 'rgba(255, 255, 255, 0.02)',
+              overflow: 'hidden'
+            }}>
+              <div
+                style={{
+                  padding: '10px 14px',
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  cursor: 'pointer',
+                  background: 'rgba(255, 255, 255, 0.03)'
+                }}
+                onClick={() => setShowGuarantor(!showGuarantor)}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.88rem', fontWeight: '700' }}>
+                  <UserCheck size={16} color="#10b981" />
+                  <span>Guarantor / Surety Details (ඇපකරු)</span>
+                  {guarantorName && <span style={{ fontSize: '0.72rem', color: '#10b981' }}>({guarantorName})</span>}
+                </div>
+                {showGuarantor ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+              </div>
+
+              {showGuarantor && (
+                <div style={{ padding: '14px', borderTop: '1px solid var(--surface-border)' }}>
+                  <div className="form-row">
+                    <div className="form-group">
+                      <label className="form-label">Guarantor Full Name</label>
+                      <input
+                        type="text"
+                        className="form-input"
+                        placeholder="e.g. Bandara Perera"
+                        value={guarantorName}
+                        onChange={(e) => setGuarantorName(e.target.value)}
+                      />
+                    </div>
+
+                    <div className="form-group">
+                      <label className="form-label">Relationship to Client</label>
+                      <input
+                        type="text"
+                        className="form-input"
+                        placeholder="e.g. Spouse, Brother, Business Partner"
+                        value={guarantorRelation}
+                        onChange={(e) => setGuarantorRelation(e.target.value)}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="form-row">
+                    <div className="form-group">
+                      <label className="form-label">Guarantor Phone</label>
+                      <input
+                        type="tel"
+                        className="form-input"
+                        placeholder="0779876543"
+                        value={guarantorPhone}
+                        onChange={(e) => setGuarantorPhone(e.target.value)}
+                      />
+                    </div>
+
+                    <div className="form-group">
+                      <label className="form-label">Guarantor NIC</label>
+                      <input
+                        type="text"
+                        className="form-input"
+                        placeholder="781234567V"
+                        value={guarantorNic}
+                        onChange={(e) => setGuarantorNic(e.target.value.toUpperCase())}
+                      />
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
 
             <div className="form-group">
