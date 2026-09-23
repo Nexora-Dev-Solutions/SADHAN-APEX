@@ -392,15 +392,6 @@ export default function App() {
               </span>
             </div>
           </div>
-
-          <button
-            className="btn btn-secondary btn-sm"
-            onClick={handleLogout}
-            title="Log Out"
-            style={{ padding: '8px' }}
-          >
-            <LogOut size={16} />
-          </button>
         </div>
       </aside>
 
@@ -506,7 +497,6 @@ export default function App() {
               onOpenPayment={(loan) => setSelectedLoanForPayment(loan)}
               onOpenLoanDetail={(loanId) => setSelectedLoanIdForDetail(loanId)}
               onOpenReminders={() => setShowNotificationCenter(true)}
-              onLogout={handleLogout}
             />
           )}
 
