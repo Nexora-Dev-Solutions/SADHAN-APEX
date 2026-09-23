@@ -1,0 +1,21 @@
+{
+  "name": "loan-management-project",
+  "version": "1.0.0",
+  "description": "58-Installment Loan & Client Management System with Thermal Receipt Printing",
+  "scripts": {
+    "start": "node server/src/index.js",
+    "dev": "node server/src/index.js",
+    "build": "npm --prefix client run build",
+    "server": "npm --prefix server start",
+    "client": "npm --prefix client run dev"
+  },
+  "keywords": [
+    "loan",
+    "microfinance",
+    "58-installments",
+    "receipt-printer",
+    "pwa"
+  ],
+  "author": "",
+  "license": "ISC"
+}

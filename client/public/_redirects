@@ -1,0 +1,6 @@
+# Netlify Redirects & API Proxy
+# 1. Forward API calls to your Render backend (replace with your Render backend URL once deployed)
+/api/* https://loan-management-server.onrender.com/api/:splat 200
+
+# 2. SPA Single Page Application fallback for React routing
+/* /index.html 200

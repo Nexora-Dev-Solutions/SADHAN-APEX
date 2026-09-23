@@ -1,0 +1,162 @@
+import React from 'react';
+import { Printer, X, CheckCircle } from 'lucide-react';
+
+export default function ThermalReceipt({ receipt, onClose }) {
+  if (!receipt) return null;
+
+  const handlePrint = () => {
+    window.print();
+  };
+
+  const formattedDate = new Date(receipt.created_at || Date.now()).toLocaleString('en-GB', {
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit'
+  });
+
+  return (
+    <div className="modal-overlay">
+      <div className="modal-content" style={{ maxWidth: '420px' }}>
+        <div className="modal-header no-print">
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <Printer size={20} color="#3b82f6" />
+            <h3 style={{ fontSize: '1.1rem', fontWeight: '700' }}>Thermal Receipt Preview</h3>
+          </div>
+          <button className="btn btn-secondary btn-sm" onClick={onClose}>
+            <X size={16} />
+          </button>
+        </div>
+
+        <div className="modal-body" style={{ background: '#0a0e17' }}>
+          {/* Thermal Receipt Paper representation */}
+          <div className="thermal-receipt-container">
+            <div className="receipt-header">
+              <div className="receipt-title">MICRO LOAN SERVICE</div>
+              <div className="receipt-subtitle">58-INSTALLMENT MICRO LOANS</div>
+              <div style={{ fontSize: '10px', color: '#555' }}>FIELD COLLECTION RECEIPT</div>
+            </div>
+
+            <div className="receipt-divider"></div>
+
+            <div className="receipt-row">
+              <span className="receipt-label">RECEIPT NO:</span>
+              <span className="receipt-value">{receipt.receipt_no}</span>
+            </div>
+            <div className="receipt-row">
+              <span className="receipt-label">DATE/TIME:</span>
+              <span className="receipt-value">{formattedDate}</span>
+            </div>
+            <div className="receipt-row">
+              <span className="receipt-label">COLLECTOR:</span>
+              <span className="receipt-value">{receipt.collector_name || 'Staff'}</span>
+            </div>
+
+            <div className="receipt-divider"></div>
+
+            <div className="receipt-row">
+              <span className="receipt-label">CLIENT:</span>
+              <span className="receipt-value">{receipt.client_name}</span>
+            </div>
+            {receipt.client_phone && (
+              <div className="receipt-row">
+                <span className="receipt-label">CONTACT:</span>
+                <span className="receipt-value">{receipt.client_phone}</span>
+              </div>
+            )}
+            <div className="receipt-row">
+              <span className="receipt-label">LOAN REF:</span>
+              <span className="receipt-value">{receipt.loan_code}</span>
+            </div>
+            <div className="receipt-row">
+              <span className="receipt-label">PLAN:</span>
+              <span className="receipt-value">{receipt.installment_count || 58} Installments</span>
+            </div>
+            <div className="receipt-row">
+              <span className="receipt-label">INSTALLMENT #:</span>
+              <span className="receipt-value" style={{ textDecoration: 'underline' }}>
+                #{receipt.current_installment_no || 1} of {receipt.installment_count || 58}
+              </span>
+            </div>
+
+            <div className="receipt-divider"></div>
+
+            <div className="receipt-row">
+              <span className="receipt-label">PAYMENT TYPE:</span>
+              <span className="receipt-value" style={{ fontWeight: '800' }}>
+                {receipt.payment_type === 'PARTIAL' ? '*** PARTIAL PAYMENT ***' : 'FULL INSTALLMENT'}
+              </span>
+            </div>
+            <div className="receipt-row">
+              <span className="receipt-label">PAYMENT METHOD:</span>
+              <span className="receipt-value">{receipt.payment_method || 'CASH'}</span>
+            </div>
+
+            {/* Prominent Amount Box */}
+            <div className="receipt-amount-box">
+              <div className="receipt-amount-title">AMOUNT RECEIVED</div>
+              <div className="receipt-amount-main">Rs. {Number(receipt.amount_paid).toFixed(2)}</div>
+            </div>
+
+            <div className="receipt-row">
+              <span className="receipt-label">PREV BALANCE:</span>
+              <span className="receipt-value">Rs. {Number(receipt.previous_balance).toFixed(2)}</span>
+            </div>
+            <div className="receipt-row">
+              <span className="receipt-label" style={{ fontWeight: '800' }}>REMAINING BAL:</span>
+              <span className="receipt-value" style={{ fontWeight: '800' }}>
+                Rs. {Number(receipt.remaining_balance).toFixed(2)}
+              </span>
+            </div>
+
+            {receipt.next_due_date && receipt.next_due_date !== 'Completed' && (
+              <>
+                <div className="receipt-divider"></div>
+                <div className="receipt-row">
+                  <span className="receipt-label">NEXT DUE DATE:</span>
+                  <span className="receipt-value">{receipt.next_due_date}</span>
+                </div>
+                {receipt.next_due_amount > 0 && (
+                  <div className="receipt-row">
+                    <span className="receipt-label">NEXT DUE AMT:</span>
+                    <span className="receipt-value">Rs. {Number(receipt.next_due_amount).toFixed(2)}</span>
+                  </div>
+                )}
+              </>
+            )}
+
+            {receipt.notes && (
+              <div style={{ marginTop: '6px', fontSize: '10px', fontStyle: 'italic' }}>
+                Note: {receipt.notes}
+              </div>
+            )}
+
+            <div className="receipt-divider"></div>
+
+            <div className="receipt-barcode">
+              ||||| | |||| ||| || ||||
+            </div>
+
+            <div className="receipt-footer">
+              <div>Thank you for your payment!</div>
+              <div style={{ fontSize: '9px', marginTop: '2px', color: '#666' }}>
+                Keep this receipt for your records.
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="modal-footer no-print" style={{ justifyContent: 'space-between' }}>
+          <button className="btn btn-secondary" onClick={onClose}>
+            Done
+          </button>
+          <button className="btn btn-primary" onClick={handlePrint} style={{ gap: '10px' }}>
+            <Printer size={18} />
+            Print Thermal Receipt
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
