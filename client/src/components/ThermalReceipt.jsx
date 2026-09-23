@@ -17,7 +17,7 @@ export default function ThermalReceipt({ receipt, onClose }) {
   });
 
   return (
-    <div className="modal-overlay">
+    <div className="modal-overlay thermal-receipt-modal">
       <div className="modal-content" style={{ maxWidth: '420px' }}>
         <div className="modal-header no-print">
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>

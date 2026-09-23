@@ -973,58 +973,86 @@ table.data-table tr:hover td {
   }
 }
 
-/* PRINT MEDIA QUERY FOR PHYSICAL THERMAL PRINTERS */
+/* PRINT MEDIA QUERY FOR PHYSICAL THERMAL PRINTERS & PDF EXPORT */
 @media print {
-  body {
+  /* 1. Reset canvas */
+  html, body {
     background: #ffffff !important;
     color: #000000 !important;
     margin: 0 !important;
     padding: 0 !important;
+    width: 100% !important;
+    height: auto !important;
   }
 
+  /* 2. Hide everything by default */
+  body * {
+    visibility: hidden !important;
+  }
+
+  /* 3. Completely remove non-receipt elements from print layout */
+  .app-container,
+  .main-wrapper,
   .sidebar,
   .top-bar,
+  .content-body,
   .mobile-bottom-nav,
+  .modal-overlay:not(.thermal-receipt-modal),
   .modal-header,
   .modal-footer,
   .btn,
-  .stats-grid,
-  .table-card,
-  .mobile-card-view,
-  .page-title,
   .no-print {
     display: none !important;
   }
 
-  .modal-overlay {
+  /* 4. Make ONLY the thermal receipt and its children visible */
+  .thermal-receipt-container,
+  .thermal-receipt-container * {
+    visibility: visible !important;
+  }
+
+  /* 5. Cleanly position receipt with zero background leakage */
+  .thermal-receipt-modal {
     position: static !important;
-    background: none !important;
+    background: transparent !important;
     backdrop-filter: none !important;
     padding: 0 !important;
+    display: block !important;
   }
 
-  .modal-content {
+  .thermal-receipt-modal .modal-content {
+    position: static !important;
     border: none !important;
     box-shadow: none !important;
-    max-width: 100% !important;
     background: transparent !important;
+    max-width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    overflow: visible !important;
   }
 
-  .modal-body {
+  .thermal-receipt-modal .modal-body {
+    background: transparent !important;
     padding: 0 !important;
+    margin: 0 !important;
   }
 
   .thermal-receipt-container {
-    box-shadow: none !important;
-    border-radius: 0 !important;
+    position: absolute !important;
+    top: 0 !important;
+    left: 0 !important;
+    width: 72mm !important;
     max-width: 72mm !important;
-    width: 100% !important;
     margin: 0 !important;
-    padding: 2mm !important;
+    padding: 2mm 3mm !important;
+    border: none !important;
+    box-shadow: none !important;
+    background: #ffffff !important;
+    color: #000000 !important;
   }
 
   @page {
     size: 80mm auto;
-    margin: 0;
+    margin: 0mm;
   }
 }

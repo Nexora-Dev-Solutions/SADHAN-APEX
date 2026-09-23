@@ -562,6 +562,27 @@ export default function App() {
               onReprintReceipt={(receipt) => setActiveReceipt(receipt)}
             />
           )}
+
+          {/* System Footer & Copyright (Visible on Mobile & All Views) */}
+          <footer style={{
+            marginTop: '36px',
+            paddingTop: '16px',
+            borderTop: '1px solid var(--surface-border)',
+            textAlign: 'center',
+            fontSize: '0.72rem',
+            color: 'var(--text-muted)',
+            lineHeight: '1.6'
+          }}>
+            <div style={{ fontWeight: '700', color: 'var(--text-secondary)' }}>
+              SADHAN APEX (PVT) LTD • 58-INSTALLMENT MICRO LOANS
+            </div>
+            <div style={{ color: '#60a5fa', fontSize: '0.72rem', fontWeight: '600', marginTop: '2px' }}>
+              📞 0702263041 / 0743150900
+            </div>
+            <div style={{ marginTop: '4px', color: '#94a3b8' }}>
+              © {new Date().getFullYear()} Sadhan Apex (Pvt) Ltd • System Solution: <strong>Nexora Software Solutions</strong>
+            </div>
+          </footer>
         </main>
       </div>
 
