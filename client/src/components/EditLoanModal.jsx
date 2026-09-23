@@ -336,29 +336,27 @@ export default function EditLoanModal({ loan, token, agents, currentUser, onClos
             )}
           </div>
 
-          <div className="modal-footer" style={{ justifyContent: 'space-between' }}>
-            <div>
-              {isOwner && !showDeleteConfirm && (
-                <button
-                  type="button"
-                  className="btn btn-danger btn-sm"
-                  style={{ gap: '6px' }}
-                  onClick={() => setShowDeleteConfirm(true)}
-                  disabled={isSubmitting}
-                >
-                  <Trash2 size={15} />
-                  Delete Loan
-                </button>
-              )}
-            </div>
+          <div className="modal-footer" style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', justifyContent: 'space-between', alignItems: 'center' }}>
+            {isOwner && !showDeleteConfirm && (
+              <button
+                type="button"
+                className="btn btn-danger btn-sm"
+                style={{ gap: '6px' }}
+                onClick={() => setShowDeleteConfirm(true)}
+                disabled={isSubmitting}
+              >
+                <Trash2 size={15} />
+                Delete Loan
+              </button>
+            )}
 
-            <div style={{ display: 'flex', gap: '8px' }}>
+            <div style={{ display: 'flex', gap: '8px', marginLeft: 'auto', flexWrap: 'wrap' }}>
               <button type="button" className="btn btn-secondary" onClick={onClose} disabled={isSubmitting}>
                 Cancel
               </button>
               <button type="submit" className="btn btn-primary" disabled={isSubmitting} style={{ gap: '6px' }}>
                 <Check size={16} />
-                {isSubmitting ? 'Updating...' : (activeTab === 'topup' ? 'Apply Top-Up to Ledger' : 'Save Changes')}
+                {isSubmitting ? 'Updating...' : (activeTab === 'topup' ? 'Apply Top-Up' : 'Save Changes')}
               </button>
             </div>
           </div>

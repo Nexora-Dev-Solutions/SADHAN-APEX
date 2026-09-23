@@ -950,6 +950,16 @@ table.data-table tr:hover td {
     max-width: 100% !important;
     overflow-x: hidden;
   }
+
+  .modal-footer {
+    padding: 12px 14px !important;
+    flex-wrap: wrap !important;
+    gap: 8px !important;
+  }
+
+  .modal-footer .btn {
+    min-height: 40px;
+  }
 }
 
 /* Extra small mobile (Fold cover screen ~360px - 412px) */

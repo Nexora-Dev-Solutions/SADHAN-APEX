@@ -256,38 +256,38 @@ export default function LoanDetailModal({ loanId, token, currentUser, onClose, o
                     <div
                       key={p.id}
                       style={{
-                        padding: '10px 14px',
+                        padding: '10px 12px',
                         background: 'rgba(255, 255, 255, 0.02)',
                         border: '1px solid var(--surface-border)',
                         borderRadius: '8px',
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'space-between',
-                        gap: '10px'
+                        gap: '8px'
                       }}
                     >
-                      <div>
+                      <div style={{ minWidth: 0, flex: 1 }}>
                         <div style={{ fontWeight: '700', fontFamily: 'var(--font-mono)', color: 'var(--accent-primary)', fontSize: '0.85rem' }}>
                           {p.receipt_no}
                         </div>
-                        <div style={{ fontSize: '0.74rem', color: 'var(--text-muted)', marginTop: '2px' }}>
+                        <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginTop: '2px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                           {formatCleanDate(p.created_at)} • {p.collector_name || 'Collector'}
                         </div>
                       </div>
 
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
                         <div style={{ textAlign: 'right' }}>
-                          <div style={{ fontWeight: '800', color: '#10b981', fontSize: '0.92rem' }}>
+                          <div style={{ fontWeight: '800', color: '#10b981', fontSize: '0.88rem', whiteSpace: 'nowrap' }}>
                             Rs. {Number(p.amount_paid).toFixed(2)}
                           </div>
-                          <span style={{ fontSize: '0.68rem', color: 'var(--text-muted)' }}>
+                          <span style={{ fontSize: '0.66rem', color: 'var(--text-muted)' }}>
                             {p.payment_type}
                           </span>
                         </div>
 
                         <button
                           className="btn btn-secondary btn-sm"
-                          style={{ gap: '4px', fontSize: '0.75rem', padding: '6px 10px' }}
+                          style={{ gap: '4px', fontSize: '0.72rem', padding: '5px 8px', flexShrink: 0 }}
                           onClick={() => onReprintReceipt({
                             ...p,
                             loan_code: loan.loan_code,
@@ -296,7 +296,7 @@ export default function LoanDetailModal({ loanId, token, currentUser, onClose, o
                             installment_count: loan.installment_count
                           })}
                         >
-                          <Printer size={13} />
+                          <Printer size={12} />
                           Reprint
                         </button>
                       </div>
@@ -309,15 +309,40 @@ export default function LoanDetailModal({ loanId, token, currentUser, onClose, o
         </div>
 
         {/* Modal Footer */}
-        <div className="modal-footer" style={{ padding: '12px 18px', justifyContent: 'space-between' }}>
-          <button className="btn btn-secondary" onClick={onClose}>
-            Close
-          </button>
-          <div style={{ display: 'flex', gap: '8px' }}>
+        <div className="modal-footer" style={{ padding: '12px 16px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+          {loan.status === 'ACTIVE' && (
+            <button
+              className="btn btn-success"
+              style={{
+                width: '100%',
+                justifyContent: 'center',
+                gap: '8px',
+                padding: '11px 16px',
+                fontSize: '0.95rem',
+                fontWeight: '700'
+              }}
+              onClick={() => {
+                onClose();
+                onOpenPayment(loan);
+              }}
+            >
+              <DollarSign size={18} />
+              Pay Installment
+            </button>
+          )}
+
+          <div style={{ display: 'flex', gap: '8px', width: '100%' }}>
+            <button
+              className="btn btn-secondary"
+              style={{ flex: 1, justifyContent: 'center', padding: '9px 12px' }}
+              onClick={onClose}
+            >
+              Close
+            </button>
             {currentUser?.role === 'OWNER' && onEditLoan && (
               <button
                 className="btn btn-secondary"
-                style={{ gap: '6px' }}
+                style={{ flex: 1, justifyContent: 'center', gap: '6px', padding: '9px 12px', whiteSpace: 'nowrap' }}
                 onClick={() => {
                   onClose();
                   onEditLoan(loan);
@@ -325,19 +350,6 @@ export default function LoanDetailModal({ loanId, token, currentUser, onClose, o
               >
                 <Edit3 size={15} />
                 Top-Up / Edit
-              </button>
-            )}
-            {loan.status === 'ACTIVE' && (
-              <button
-                className="btn btn-success"
-                style={{ gap: '6px' }}
-                onClick={() => {
-                  onClose();
-                  onOpenPayment(loan);
-                }}
-              >
-                <DollarSign size={16} />
-                Pay Installment
               </button>
             )}
           </div>
