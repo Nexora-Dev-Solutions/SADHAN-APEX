@@ -325,8 +325,8 @@ app.get('/api/dashboard', verifyToken, async (req, res) => {
   }
 });
 
-// MONTHLY FINANCIAL REPORT & ANALYTICS
-app.get('/api/reports/monthly', verifyToken, async (req, res) => {
+// MONTHLY FINANCIAL REPORT & ANALYTICS (Owner Only)
+app.get('/api/reports/monthly', verifyToken, requireOwner, async (req, res) => {
   try {
     const month = req.query.month || new Date().toISOString().slice(0, 7);
     const report = await db.getMonthlyReport(month);
@@ -337,8 +337,8 @@ app.get('/api/reports/monthly', verifyToken, async (req, res) => {
   }
 });
 
-// MASTER TRANSACTIONS & RECEIPTS LEDGER
-app.get('/api/payments', verifyToken, async (req, res) => {
+// MASTER TRANSACTIONS & RECEIPTS LEDGER (Owner Only)
+app.get('/api/payments', verifyToken, requireOwner, async (req, res) => {
   try {
     const { month, search, payment_method, limit = 200, offset = 0 } = req.query;
     const transactions = await db.getAllTransactions({

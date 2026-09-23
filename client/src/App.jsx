@@ -124,6 +124,7 @@ export default function App() {
     if (targetRole === 'OWNER') {
       handleLogin('owner', 'owner123');
     } else {
+      if (currentView === 'reports') setCurrentView('dashboard');
       handleLogin('agent1', 'agent123');
     }
   };
@@ -331,13 +332,15 @@ export default function App() {
             )}
           </li>
 
-          <li
-            className={`nav-item ${currentView === 'reports' ? 'active' : ''}`}
-            onClick={() => setCurrentView('reports')}
-          >
-            <BarChart3 size={18} />
-            <span>Reports & Ledger</span>
-          </li>
+          {currentUser?.role === 'OWNER' && (
+            <li
+              className={`nav-item ${currentView === 'reports' ? 'active' : ''}`}
+              onClick={() => setCurrentView('reports')}
+            >
+              <BarChart3 size={18} />
+              <span>Reports & Ledger</span>
+            </li>
+          )}
         </ul>
 
         {/* Quick Role Switcher for Testing */}
@@ -502,7 +505,7 @@ export default function App() {
             />
           )}
 
-          {currentView === 'reports' && (
+          {currentView === 'reports' && currentUser?.role === 'OWNER' && (
             <ReportsView
               token={token}
               currentUser={currentUser}
@@ -557,13 +560,15 @@ export default function App() {
           <span>Clients</span>
         </div>
 
-        <div
-          className={`mobile-nav-item ${currentView === 'reports' ? 'active' : ''}`}
-          onClick={() => setCurrentView('reports')}
-        >
-          <BarChart3 size={20} />
-          <span>Reports</span>
-        </div>
+        {currentUser?.role === 'OWNER' && (
+          <div
+            className={`mobile-nav-item ${currentView === 'reports' ? 'active' : ''}`}
+            onClick={() => setCurrentView('reports')}
+          >
+            <BarChart3 size={20} />
+            <span>Reports</span>
+          </div>
+        )}
       </nav>
 
       {/* MODALS */}
