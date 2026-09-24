@@ -32,6 +32,9 @@ export default function ReportsView({ token, currentUser, onReprintReceipt, data
   const [search, setSearch] = useState('');
   const [methodFilter, setMethodFilter] = useState('ALL');
   const [scopeFilter, setScopeFilter] = useState('MONTH'); // 'MONTH' or 'ALL'
+  const [ledgerType, setLedgerType] = useState('COLLECTIONS'); // 'COLLECTIONS' | 'DISBURSEMENTS'
+  const [disbursedLoans, setDisbursedLoans] = useState([]);
+  const [lastRefreshedAt, setLastRefreshedAt] = useState(new Date());
   const [hoveredDay, setHoveredDay] = useState(null);
 
   useEffect(() => {
@@ -50,12 +53,13 @@ export default function ReportsView({ token, currentUser, onReprintReceipt, data
     setIsLoading(true);
     setError('');
     try {
-      const res = await fetch(`/api/reports/monthly?month=${selectedMonth}`, {
+      const res = await fetch(`/api/reports/monthly?month=${selectedMonth}&_t=${Date.now()}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Failed to load monthly report');
       setReport(data.report);
+      setLastRefreshedAt(new Date());
     } catch (err) {
       console.error(err);
       setError(err.message);
@@ -76,14 +80,40 @@ export default function ReportsView({ token, currentUser, onReprintReceipt, data
       if (search.trim()) params.append('search', search.trim());
       if (methodFilter !== 'ALL') params.append('payment_method', methodFilter);
       params.append('limit', '300');
+      params.append('_t', Date.now().toString());
 
-      const res = await fetch(`/api/payments?${params.toString()}`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      const data = await res.json();
-      if (res.ok) {
-        setTransactions(data.transactions || []);
+      const [txRes, loansRes] = await Promise.all([
+        fetch(`/api/payments?${params.toString()}`, {
+          headers: { Authorization: `Bearer ${token}` }
+        }),
+        fetch(`/api/loans?_t=${Date.now()}`, {
+          headers: { Authorization: `Bearer ${token}` }
+        })
+      ]);
+
+      const txData = await txRes.json();
+      if (txRes.ok) {
+        setTransactions(txData.transactions || []);
       }
+
+      const loansData = await loansRes.json();
+      if (loansRes.ok && loansData.loans) {
+        let lList = loansData.loans;
+        if (scopeFilter === 'MONTH') {
+          lList = lList.filter(l => (l.created_at || '').startsWith(selectedMonth));
+        }
+        if (search.trim()) {
+          const q = search.trim().toLowerCase();
+          lList = lList.filter(l =>
+            (l.loan_code || '').toLowerCase().includes(q) ||
+            (l.client_name || '').toLowerCase().includes(q) ||
+            (l.client_phone || '').toLowerCase().includes(q) ||
+            (l.nic_id || '').toLowerCase().includes(q)
+          );
+        }
+        setDisbursedLoans(lList);
+      }
+      setLastRefreshedAt(new Date());
     } catch (err) {
       console.error('Failed to load transactions:', err);
     }
@@ -187,12 +217,28 @@ export default function ReportsView({ token, currentUser, onReprintReceipt, data
         gap: '12px'
       }}>
         <div>
-          <h2 style={{ fontSize: '1.3rem', fontWeight: '800', display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <BarChart3 size={24} color="#3b82f6" />
-            Monthly Financial Report & Ledger
-          </h2>
-          <p style={{ fontSize: '0.82rem', color: 'var(--text-muted)' }}>
-            Financial health, field collection analytics, and searchable master receipts
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <h2 style={{ fontSize: '1.3rem', fontWeight: '800', display: 'flex', alignItems: 'center', gap: '8px', margin: 0 }}>
+              <BarChart3 size={24} color="#3b82f6" />
+              Monthly Financial Report & Ledger
+            </h2>
+            <span style={{
+              fontSize: '0.72rem',
+              background: 'rgba(16, 185, 129, 0.15)',
+              color: '#34d399',
+              padding: '3px 8px',
+              borderRadius: '12px',
+              fontWeight: '700',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '4px'
+            }}>
+              <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#34d399' }}></span>
+              Live Sync
+            </span>
+          </div>
+          <p style={{ fontSize: '0.82rem', color: 'var(--text-muted)', marginTop: '4px' }}>
+            Financial health, field collection analytics, and searchable master receipts • Updated {lastRefreshedAt.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
           </p>
         </div>
 
@@ -302,7 +348,7 @@ export default function ReportsView({ token, currentUser, onReprintReceipt, data
             Rs. {Number(report?.total_disbursed || 0).toLocaleString()}
           </div>
           <div className="stat-subtext" style={{ color: 'var(--text-secondary)' }}>
-            🤝 {report?.new_loans_count || 0} New 58-Day plans issued
+            🤝 {report?.new_loans_count || 0} New plans issued
           </div>
         </div>
 
@@ -351,7 +397,7 @@ export default function ReportsView({ token, currentUser, onReprintReceipt, data
                 <span>Daily Collection Velocity</span>
               </div>
               <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginTop: '2px' }}>
-                Day-by-day cash intake across all 58-day loans
+                Day-by-day cash intake across active loans
               </div>
             </div>
             {hoveredDay && (
@@ -561,30 +607,51 @@ export default function ReportsView({ token, currentUser, onReprintReceipt, data
                 borderRadius: '12px',
                 fontWeight: '700'
               }}>
-                {transactions.length} Records
+                {ledgerType === 'COLLECTIONS' ? `${transactions.length} Receipts` : `${disbursedLoans.length} Loans`}
               </span>
             </h3>
             <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>
-              Search across historical receipts, inspect balances, and reprint physical thermal receipts
+              {ledgerType === 'COLLECTIONS'
+                ? 'Search across historical receipts, inspect balances, and reprint physical thermal receipts'
+                : 'Inspect all newly issued loan facilities, capital disbursement, and markup breakdown'}
             </p>
           </div>
 
-          {/* Quick Scope Switcher */}
-          <div style={{ display: 'flex', gap: '6px' }}>
-            <button
-              className={`btn btn-sm ${scopeFilter === 'MONTH' ? 'btn-primary' : 'btn-secondary'}`}
-              onClick={() => setScopeFilter('MONTH')}
-              style={{ fontSize: '0.78rem', padding: '6px 10px' }}
-            >
-              {formatMonthTitle(selectedMonth)}
-            </button>
-            <button
-              className={`btn btn-sm ${scopeFilter === 'ALL' ? 'btn-primary' : 'btn-secondary'}`}
-              onClick={() => setScopeFilter('ALL')}
-              style={{ fontSize: '0.78rem', padding: '6px 10px' }}
-            >
-              All History
-            </button>
+          {/* Quick Scope Switcher & Ledger Type */}
+          <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center' }}>
+            <div style={{ display: 'flex', background: 'rgba(255,255,255,0.06)', borderRadius: 'var(--radius-md)', padding: '2px' }}>
+              <button
+                className={`btn btn-sm ${ledgerType === 'COLLECTIONS' ? 'btn-primary' : 'btn-secondary'}`}
+                onClick={() => setLedgerType('COLLECTIONS')}
+                style={{ fontSize: '0.78rem', padding: '5px 12px', border: 'none' }}
+              >
+                Collections ({transactions.length})
+              </button>
+              <button
+                className={`btn btn-sm ${ledgerType === 'DISBURSEMENTS' ? 'btn-primary' : 'btn-secondary'}`}
+                onClick={() => setLedgerType('DISBURSEMENTS')}
+                style={{ fontSize: '0.78rem', padding: '5px 12px', border: 'none' }}
+              >
+                Disbursed Loans ({disbursedLoans.length})
+              </button>
+            </div>
+
+            <div style={{ display: 'flex', gap: '4px' }}>
+              <button
+                className={`btn btn-sm ${scopeFilter === 'MONTH' ? 'btn-primary' : 'btn-secondary'}`}
+                onClick={() => setScopeFilter('MONTH')}
+                style={{ fontSize: '0.78rem', padding: '5px 10px' }}
+              >
+                {formatMonthTitle(selectedMonth)}
+              </button>
+              <button
+                className={`btn btn-sm ${scopeFilter === 'ALL' ? 'btn-primary' : 'btn-secondary'}`}
+                onClick={() => setScopeFilter('ALL')}
+                style={{ fontSize: '0.78rem', padding: '5px 10px' }}
+              >
+                All History
+              </button>
+            </div>
           </div>
         </div>
 
@@ -625,101 +692,184 @@ export default function ReportsView({ token, currentUser, onReprintReceipt, data
 
         {/* DESKTOP TABLE VIEW */}
         <div className="desktop-table-view">
-          {transactions.length === 0 ? (
-            <div style={{ textAlign: 'center', padding: '40px 10px', color: 'var(--text-muted)', fontSize: '0.88rem' }}>
-              No transaction receipts found matching your search.
-            </div>
-          ) : (
-            <div style={{ overflowX: 'auto' }}>
-              <table className="data-table" style={{ width: '100%', minWidth: '950px' }}>
-                <thead>
-                  <tr>
-                    <th style={{ whiteSpace: 'nowrap', width: '130px' }}>Receipt #</th>
-                    <th style={{ whiteSpace: 'nowrap', width: '140px' }}>Date & Time</th>
-                    <th style={{ minWidth: '180px' }}>Client & Contact</th>
-                    <th style={{ whiteSpace: 'nowrap', width: '120px' }}>Loan Ref</th>
-                    <th style={{ whiteSpace: 'nowrap', width: '90px' }}>Method</th>
-                    <th style={{ textAlign: 'right', whiteSpace: 'nowrap', width: '130px' }}>Amount Paid</th>
-                    <th style={{ textAlign: 'right', whiteSpace: 'nowrap', width: '140px' }}>Remaining Bal</th>
-                    <th style={{ whiteSpace: 'nowrap', width: '140px' }}>Collector</th>
-                    <th style={{ textAlign: 'center', whiteSpace: 'nowrap', width: '100px' }}>Receipt</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {transactions.map((t) => {
-                    const d = new Date(t.created_at || Date.now());
-                    const dateFormatted = d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
-                    const timeFormatted = d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+          {ledgerType === 'COLLECTIONS' ? (
+            transactions.length === 0 ? (
+              <div style={{ textAlign: 'center', padding: '40px 10px', color: 'var(--text-muted)', fontSize: '0.88rem' }}>
+                No transaction receipts found matching your search.
+              </div>
+            ) : (
+              <div style={{ overflowX: 'auto' }}>
+                <table className="data-table" style={{ width: '100%', minWidth: '950px' }}>
+                  <thead>
+                    <tr>
+                      <th style={{ whiteSpace: 'nowrap', width: '130px' }}>Receipt #</th>
+                      <th style={{ whiteSpace: 'nowrap', width: '140px' }}>Date & Time</th>
+                      <th style={{ minWidth: '180px' }}>Client & Contact</th>
+                      <th style={{ whiteSpace: 'nowrap', width: '120px' }}>Loan Ref</th>
+                      <th style={{ whiteSpace: 'nowrap', width: '90px' }}>Method</th>
+                      <th style={{ textAlign: 'right', whiteSpace: 'nowrap', width: '130px' }}>Amount Paid</th>
+                      <th style={{ textAlign: 'right', whiteSpace: 'nowrap', width: '140px' }}>Remaining Bal</th>
+                      <th style={{ whiteSpace: 'nowrap', width: '140px' }}>Collector</th>
+                      <th style={{ textAlign: 'center', whiteSpace: 'nowrap', width: '100px' }}>Receipt</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {transactions.map((t) => {
+                      const d = new Date(t.created_at || Date.now());
+                      const dateFormatted = d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+                      const timeFormatted = d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
-                    return (
-                      <tr key={`tx-${t.id}`}>
-                        <td style={{ whiteSpace: 'nowrap' }}>
-                          <span style={{
-                            fontWeight: '800',
-                            fontFamily: 'monospace',
-                            color: '#38bdf8',
-                            background: 'rgba(56, 189, 248, 0.1)',
-                            padding: '3px 7px',
-                            borderRadius: 'var(--radius-sm)'
-                          }}>
-                            {t.receipt_no}
-                          </span>
-                        </td>
-                        <td style={{ whiteSpace: 'nowrap' }}>
-                          <div style={{ fontWeight: '600' }}>{dateFormatted}</div>
-                          <div style={{ fontSize: '0.74rem', color: 'var(--text-muted)' }}>{timeFormatted}</div>
-                        </td>
-                        <td>
-                          <div style={{ fontWeight: '700', color: 'var(--text-primary)' }}>{t.client_name}</div>
-                          <div style={{ fontSize: '0.74rem', color: 'var(--text-muted)' }}>
-                            {t.client_phone} {t.client_nic ? `• ${t.client_nic}` : ''}
-                          </div>
-                        </td>
-                        <td style={{ whiteSpace: 'nowrap' }}>
-                          <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
-                            {t.loan_code}
-                          </span>
-                        </td>
-                        <td style={{ whiteSpace: 'nowrap' }}>
-                          <span style={{
-                            fontSize: '0.72rem',
-                            fontWeight: '600',
-                            padding: '2px 6px',
-                            borderRadius: 'var(--radius-sm)',
-                            background: t.payment_method === 'CASH' ? 'rgba(16, 185, 129, 0.1)' : 'rgba(59, 130, 246, 0.1)',
-                            color: t.payment_method === 'CASH' ? '#34d399' : '#60a5fa'
-                          }}>
-                            {t.payment_method || 'CASH'}
-                          </span>
-                        </td>
-                        <td style={{ textAlign: 'right', fontWeight: '800', color: '#10b981', fontSize: '0.92rem', whiteSpace: 'nowrap' }}>
-                          Rs. {Math.round(Number(t.amount_paid)).toLocaleString()}
-                        </td>
-                        <td style={{ textAlign: 'right', fontWeight: '700', color: 'var(--text-secondary)', whiteSpace: 'nowrap' }}>
-                          Rs. {Math.round(Number(t.remaining_balance)).toLocaleString()}
-                        </td>
-                        <td style={{ whiteSpace: 'nowrap' }}>
-                          <span style={{ fontSize: '0.82rem', color: 'var(--text-primary)', fontWeight: '600' }}>
-                            {t.collector_name || 'Staff'}
-                          </span>
-                        </td>
-                        <td style={{ textAlign: 'center', whiteSpace: 'nowrap' }}>
-                          <button
-                            className="btn btn-secondary btn-sm"
-                            style={{ gap: '4px', padding: '5px 9px', fontSize: '0.76rem' }}
-                            onClick={() => onReprintReceipt(t)}
-                            title="Reprint thermal receipt slip"
-                          >
-                            <Printer size={13} color="#38bdf8" />
-                            <span>Reprint</span>
-                          </button>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
+                      return (
+                        <tr key={`tx-${t.id}`}>
+                          <td style={{ whiteSpace: 'nowrap' }}>
+                            <span style={{
+                              fontWeight: '800',
+                              fontFamily: 'monospace',
+                              color: '#38bdf8',
+                              background: 'rgba(56, 189, 248, 0.1)',
+                              padding: '3px 7px',
+                              borderRadius: 'var(--radius-sm)'
+                            }}>
+                              {t.receipt_no}
+                            </span>
+                          </td>
+                          <td style={{ whiteSpace: 'nowrap' }}>
+                            <div style={{ fontWeight: '600' }}>{dateFormatted}</div>
+                            <div style={{ fontSize: '0.74rem', color: 'var(--text-muted)' }}>{timeFormatted}</div>
+                          </td>
+                          <td>
+                            <div style={{ fontWeight: '700', color: 'var(--text-primary)' }}>{t.client_name}</div>
+                            <div style={{ fontSize: '0.74rem', color: 'var(--text-muted)' }}>
+                              {t.client_phone} {t.client_nic ? `• ${t.client_nic}` : ''}
+                            </div>
+                          </td>
+                          <td style={{ whiteSpace: 'nowrap' }}>
+                            <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
+                              {t.loan_code}
+                            </span>
+                          </td>
+                          <td style={{ whiteSpace: 'nowrap' }}>
+                            <span style={{
+                              fontSize: '0.72rem',
+                              fontWeight: '600',
+                              padding: '2px 6px',
+                              borderRadius: 'var(--radius-sm)',
+                              background: t.payment_method === 'CASH' ? 'rgba(16, 185, 129, 0.1)' : 'rgba(59, 130, 246, 0.1)',
+                              color: t.payment_method === 'CASH' ? '#34d399' : '#60a5fa'
+                            }}>
+                              {t.payment_method || 'CASH'}
+                            </span>
+                          </td>
+                          <td style={{ textAlign: 'right', fontWeight: '800', color: '#10b981', fontSize: '0.92rem', whiteSpace: 'nowrap' }}>
+                            Rs. {Math.round(Number(t.amount_paid)).toLocaleString()}
+                          </td>
+                          <td style={{ textAlign: 'right', fontWeight: '700', color: 'var(--text-secondary)', whiteSpace: 'nowrap' }}>
+                            Rs. {Math.round(Number(t.remaining_balance)).toLocaleString()}
+                          </td>
+                          <td style={{ whiteSpace: 'nowrap' }}>
+                            <span style={{ fontSize: '0.82rem', color: 'var(--text-primary)', fontWeight: '600' }}>
+                              {t.collector_name || 'Staff'}
+                            </span>
+                          </td>
+                          <td style={{ textAlign: 'center', whiteSpace: 'nowrap' }}>
+                            <button
+                              className="btn btn-secondary btn-sm"
+                              style={{ gap: '4px', padding: '5px 9px', fontSize: '0.76rem' }}
+                              onClick={() => onReprintReceipt(t)}
+                              title="Reprint thermal receipt slip"
+                            >
+                              <Printer size={13} color="#38bdf8" />
+                              <span>Reprint</span>
+                            </button>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )
+          ) : (
+            disbursedLoans.length === 0 ? (
+              <div style={{ textAlign: 'center', padding: '40px 10px', color: 'var(--text-muted)', fontSize: '0.88rem' }}>
+                No disbursed loan facilities found matching your search.
+              </div>
+            ) : (
+              <div style={{ overflowX: 'auto' }}>
+                <table className="data-table" style={{ width: '100%', minWidth: '950px' }}>
+                  <thead>
+                    <tr>
+                      <th style={{ whiteSpace: 'nowrap', width: '130px' }}>Loan Code</th>
+                      <th style={{ whiteSpace: 'nowrap', width: '140px' }}>Issue Date</th>
+                      <th style={{ minWidth: '180px' }}>Client & Contact</th>
+                      <th style={{ textAlign: 'right', whiteSpace: 'nowrap', width: '140px' }}>Principal (Disbursed)</th>
+                      <th style={{ textAlign: 'right', whiteSpace: 'nowrap', width: '110px' }}>Markup (8%)</th>
+                      <th style={{ textAlign: 'right', whiteSpace: 'nowrap', width: '130px' }}>Total Payable</th>
+                      <th style={{ textAlign: 'right', whiteSpace: 'nowrap', width: '130px' }}>Remaining Bal</th>
+                      <th style={{ textAlign: 'center', whiteSpace: 'nowrap', width: '100px' }}>Status</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {disbursedLoans.map((l) => {
+                      const d = new Date(l.created_at || l.start_date || Date.now());
+                      const dateFormatted = d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+                      const timeFormatted = d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+                      return (
+                        <tr key={`disb-${l.id}`}>
+                          <td style={{ whiteSpace: 'nowrap' }}>
+                            <span style={{
+                              fontWeight: '800',
+                              fontFamily: 'monospace',
+                              color: '#38bdf8',
+                              background: 'rgba(56, 189, 248, 0.1)',
+                              padding: '3px 7px',
+                              borderRadius: 'var(--radius-sm)'
+                            }}>
+                              {l.loan_code}
+                            </span>
+                          </td>
+                          <td style={{ whiteSpace: 'nowrap' }}>
+                            <div style={{ fontWeight: '600' }}>{dateFormatted}</div>
+                            <div style={{ fontSize: '0.74rem', color: 'var(--text-muted)' }}>{timeFormatted}</div>
+                          </td>
+                          <td>
+                            <div style={{ fontWeight: '700', color: 'var(--text-primary)' }}>{l.client_name}</div>
+                            <div style={{ fontSize: '0.74rem', color: 'var(--text-muted)' }}>
+                              {l.client_phone} {l.nic_id ? `• ${l.nic_id}` : ''}
+                            </div>
+                          </td>
+                          <td style={{ textAlign: 'right', fontWeight: '800', color: '#60a5fa', fontSize: '0.92rem', whiteSpace: 'nowrap' }}>
+                            Rs. {Math.round(Number(l.principal_amount)).toLocaleString()}
+                          </td>
+                          <td style={{ textAlign: 'right', fontWeight: '700', color: '#c084fc', whiteSpace: 'nowrap' }}>
+                            + Rs. {Math.round(Number(l.total_interest)).toLocaleString()}
+                          </td>
+                          <td style={{ textAlign: 'right', fontWeight: '800', color: 'var(--text-primary)', whiteSpace: 'nowrap' }}>
+                            Rs. {Math.round(Number(l.total_payable)).toLocaleString()}
+                          </td>
+                          <td style={{ textAlign: 'right', fontWeight: '700', color: Number(l.remaining_balance) > 0 ? '#f59e0b' : '#10b981', whiteSpace: 'nowrap' }}>
+                            Rs. {Math.round(Number(l.remaining_balance)).toLocaleString()}
+                          </td>
+                          <td style={{ textAlign: 'center', whiteSpace: 'nowrap' }}>
+                            <span style={{
+                              fontSize: '0.72rem',
+                              fontWeight: '700',
+                              padding: '2px 8px',
+                              borderRadius: '12px',
+                              background: l.status === 'COMPLETED' ? 'rgba(16, 185, 129, 0.15)' : 'rgba(59, 130, 246, 0.15)',
+                              color: l.status === 'COMPLETED' ? '#34d399' : '#60a5fa'
+                            }}>
+                              {l.status}
+                            </span>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )
           )}
         </div>
 
