@@ -823,24 +823,22 @@ const db = {
     created_by,
     assigned_agent_id,
     principal_amount,
-    interest_rate_pct = 16.00,
+    interest_rate_pct = 8.00,
     installment_count = 58,
     frequency = 'DAILY',
     start_date
   }) => {
     const principal = parseFloat(principal_amount);
-    const rate = parseFloat(interest_rate_pct) || 16.00;
-    const count = parseInt(installment_count, 10) || 58;
+    const rate = parseFloat(interest_rate_pct) || 8.00;
+    const maxSlots = parseInt(installment_count, 10) || 58;
+    const baseScheduleCount = 54; // Standard 54-day payback schedule before 58-day limit
 
-    // 1. Calculate raw interest & raw installment
+    // 1. Calculate raw interest & standard daily installment based on 54 installments
     const rawTotalInterest = (principal * rate) / 100;
     const rawTotalPayable = principal + rawTotalInterest;
-    const rawInstallment = count > 0 ? (rawTotalPayable / count) : 0;
+    const rawInstallment = (rawTotalPayable / baseScheduleCount);
 
     // 2. Round off installment cleanly:
-    // - >= 1000: round to nearest 100 (e.g. 1788 -> 1800)
-    // - 300 to 1000: round to nearest 50 (e.g. 430 -> 450)
-    // - < 300: round to nearest 10 (e.g. 116 -> 120)
     let installmentAmount = 0;
     if (rawInstallment >= 1000) {
       installmentAmount = Math.round(rawInstallment / 100) * 100;
@@ -850,8 +848,7 @@ const db = {
       installmentAmount = Math.round(rawInstallment / 10) * 10 || 10;
     }
 
-    // Safety: A loan with interest must NEVER round down so much that profit drops to 0 or below principal
-    if (count > 0 && principal > 0 && rate > 0 && (installmentAmount * count) <= principal) {
+    if (principal > 0 && rate > 0 && (installmentAmount * baseScheduleCount) <= principal) {
       if (rawInstallment >= 1000) {
         installmentAmount = Math.ceil(rawInstallment / 100) * 100;
       } else if (rawInstallment >= 300) {
@@ -861,17 +858,17 @@ const db = {
       }
     }
 
-    // 3. Derive total payable directly from clean rounded installments
-    const totalPayable = Math.round(installmentAmount * count);
+    // 3. Derive total payable directly from clean rounded installments (54 scheduled)
+    const totalPayable = Math.round(installmentAmount * baseScheduleCount);
     const totalInterest = Math.max(0, Math.round(totalPayable - principal));
 
     const start = new Date(start_date || new Date().toISOString().split('T')[0]);
 
-    // Calculate end date based on frequency
+    // Calculate end date based on frequency (58 days max)
     let stepDays = 1;
     if (frequency === 'WEEKLY') stepDays = 7;
     if (frequency === 'MONTHLY') stepDays = 30;
-    const endDate = new Date(start.getTime() + count * stepDays * 86400000);
+    const endDate = new Date(start.getTime() + maxSlots * stepDays * 86400000);
     const endDateStr = endDate.toISOString().split('T')[0];
 
     const timestamp = Date.now().toString().slice(-4);
@@ -892,19 +889,21 @@ const db = {
           [
             loanCode, client_id, created_by, assigned_agent_id,
             principal, rate, totalInterest, totalPayable,
-            count, frequency, installmentAmount,
+            maxSlots, frequency, installmentAmount,
             start.toISOString().split('T')[0], endDateStr, totalPayable
           ]
         );
         const newLoan = loanRes.rows[0];
 
-        // Insert 58 installments
-        for (let i = 1; i <= count; i++) {
+        // Insert 58 installment slots (Slots 1-54 scheduled, 55-58 buffer)
+        for (let i = 1; i <= maxSlots; i++) {
           const instDate = new Date(start.getTime() + (i - 1) * stepDays * 86400000);
+          const expAmt = (i <= baseScheduleCount) ? installmentAmount : 0.00;
+          const initialStatus = (i <= baseScheduleCount) ? 'PENDING' : 'BLANK';
           await client.query(
             `INSERT INTO installments (loan_id, installment_no, due_date, expected_amount, paid_amount, status)
-             VALUES ($1, $2, $3, $4, 0.00, 'PENDING')`,
-            [newLoan.id, i, instDate.toISOString().split('T')[0], installmentAmount]
+             VALUES ($1, $2, $3, $4, 0.00, $5)`,
+            [newLoan.id, i, instDate.toISOString().split('T')[0], expAmt, initialStatus]
           );
         }
 
@@ -930,7 +929,7 @@ const db = {
       interest_rate_pct: rate,
       total_interest: totalInterest,
       total_payable: totalPayable,
-      installment_count: count,
+      installment_count: maxSlots,
       frequency,
       installment_amount: installmentAmount,
       start_date: start.toISOString().split('T')[0],
@@ -943,17 +942,19 @@ const db = {
     localStore.loans.push(newLoan);
 
     // Generate installments
-    for (let i = 1; i <= count; i++) {
+    for (let i = 1; i <= maxSlots; i++) {
       const instId = localStore.installments.length ? Math.max(...localStore.installments.map(inst => inst.id)) + 1 : 1;
       const instDate = new Date(start.getTime() + (i - 1) * stepDays * 86400000);
+      const expAmt = (i <= baseScheduleCount) ? installmentAmount : 0.00;
+      const initialStatus = (i <= baseScheduleCount) ? 'PENDING' : 'BLANK';
       localStore.installments.push({
         id: instId,
         loan_id: newId,
         installment_no: i,
         due_date: instDate.toISOString().split('T')[0],
-        expected_amount: installmentAmount,
+        expected_amount: expAmt,
         paid_amount: 0.00,
-        status: 'PENDING'
+        status: initialStatus
       });
     }
 
@@ -1049,6 +1050,14 @@ const db = {
           }
         }
 
+        // If loan is fully settled, blank out remaining unpaid slots
+        if (newRemaining <= 0 || newStatus === 'COMPLETED') {
+          await client.query(
+            `UPDATE installments SET expected_amount = 0.00, status = 'BLANK' WHERE loan_id = $1 AND status != 'PAID'`,
+            [loanId]
+          );
+        }
+
         await client.query('COMMIT');
         return updatedRes.rows[0];
       } catch (err) {
@@ -1130,6 +1139,16 @@ const db = {
       }
     }
 
+    // If loan is fully settled, blank out remaining unpaid slots
+    if (newRemaining <= 0 || loan.status === 'COMPLETED') {
+      localStore.installments
+        .filter(i => i.loan_id === loanId && i.status !== 'PAID')
+        .forEach(i => {
+          i.expected_amount = 0.00;
+          i.status = 'BLANK';
+        });
+    }
+
     saveLocalStore();
     return loan;
   },
@@ -1161,6 +1180,169 @@ const db = {
     localStore.loans = localStore.loans.filter(l => l.id !== loanId);
     saveLocalStore();
     return true;
+  },
+
+  // APPLY 8% OVERDUE PENALTY (After 58 days / unpaid limit)
+  applyPenalty: async (loanId, penaltyPct = 8.0) => {
+    const id = parseInt(loanId, 10);
+    const rate = parseFloat(penaltyPct) || 8.0;
+
+    if (usePostgres) {
+      const client = await pgPool.connect();
+      try {
+        await client.query('BEGIN');
+        const loanRes = await client.query('SELECT * FROM loans WHERE id = $1 FOR UPDATE', [id]);
+        if (loanRes.rows.length === 0) throw new Error('Loan not found');
+        const loan = loanRes.rows[0];
+
+        const rem = parseFloat(loan.remaining_balance);
+        if (rem <= 0 || loan.status === 'COMPLETED') {
+          throw new Error('Loan is already fully repaid');
+        }
+
+        const penaltyAmount = Math.round(rem * (rate / 100));
+        if (penaltyAmount <= 0) {
+          throw new Error('Penalty amount is zero');
+        }
+
+        const newRemaining = Math.round(rem + penaltyAmount);
+        const newTotalPayable = Math.round(parseFloat(loan.total_payable) + penaltyAmount);
+        const newTotalInterest = Math.round(parseFloat(loan.total_interest) + penaltyAmount);
+
+        // Fetch all installments
+        const instsRes = await client.query(
+          'SELECT * FROM installments WHERE loan_id = $1 ORDER BY installment_no ASC',
+          [id]
+        );
+        const insts = instsRes.rows;
+        let lastInst = insts[insts.length - 1];
+        let lastNo = lastInst ? lastInst.installment_no : 58;
+        let lastDate = lastInst ? new Date(lastInst.due_date) : new Date();
+
+        const instAmt = parseFloat(loan.installment_amount) || 100;
+        const blankInsts = insts.filter(i => i.status === 'BLANK');
+        let remainingPenaltyToAllocate = penaltyAmount;
+
+        // Activate existing blank buffer slots if available
+        for (const blank of blankInsts) {
+          if (remainingPenaltyToAllocate <= 0) break;
+          const alloc = Math.min(instAmt, remainingPenaltyToAllocate);
+          await client.query(
+            `UPDATE installments SET expected_amount = $1, status = 'PENDING' WHERE id = $2`,
+            [alloc, blank.id]
+          );
+          remainingPenaltyToAllocate -= alloc;
+        }
+
+        // If penalty extends beyond existing slots, append new slots
+        let newMaxSlots = lastNo;
+        while (remainingPenaltyToAllocate > 0) {
+          lastNo++;
+          newMaxSlots = lastNo;
+          lastDate = new Date(lastDate.getTime() + 86400000);
+          const alloc = Math.min(instAmt, remainingPenaltyToAllocate);
+          await client.query(
+            `INSERT INTO installments (loan_id, installment_no, due_date, expected_amount, paid_amount, status)
+             VALUES ($1, $2, $3, $4, 0.00, 'PENDING')`,
+            [id, lastNo, lastDate.toISOString().split('T')[0], alloc]
+          );
+          remainingPenaltyToAllocate -= alloc;
+        }
+
+        const newEndDateRes = await client.query(
+          'SELECT due_date FROM installments WHERE loan_id = $1 ORDER BY installment_no DESC LIMIT 1',
+          [id]
+        );
+        const newEndDate = newEndDateRes.rows[0].due_date;
+
+        const updatedRes = await client.query(
+          `UPDATE loans 
+           SET remaining_balance = $1, total_payable = $2, total_interest = $3,
+               installment_count = $4, end_date = $5,
+               notes = COALESCE(notes, '') || $6
+           WHERE id = $7 RETURNING *`,
+          [
+            newRemaining, newTotalPayable, newTotalInterest,
+            newMaxSlots, newEndDate,
+            ` [Penalty applied: Rs. ${penaltyAmount} (${rate}% overdue penalty)]`,
+            id
+          ]
+        );
+
+        await client.query('COMMIT');
+        return updatedRes.rows[0];
+      } catch (err) {
+        await client.query('ROLLBACK');
+        throw err;
+      } finally {
+        client.release();
+      }
+    }
+
+    // LocalStore fallback
+    loadLocalStore();
+    const loan = localStore.loans.find(l => l.id === id);
+    if (!loan) throw new Error('Loan not found');
+
+    const rem = parseFloat(loan.remaining_balance);
+    if (rem <= 0 || loan.status === 'COMPLETED') {
+      throw new Error('Loan is already fully repaid');
+    }
+
+    const penaltyAmount = Math.round(rem * (rate / 100));
+    if (penaltyAmount <= 0) throw new Error('Penalty amount is zero');
+
+    const newRemaining = Math.round(rem + penaltyAmount);
+    loan.remaining_balance = newRemaining;
+    loan.total_payable = Math.round(parseFloat(loan.total_payable) + penaltyAmount);
+    loan.total_interest = Math.round(parseFloat(loan.total_interest) + penaltyAmount);
+    loan.notes = (loan.notes ? loan.notes + ' ' : '') + `[Penalty applied: Rs. ${penaltyAmount} (${rate}% overdue penalty)]`;
+
+    const loanInsts = localStore.installments
+      .filter(i => i.loan_id === id)
+      .sort((a, b) => a.installment_no - b.installment_no);
+
+    let lastInst = loanInsts[loanInsts.length - 1];
+    let lastNo = lastInst ? lastInst.installment_no : 58;
+    let lastDate = lastInst ? new Date(lastInst.due_date) : new Date();
+
+    const instAmt = parseFloat(loan.installment_amount) || 100;
+    const blankInsts = loanInsts.filter(i => i.status === 'BLANK');
+    let remainingPenaltyToAllocate = penaltyAmount;
+
+    for (const blank of blankInsts) {
+      if (remainingPenaltyToAllocate <= 0) break;
+      const alloc = Math.min(instAmt, remainingPenaltyToAllocate);
+      blank.expected_amount = alloc;
+      blank.status = 'PENDING';
+      remainingPenaltyToAllocate -= alloc;
+    }
+
+    while (remainingPenaltyToAllocate > 0) {
+      lastNo++;
+      lastDate = new Date(lastDate.getTime() + 86400000);
+      const alloc = Math.min(instAmt, remainingPenaltyToAllocate);
+      const instId = localStore.installments.length ? Math.max(...localStore.installments.map(i => i.id)) + 1 : 1;
+      localStore.installments.push({
+        id: instId,
+        loan_id: id,
+        installment_no: lastNo,
+        due_date: lastDate.toISOString().split('T')[0],
+        expected_amount: alloc,
+        paid_amount: 0.00,
+        status: 'PENDING'
+      });
+      remainingPenaltyToAllocate -= alloc;
+    }
+
+    loan.installment_count = lastNo;
+    const finalInst = localStore.installments
+      .filter(i => i.loan_id === id)
+      .sort((a, b) => b.installment_no - a.installment_no)[0];
+    if (finalInst) loan.end_date = finalInst.due_date;
+
+    saveLocalStore();
+    return loan;
   },
 
 
@@ -1208,25 +1390,41 @@ const db = {
         let affectedInstallmentNo = null;
         for (const inst of instRes.rows) {
           if (unallocated <= 0) break;
-          const needed = Math.round((parseFloat(inst.expected_amount) - parseFloat(inst.paid_amount)) * 100) / 100;
+          let expected = parseFloat(inst.expected_amount);
+          if (expected <= 0) {
+            expected = Math.min(parseFloat(loan.installment_amount) || payAmount, unallocated);
+          }
+          const needed = Math.round((expected - parseFloat(inst.paid_amount)) * 100) / 100;
+          if (needed <= 0) continue;
+
           if (affectedInstallmentNo === null) {
             affectedInstallmentNo = inst.installment_no;
           }
 
           if (unallocated >= needed) {
             await client.query(
-              `UPDATE installments SET paid_amount = expected_amount, status = 'PAID' WHERE id = $1`,
-              [inst.id]
+              `UPDATE installments SET expected_amount = $1, paid_amount = $1, status = 'PAID' WHERE id = $2`,
+              [expected, inst.id]
             );
             unallocated = Math.round((unallocated - needed) * 100) / 100;
           } else {
             const newPaid = Math.round((parseFloat(inst.paid_amount) + unallocated) * 100) / 100;
             await client.query(
-              `UPDATE installments SET paid_amount = $1, status = 'PARTIAL' WHERE id = $2`,
-              [newPaid, inst.id]
+              `UPDATE installments SET expected_amount = $1, paid_amount = $2, status = 'PARTIAL' WHERE id = $3`,
+              [expected, newPaid, inst.id]
             );
             unallocated = 0;
           }
+        }
+
+        // If loan is fully repaid, blank out any remaining unpaid slots
+        if (newBalance <= 0) {
+          await client.query(
+            `UPDATE installments 
+             SET expected_amount = 0.00, status = 'BLANK' 
+             WHERE loan_id = $1 AND status != 'PAID'`,
+            [loan_id]
+          );
         }
 
         // Generate receipt number
@@ -1258,7 +1456,7 @@ const db = {
         const nextInstRes = await client.query(
           `SELECT installment_no, due_date, expected_amount, paid_amount 
            FROM installments 
-           WHERE loan_id = $1 AND status != 'PAID' 
+           WHERE loan_id = $1 AND status NOT IN ('PAID', 'BLANK') AND expected_amount > 0 
            ORDER BY installment_no ASC LIMIT 1`,
           [loan_id]
         );
@@ -1306,13 +1504,20 @@ const db = {
     let affectedInstallmentNo = null;
     for (const inst of pendingInsts) {
       if (unallocated <= 0) break;
-      const needed = Math.round((parseFloat(inst.expected_amount) - parseFloat(inst.paid_amount)) * 100) / 100;
+      let expected = parseFloat(inst.expected_amount);
+      if (expected <= 0) {
+        expected = Math.min(parseFloat(loan.installment_amount) || payAmount, unallocated);
+        inst.expected_amount = expected;
+      }
+      const needed = Math.round((expected - parseFloat(inst.paid_amount)) * 100) / 100;
+      if (needed <= 0) continue;
+
       if (affectedInstallmentNo === null) {
         affectedInstallmentNo = inst.installment_no;
       }
 
       if (unallocated >= needed) {
-        inst.paid_amount = inst.expected_amount;
+        inst.paid_amount = expected;
         inst.status = 'PAID';
         unallocated = Math.round((unallocated - needed) * 100) / 100;
       } else {
@@ -1320,6 +1525,16 @@ const db = {
         inst.status = 'PARTIAL';
         unallocated = 0;
       }
+    }
+
+    // If loan is fully repaid, blank out any remaining unpaid slots
+    if (newBalance <= 0) {
+      localStore.installments
+        .filter(i => i.loan_id === loan.id && i.status !== 'PAID')
+        .forEach(i => {
+          i.expected_amount = 0.00;
+          i.status = 'BLANK';
+        });
     }
 
     const payId = localStore.payments.length ? Math.max(...localStore.payments.map(p => p.id)) + 1 : 1;
@@ -1346,7 +1561,7 @@ const db = {
     const clientInfo = localStore.clients.find(c => c.id === loan.client_id) || {};
     const collectorInfo = localStore.users.find(u => u.id === parseInt(collector_id, 10)) || {};
     const nextInst = localStore.installments
-      .filter(i => i.loan_id === loan.id && i.status !== 'PAID')
+      .filter(i => i.loan_id === loan.id && i.status !== 'PAID' && i.status !== 'BLANK' && parseFloat(i.expected_amount) > 0)
       .sort((a, b) => a.installment_no - b.installment_no)[0];
 
     return {
@@ -1376,7 +1591,7 @@ const db = {
         FROM installments i
         JOIN loans l ON i.loan_id = l.id
         JOIN clients c ON l.client_id = c.id
-        WHERE l.status = 'ACTIVE' AND i.status != 'PAID'
+        WHERE l.status = 'ACTIVE' AND i.status NOT IN ('PAID', 'BLANK') AND i.expected_amount > 0
       `;
       const res = await pgPool.query(query);
       loans = res.rows;
@@ -1386,7 +1601,7 @@ const db = {
       loans = [];
       for (const loan of activeLoans) {
         const client = localStore.clients.find(c => c.id === loan.client_id) || {};
-        const pendingInsts = localStore.installments.filter(i => i.loan_id === loan.id && i.status !== 'PAID');
+        const pendingInsts = localStore.installments.filter(i => i.loan_id === loan.id && i.status !== 'PAID' && i.status !== 'BLANK' && parseFloat(i.expected_amount) > 0);
         for (const inst of pendingInsts) {
           loans.push({
             loan_id: loan.id,
@@ -1416,7 +1631,7 @@ const db = {
           ...item,
           balance_due: balanceDue,
           urgency: 'HIGH',
-          title: `Due Today: Inst #${item.installment_no} of 58`,
+          title: `Due Today: Inst #${item.installment_no}`,
           message: `${item.client_name} has Rs. ${balanceDue} due today for ${item.loan_code}.`
         });
       } else if (item.due_date < todayStr) {

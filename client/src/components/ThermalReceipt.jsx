@@ -37,7 +37,7 @@ export default function ThermalReceipt({ receipt, onClose }) {
                 SADHAN APEX (PVT) LTD
               </div>
               <div className="receipt-subtitle" style={{ fontSize: '11px', fontWeight: '600', marginTop: '2px' }}>
-                58-INSTALLMENT MICRO LOANS
+                MICRO FINANCIAL SERVICES
               </div>
               <div style={{ fontSize: '10px', color: '#333', fontWeight: '600', marginTop: '3px' }}>
                 TEL: 0702263041 / 0743150900
@@ -80,7 +80,7 @@ export default function ThermalReceipt({ receipt, onClose }) {
             </div>
             <div className="receipt-row">
               <span className="receipt-label">PLAN:</span>
-              <span className="receipt-value">{receipt.installment_count || 58} Installments</span>
+              <span className="receipt-value">54 Days (58-Day Limit)</span>
             </div>
             <div className="receipt-row">
               <span className="receipt-label">INSTALLMENT #:</span>

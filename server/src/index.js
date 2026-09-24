@@ -203,7 +203,7 @@ app.post('/api/loans', verifyToken, async (req, res) => {
       client_id,
       assigned_agent_id,
       principal_amount,
-      interest_rate_pct = 16.00,
+      interest_rate_pct = 8.00,
       installment_count = 58,
       frequency = 'DAILY',
       start_date
@@ -222,7 +222,7 @@ app.post('/api/loans', verifyToken, async (req, res) => {
       created_by: req.user.id,
       assigned_agent_id: assigned_agent_id || (req.user.role === 'AGENT' ? req.user.id : null),
       principal_amount,
-      interest_rate_pct: parseFloat(interest_rate_pct) || 16.00,
+      interest_rate_pct: parseFloat(interest_rate_pct) || 8.00,
       installment_count: parseInt(installment_count, 10) || 58,
       frequency: frequency || 'DAILY',
       start_date: start_date || new Date().toISOString().split('T')[0]
@@ -250,6 +250,18 @@ app.put('/api/loans/:id', verifyToken, requireOwner, async (req, res) => {
   } catch (err) {
     console.error('Error updating loan:', err);
     return res.status(500).json({ error: err.message || 'Failed to update loan' });
+  }
+});
+
+// APPLY OVERDUE PENALTY (8% on remaining balance after 58 days)
+app.post('/api/loans/:id/penalty', verifyToken, requireOwner, async (req, res) => {
+  try {
+    const { penalty_pct = 8.0 } = req.body;
+    const updated = await db.applyPenalty(req.params.id, penalty_pct);
+    return res.json({ loan: updated, message: 'Overdue penalty applied successfully' });
+  } catch (err) {
+    console.error('Error applying penalty:', err);
+    return res.status(500).json({ error: err.message || 'Failed to apply penalty' });
   }
 });
 

@@ -34,14 +34,14 @@ export default function LoansView({
         <div>
           <h2 style={{ fontSize: '1.25rem', fontWeight: '800' }}>Loan Management</h2>
           <p style={{ fontSize: '0.82rem', color: 'var(--text-muted)' }}>
-            All 58-installment plans, schedules, and recovery statuses
+            Active micro loan plans, schedules, and recovery statuses
           </p>
         </div>
 
         {currentUser.role === 'OWNER' && (
           <button className="btn btn-primary" onClick={onOpenNewLoan} style={{ gap: '8px' }}>
             <PlusCircle size={18} />
-            Create 58-Loan (8%)
+            Issue Loan (8%)
           </button>
         )}
       </div>
@@ -264,7 +264,7 @@ export default function LoansView({
                 {/* Mobile Financial Breakdown */}
                 <div className="mobile-card-stats">
                   <div>
-                    <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>INSTALLMENT (58x)</div>
+                    <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>INSTALLMENT</div>
                     <div style={{ fontWeight: '800', color: '#60a5fa', fontSize: '0.98rem' }}>
                       Rs. {Math.round(Number(loan.installment_amount)).toLocaleString()}
                     </div>
@@ -276,7 +276,7 @@ export default function LoansView({
                     <div style={{ fontWeight: '800', color: loan.remaining_balance > 0 ? '#f87171' : '#10b981', fontSize: '1.05rem' }}>
                       Rs. {Math.round(Number(loan.remaining_balance)).toLocaleString()}
                     </div>
-                    <div style={{ fontSize: '0.68rem', color: '#34d399', fontWeight: '600' }}>58-Installment Plan</div>
+                    <div style={{ fontSize: '0.68rem', color: '#34d399', fontWeight: '600' }}>{loan.installment_count || 58}-Day Plan</div>
                   </div>
                 </div>
 

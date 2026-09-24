@@ -7,8 +7,8 @@ export default function NewLoanModal({ token, clients, agents, currentUser, onCl
     currentUser.role === 'AGENT' ? currentUser.id : (agents.length ? agents[0].id : '')
   );
   const [principal, setPrincipal] = useState('50000');
-  const [interestRate, setInterestRate] = useState('16'); // Default 16% (8%/month for 58 installments)
-  const [installmentCount, setInstallmentCount] = useState('58'); // Default 58 installments
+  const [interestRate, setInterestRate] = useState('8'); // Default 8% for loan term
+  const [installmentCount, setInstallmentCount] = useState('58'); // 58-day window (54 scheduled)
   const [frequency, setFrequency] = useState('DAILY');
   const [startDate, setStartDate] = useState(new Date().toISOString().split('T')[0]);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -18,10 +18,11 @@ export default function NewLoanModal({ token, clients, agents, currentUser, onCl
   const parsedPrincipal = parseFloat(principal) || 0;
   const parsedRate = parseFloat(interestRate) || 0;
   const parsedCount = parseInt(installmentCount, 10) || 58;
+  const baseScheduleCount = parsedCount === 58 ? 54 : parsedCount;
 
   const rawInterest = (parsedPrincipal * parsedRate) / 100;
   const rawTotalPayable = parsedPrincipal + rawInterest;
-  const rawInstallment = parsedCount > 0 ? (rawTotalPayable / parsedCount) : 0;
+  const rawInstallment = baseScheduleCount > 0 ? (rawTotalPayable / baseScheduleCount) : 0;
 
   // Round installment cleanly:
   // - >= 1000: round to nearest 100 (e.g. 1788 -> 1800)
@@ -37,7 +38,7 @@ export default function NewLoanModal({ token, clients, agents, currentUser, onCl
   }
 
   // Safety: A loan with interest must NEVER round down so much that profit drops to 0 or below principal
-  if (parsedCount > 0 && parsedPrincipal > 0 && parsedRate > 0 && (installmentAmount * parsedCount) <= parsedPrincipal) {
+  if (baseScheduleCount > 0 && parsedPrincipal > 0 && parsedRate > 0 && (installmentAmount * baseScheduleCount) <= parsedPrincipal) {
     if (rawInstallment >= 1000) {
       installmentAmount = Math.ceil(rawInstallment / 100) * 100;
     } else if (rawInstallment >= 300) {
@@ -47,7 +48,7 @@ export default function NewLoanModal({ token, clients, agents, currentUser, onCl
     }
   }
 
-  const totalPayable = parsedCount > 0 && parsedPrincipal > 0 ? (installmentAmount * parsedCount) : 0;
+  const totalPayable = baseScheduleCount > 0 && parsedPrincipal > 0 ? (installmentAmount * baseScheduleCount) : 0;
   const totalInterest = Math.max(0, totalPayable - parsedPrincipal);
 
   const stepDays = frequency === 'DAILY' ? 1 : frequency === 'WEEKLY' ? 7 : 30;
@@ -107,7 +108,7 @@ export default function NewLoanModal({ token, clients, agents, currentUser, onCl
         <div className="modal-header">
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             <Calculator size={22} color="#3b82f6" />
-            <h3 style={{ fontSize: '1.15rem', fontWeight: '700' }}>Create 58-Installment Loan</h3>
+            <h3 style={{ fontSize: '1.15rem', fontWeight: '700' }}>Issue Micro Loan</h3>
           </div>
           <button className="btn btn-secondary btn-sm" onClick={onClose}>
             <X size={16} />
@@ -180,7 +181,7 @@ export default function NewLoanModal({ token, clients, agents, currentUser, onCl
               </div>
 
               <div className="form-group">
-                <label className="form-label">Interest Rate (%)</label>
+                <label className="form-label">Loan Term Interest (%)</label>
                 <input
                   type="number"
                   step="0.5"
@@ -202,7 +203,7 @@ export default function NewLoanModal({ token, clients, agents, currentUser, onCl
                   value={installmentCount}
                   onChange={(e) => setInstallmentCount(e.target.value)}
                 >
-                  <option value="58">58 Installments (Standard)</option>
+                  <option value="58">54 Days Scheduled (58-Day Limit)</option>
                   <option value="30">30 Installments</option>
                   <option value="60">60 Installments</option>
                   <option value="100">100 Installments</option>
@@ -259,16 +260,16 @@ export default function NewLoanModal({ token, clients, agents, currentUser, onCl
                   <div style={{ fontWeight: '800', color: '#f8fafc', fontSize: '0.98rem' }}>Rs. {Math.round(totalPayable).toLocaleString()}</div>
                 </div>
                 <div>
-                  <div style={{ color: 'var(--text-muted)', fontSize: '0.76rem' }}>Per Installment ({parsedCount}x):</div>
-                  <div style={{ fontWeight: '800', color: '#38bdf8', fontSize: '1.02rem', wordBreak: 'break-word' }}>Rs. {Math.round(installmentAmount).toLocaleString()}</div>
+                  <div style={{ color: 'var(--text-muted)', fontSize: '0.76rem' }}>Per Installment:</div>
+                  <div style={{ fontWeight: '800', color: '#38bdf8', fontSize: '1.02rem', wordBreak: 'break-word' }}>Rs. {Math.round(installmentAmount).toLocaleString()} / day</div>
                 </div>
                 <div>
-                  <div style={{ color: 'var(--text-muted)', fontSize: '0.76rem' }}>Plan Duration:</div>
-                  <div style={{ fontWeight: '500' }}>{parsedCount} {frequency.toLowerCase()}s</div>
+                  <div style={{ color: 'var(--text-muted)', fontSize: '0.76rem' }}>Scheduled Payback:</div>
+                  <div style={{ fontWeight: '600', color: '#60a5fa' }}>{baseScheduleCount} {frequency.toLowerCase()}s</div>
                 </div>
                 <div>
-                  <div style={{ color: 'var(--text-muted)', fontSize: '0.76rem' }}>Estimated Maturity:</div>
-                  <div style={{ fontWeight: '500' }}>{endDate}</div>
+                  <div style={{ color: 'var(--text-muted)', fontSize: '0.76rem' }}>Limit Window:</div>
+                  <div style={{ fontWeight: '500' }}>{parsedCount} days (8% penalty after)</div>
                 </div>
               </div>
             </div>
@@ -291,7 +292,7 @@ export default function NewLoanModal({ token, clients, agents, currentUser, onCl
               style={{ flex: 1.5, justifyContent: 'center', gap: '8px', whiteSpace: 'nowrap' }}
             >
               <PlusCircle size={18} />
-              {isSubmitting ? 'Creating...' : 'Create 58-Day Plan'}
+              {isSubmitting ? 'Issuing...' : 'Issue Loan'}
             </button>
           </div>
         </form>

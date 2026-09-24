@@ -18,6 +18,7 @@ export default function LoanDetailModal({ loanId, token, currentUser, onClose, o
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [activeTab, setActiveTab] = useState('installments'); // 'installments' | 'payments'
+  const [penaltyLoading, setPenaltyLoading] = useState(false);
 
   useEffect(() => {
     async function fetchLoan() {
@@ -37,11 +38,39 @@ export default function LoanDetailModal({ loanId, token, currentUser, onClose, o
     fetchLoan();
   }, [loanId, token]);
 
+  const handleApplyPenalty = async () => {
+    if (!loan) return;
+    const penaltyAmt = Math.round(Number(loan.remaining_balance) * 0.08);
+    if (!window.confirm(`Apply 8% overdue penalty (Rs. ${penaltyAmt.toLocaleString()}) to ${loan.loan_code}?`)) return;
+    setPenaltyLoading(true);
+    try {
+      const res = await fetch(`/api/loans/${loan.id}/penalty`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({ penalty_pct: 8.0 })
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to apply penalty');
+      const detailRes = await fetch(`/api/loans/${loan.id}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      const detailData = await detailRes.json();
+      if (detailData.loan) setLoan(detailData.loan);
+    } catch (err) {
+      alert(err.message);
+    } finally {
+      setPenaltyLoading(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="modal-overlay">
         <div className="modal-content" style={{ padding: '40px', textAlign: 'center' }}>
-          <div style={{ color: 'var(--accent-primary)', fontSize: '1.1rem' }}>Loading 58-Installment Ledger...</div>
+          <div style={{ color: 'var(--accent-primary)', fontSize: '1.1rem' }}>Loading Loan Ledger...</div>
         </div>
       </div>
     );
@@ -156,6 +185,48 @@ export default function LoanDetailModal({ loanId, token, currentUser, onClose, o
             </div>
           </div>
 
+          {/* Overdue Penalty Banner (Exceeded 58-Day Limit) */}
+          {loan.status === 'ACTIVE' && loan.end_date && new Date().toISOString().split('T')[0] > loan.end_date && (
+            <div style={{
+              background: 'rgba(239, 68, 68, 0.12)',
+              border: '1px solid rgba(239, 68, 68, 0.35)',
+              borderRadius: 'var(--radius-md)',
+              padding: '12px 14px',
+              marginBottom: '14px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              gap: '12px',
+              flexWrap: 'wrap'
+            }}>
+              <div>
+                <div style={{ fontWeight: '700', color: '#f87171', fontSize: '0.88rem' }}>
+                  ⚠️ 58-Day Limit Exceeded
+                </div>
+                <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginTop: '2px' }}>
+                  58-day window ended on {formatCleanDate(loan.end_date)}. Unpaid: Rs. {Math.round(Number(loan.remaining_balance)).toLocaleString()}.
+                </div>
+              </div>
+              {currentUser?.role === 'OWNER' && (
+                <button
+                  className="btn btn-sm"
+                  style={{
+                    background: '#dc2626',
+                    color: '#fff',
+                    fontWeight: '700',
+                    padding: '6px 12px',
+                    fontSize: '0.8rem',
+                    whiteSpace: 'nowrap'
+                  }}
+                  onClick={handleApplyPenalty}
+                  disabled={penaltyLoading}
+                >
+                  {penaltyLoading ? 'Applying...' : `Apply 8% Penalty (+Rs. ${Math.round(Number(loan.remaining_balance) * 0.08).toLocaleString()})`}
+                </button>
+              )}
+            </div>
+          )}
+
           {/* Responsive Full-Width Tabs */}
           <div style={{ display: 'flex', gap: '8px', borderBottom: '1px solid var(--surface-border)', marginBottom: '14px' }}>
             <button
@@ -163,7 +234,7 @@ export default function LoanDetailModal({ loanId, token, currentUser, onClose, o
               style={{ flex: 1, padding: '8px 10px', fontSize: '0.82rem', textAlign: 'center' }}
               onClick={() => setActiveTab('installments')}
             >
-              58 Installments ({loan.installments?.length || 0})
+              Schedule ({loan.installments?.length || 0})
             </button>
             <button
               className={`btn btn-sm ${activeTab === 'payments' ? 'btn-primary' : 'btn-secondary'}`}
@@ -174,10 +245,11 @@ export default function LoanDetailModal({ loanId, token, currentUser, onClose, o
             </button>
           </div>
 
-          {/* Tab 1: 58-Installments Schedule (100% Full-Width Responsive List, ZERO Horizontal Scroll) */}
+          {/* Tab 1: Installments Schedule (100% Full-Width Responsive List, ZERO Horizontal Scroll) */}
           {activeTab === 'installments' && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
               {(loan.installments || []).map((inst) => {
+                const isBlank = inst.status === 'BLANK' || (loan.status === 'COMPLETED' && inst.status !== 'PAID');
                 const isPaid = inst.status === 'PAID';
                 const isPartial = inst.status === 'PARTIAL';
 
@@ -189,10 +261,11 @@ export default function LoanDetailModal({ loanId, token, currentUser, onClose, o
                       alignItems: 'center',
                       justifyContent: 'space-between',
                       padding: '9px 12px',
-                      background: isPaid ? 'rgba(16, 185, 129, 0.05)' : isPartial ? 'rgba(245, 158, 11, 0.05)' : 'rgba(255, 255, 255, 0.02)',
-                      border: '1px solid ' + (isPaid ? 'rgba(16, 185, 129, 0.22)' : isPartial ? 'rgba(245, 158, 11, 0.25)' : 'var(--surface-border)'),
+                      background: isBlank ? 'rgba(255, 255, 255, 0.01)' : isPaid ? 'rgba(16, 185, 129, 0.05)' : isPartial ? 'rgba(245, 158, 11, 0.05)' : 'rgba(255, 255, 255, 0.02)',
+                      border: '1px solid ' + (isBlank ? 'rgba(255, 255, 255, 0.05)' : isPaid ? 'rgba(16, 185, 129, 0.22)' : isPartial ? 'rgba(245, 158, 11, 0.25)' : 'var(--surface-border)'),
                       borderRadius: '8px',
-                      gap: '8px'
+                      gap: '8px',
+                      opacity: isBlank ? 0.45 : 1
                     }}
                   >
                     {/* Left: Installment Number & Due Date */}
@@ -201,18 +274,18 @@ export default function LoanDetailModal({ loanId, token, currentUser, onClose, o
                         fontWeight: '800',
                         fontFamily: 'var(--font-mono)',
                         fontSize: '0.85rem',
-                        color: 'var(--accent-primary)',
+                        color: isBlank ? 'var(--text-muted)' : 'var(--accent-primary)',
                         minWidth: '32px'
                       }}>
                         #{inst.installment_no}
                       </span>
                       <div style={{ minWidth: 0 }}>
-                        <div style={{ fontSize: '0.84rem', fontWeight: '600', color: 'var(--text-primary)' }}>
+                        <div style={{ fontSize: '0.84rem', fontWeight: isBlank ? '400' : '600', color: isBlank ? 'var(--text-muted)' : 'var(--text-primary)' }}>
                           {formatCleanDate(inst.due_date)}
                         </div>
-                        {isPartial && (
+                        {isPartial && !isBlank && (
                           <div style={{ fontSize: '0.7rem', color: '#10b981' }}>
-                            Paid: Rs. {Number(inst.paid_amount).toFixed(2)}
+                            Paid: Rs. {Math.round(Number(inst.paid_amount)).toLocaleString()}
                           </div>
                         )}
                       </div>
@@ -221,21 +294,32 @@ export default function LoanDetailModal({ loanId, token, currentUser, onClose, o
                     {/* Right: Expected Amount & Status Badge */}
                     <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexShrink: 0 }}>
                       <div style={{ textAlign: 'right' }}>
-                        <div style={{ fontSize: '0.86rem', fontWeight: '700', color: isPaid ? '#10b981' : 'var(--text-primary)' }}>
-                          Rs. {Number(inst.expected_amount).toFixed(2)}
+                        <div style={{ fontSize: '0.86rem', fontWeight: isBlank ? '400' : '700', color: isBlank ? 'var(--text-muted)' : isPaid ? '#10b981' : 'var(--text-primary)' }}>
+                          {isBlank ? '—' : `Rs. ${Math.round(Number(inst.expected_amount)).toLocaleString()}`}
                         </div>
                       </div>
-                      <span
-                        className={`status-badge badge-${inst.status.toLowerCase()}`}
-                        style={{
-                          fontSize: '0.7rem',
-                          padding: '3px 8px',
+                      {isBlank ? (
+                        <span style={{
+                          fontSize: '0.75rem',
+                          color: 'var(--text-muted)',
                           minWidth: '60px',
                           textAlign: 'center'
-                        }}
-                      >
-                        {inst.status}
-                      </span>
+                        }}>
+                          —
+                        </span>
+                      ) : (
+                        <span
+                          className={`status-badge badge-${inst.status.toLowerCase()}`}
+                          style={{
+                            fontSize: '0.7rem',
+                            padding: '3px 8px',
+                            minWidth: '60px',
+                            textAlign: 'center'
+                          }}
+                        >
+                          {inst.status}
+                        </span>
+                      )}
                     </div>
                   </div>
                 );

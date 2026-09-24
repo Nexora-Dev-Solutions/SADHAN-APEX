@@ -33,9 +33,10 @@ export default function EditLoanModal({ loan, token, agents, currentUser, onClos
   const calculatedNewPrincipal = activeTab === 'topup' ? currentPrincipal + parsedTopup : (parseFloat(editPrincipal) || currentPrincipal);
   const calculatedRate = parseFloat(interestRate) || currentRate;
 
+  const scheduleCount = currentCount === 58 ? 54 : currentCount;
   const rawNewInterest = (calculatedNewPrincipal * calculatedRate) / 100;
   const rawNewPayable = calculatedNewPrincipal + rawNewInterest;
-  const rawNewInst = currentCount > 0 ? (rawNewPayable / currentCount) : 0;
+  const rawNewInst = scheduleCount > 0 ? (rawNewPayable / scheduleCount) : 0;
 
   let calculatedNewInstAmt = 0;
   if (rawNewInst >= 1000) {
@@ -47,7 +48,7 @@ export default function EditLoanModal({ loan, token, agents, currentUser, onClos
   }
 
   // Safety: A loan with interest must NEVER round down so much that profit drops to 0 or below principal
-  if (currentCount > 0 && calculatedNewPrincipal > 0 && calculatedRate > 0 && (calculatedNewInstAmt * currentCount) <= calculatedNewPrincipal) {
+  if (scheduleCount > 0 && calculatedNewPrincipal > 0 && calculatedRate > 0 && (calculatedNewInstAmt * scheduleCount) <= calculatedNewPrincipal) {
     if (rawNewInst >= 1000) {
       calculatedNewInstAmt = Math.ceil(rawNewInst / 100) * 100;
     } else if (rawNewInst >= 300) {
@@ -57,7 +58,7 @@ export default function EditLoanModal({ loan, token, agents, currentUser, onClos
     }
   }
 
-  const calculatedTotalPayable = Math.round(calculatedNewInstAmt * currentCount);
+  const calculatedTotalPayable = Math.round(calculatedNewInstAmt * scheduleCount);
   const calculatedInterest = Math.max(0, calculatedTotalPayable - calculatedNewPrincipal);
   const calculatedNewRemaining = Math.max(0, Math.round(calculatedTotalPayable - currentPaid));
 
@@ -331,7 +332,7 @@ export default function EditLoanModal({ loan, token, agents, currentUser, onClos
                   </div>
                 </div>
                 <div>
-                  <div style={{ color: 'var(--text-muted)', fontSize: '0.76rem' }}>Per Installment ({currentCount}x):</div>
+                  <div style={{ color: 'var(--text-muted)', fontSize: '0.76rem' }}>Per Installment:</div>
                   <div style={{ fontWeight: '800', color: '#38bdf8', fontSize: '1rem', wordBreak: 'break-word' }}>
                     Rs. {Math.round(calculatedNewInstAmt).toLocaleString()}
                   </div>
