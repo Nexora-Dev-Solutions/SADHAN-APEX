@@ -15,11 +15,13 @@ import {
   Filter,
   CheckCircle2,
   Clock,
-  ArrowUpRight
+  ArrowUpRight,
+  RefreshCw
 } from 'lucide-react';
 
-export default function ReportsView({ token, currentUser, onReprintReceipt }) {
-  const currentMonthStr = new Date().toISOString().slice(0, 7);
+export default function ReportsView({ token, currentUser, onReprintReceipt, dataRefreshKey }) {
+  const now = new Date();
+  const currentMonthStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
   const [selectedMonth, setSelectedMonth] = useState(currentMonthStr);
   const [report, setReport] = useState(null);
   const [transactions, setTransactions] = useState([]);
@@ -34,14 +36,14 @@ export default function ReportsView({ token, currentUser, onReprintReceipt }) {
 
   useEffect(() => {
     loadReportData();
-  }, [selectedMonth, token]);
+  }, [selectedMonth, token, dataRefreshKey]);
 
   useEffect(() => {
     const timer = setTimeout(() => {
       loadTransactions();
     }, 250);
     return () => clearTimeout(timer);
-  }, [selectedMonth, search, methodFilter, scopeFilter, token]);
+  }, [selectedMonth, search, methodFilter, scopeFilter, token, dataRefreshKey]);
 
   const loadReportData = async () => {
     if (!token) return;
@@ -88,17 +90,24 @@ export default function ReportsView({ token, currentUser, onReprintReceipt }) {
   };
 
   const handleMonthChange = (offset) => {
-    const [year, month] = selectedMonth.split('-').map(Number);
-    const date = new Date(year, month - 1 + offset, 1);
-    const newMonthStr = date.toISOString().slice(0, 7);
+    let [year, month] = selectedMonth.split('-').map(Number);
+    month += offset;
+    if (month > 12) {
+      year += 1;
+      month = 1;
+    } else if (month < 1) {
+      year -= 1;
+      month = 12;
+    }
+    const newMonthStr = `${year}-${String(month).padStart(2, '0')}`;
     setSelectedMonth(newMonthStr);
   };
 
   const formatMonthTitle = (monthStr) => {
     if (!monthStr) return '';
     const [year, month] = monthStr.split('-').map(Number);
-    const d = new Date(year, month - 1, 1);
-    return d.toLocaleString('en-US', { month: 'long', year: 'numeric' });
+    const months = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+    return `${months[month - 1] || ''} ${year}`;
   };
 
   const exportToCsv = () => {
@@ -238,6 +247,16 @@ export default function ReportsView({ token, currentUser, onReprintReceipt }) {
               Current Month
             </button>
           )}
+
+          <button
+            className="btn btn-secondary btn-sm"
+            onClick={() => { loadReportData(); loadTransactions(); }}
+            title="Refresh Report Data"
+            style={{ gap: '6px' }}
+          >
+            <RefreshCw size={14} className={isLoading ? 'spin' : ''} />
+            <span>Refresh</span>
+          </button>
 
           <button
             className="btn btn-primary btn-sm"
@@ -612,18 +631,18 @@ export default function ReportsView({ token, currentUser, onReprintReceipt }) {
             </div>
           ) : (
             <div style={{ overflowX: 'auto' }}>
-              <table className="table" style={{ width: '100%', fontSize: '0.85rem' }}>
+              <table className="data-table" style={{ width: '100%', minWidth: '950px' }}>
                 <thead>
                   <tr>
-                    <th>Receipt #</th>
-                    <th>Date & Time</th>
-                    <th>Client & Contact</th>
-                    <th>Loan Ref</th>
-                    <th>Method</th>
-                    <th style={{ textAlign: 'right' }}>Amount Paid</th>
-                    <th style={{ textAlign: 'right' }}>Remaining Bal</th>
-                    <th>Collector</th>
-                    <th style={{ textAlign: 'center' }}>Receipt</th>
+                    <th style={{ whiteSpace: 'nowrap', width: '130px' }}>Receipt #</th>
+                    <th style={{ whiteSpace: 'nowrap', width: '140px' }}>Date & Time</th>
+                    <th style={{ minWidth: '180px' }}>Client & Contact</th>
+                    <th style={{ whiteSpace: 'nowrap', width: '120px' }}>Loan Ref</th>
+                    <th style={{ whiteSpace: 'nowrap', width: '90px' }}>Method</th>
+                    <th style={{ textAlign: 'right', whiteSpace: 'nowrap', width: '130px' }}>Amount Paid</th>
+                    <th style={{ textAlign: 'right', whiteSpace: 'nowrap', width: '140px' }}>Remaining Bal</th>
+                    <th style={{ whiteSpace: 'nowrap', width: '140px' }}>Collector</th>
+                    <th style={{ textAlign: 'center', whiteSpace: 'nowrap', width: '100px' }}>Receipt</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -634,7 +653,7 @@ export default function ReportsView({ token, currentUser, onReprintReceipt }) {
 
                     return (
                       <tr key={`tx-${t.id}`}>
-                        <td>
+                        <td style={{ whiteSpace: 'nowrap' }}>
                           <span style={{
                             fontWeight: '800',
                             fontFamily: 'monospace',
@@ -646,7 +665,7 @@ export default function ReportsView({ token, currentUser, onReprintReceipt }) {
                             {t.receipt_no}
                           </span>
                         </td>
-                        <td>
+                        <td style={{ whiteSpace: 'nowrap' }}>
                           <div style={{ fontWeight: '600' }}>{dateFormatted}</div>
                           <div style={{ fontSize: '0.74rem', color: 'var(--text-muted)' }}>{timeFormatted}</div>
                         </td>
@@ -656,12 +675,12 @@ export default function ReportsView({ token, currentUser, onReprintReceipt }) {
                             {t.client_phone} {t.client_nic ? `• ${t.client_nic}` : ''}
                           </div>
                         </td>
-                        <td>
+                        <td style={{ whiteSpace: 'nowrap' }}>
                           <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
                             {t.loan_code}
                           </span>
                         </td>
-                        <td>
+                        <td style={{ whiteSpace: 'nowrap' }}>
                           <span style={{
                             fontSize: '0.72rem',
                             fontWeight: '600',
@@ -673,18 +692,18 @@ export default function ReportsView({ token, currentUser, onReprintReceipt }) {
                             {t.payment_method || 'CASH'}
                           </span>
                         </td>
-                        <td style={{ textAlign: 'right', fontWeight: '800', color: '#10b981', fontSize: '0.92rem' }}>
-                          Rs. {Number(t.amount_paid).toFixed(2)}
+                        <td style={{ textAlign: 'right', fontWeight: '800', color: '#10b981', fontSize: '0.92rem', whiteSpace: 'nowrap' }}>
+                          Rs. {Math.round(Number(t.amount_paid)).toLocaleString()}
                         </td>
-                        <td style={{ textAlign: 'right', fontWeight: '600', color: 'var(--text-secondary)' }}>
-                          Rs. {Number(t.remaining_balance).toFixed(2)}
+                        <td style={{ textAlign: 'right', fontWeight: '700', color: 'var(--text-secondary)', whiteSpace: 'nowrap' }}>
+                          Rs. {Math.round(Number(t.remaining_balance)).toLocaleString()}
                         </td>
-                        <td>
-                          <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
+                        <td style={{ whiteSpace: 'nowrap' }}>
+                          <span style={{ fontSize: '0.82rem', color: 'var(--text-primary)', fontWeight: '600' }}>
                             {t.collector_name || 'Staff'}
                           </span>
                         </td>
-                        <td style={{ textAlign: 'center' }}>
+                        <td style={{ textAlign: 'center', whiteSpace: 'nowrap' }}>
                           <button
                             className="btn btn-secondary btn-sm"
                             style={{ gap: '4px', padding: '5px 9px', fontSize: '0.76rem' }}
@@ -747,10 +766,10 @@ export default function ReportsView({ token, currentUser, onReprintReceipt }) {
 
                       <div style={{ textAlign: 'right' }}>
                         <div style={{ fontSize: '1.05rem', fontWeight: '800', color: '#10b981' }}>
-                          Rs. {Number(t.amount_paid).toFixed(2)}
+                          Rs. {Math.round(Number(t.amount_paid)).toLocaleString()}
                         </div>
                         <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
-                          Bal: Rs. {Number(t.remaining_balance).toFixed(0)}
+                          Bal: Rs. {Math.round(Number(t.remaining_balance)).toLocaleString()}
                         </div>
                       </div>
                     </div>

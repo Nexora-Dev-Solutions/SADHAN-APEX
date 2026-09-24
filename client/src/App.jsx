@@ -55,6 +55,7 @@ export default function App() {
   const [clients, setClients] = useState([]);
   const [agents, setAgents] = useState([]);
   const [reminders, setReminders] = useState({ due_today: [], overdue: [], penalties: [] });
+  const [dataRefreshKey, setDataRefreshKey] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
 
   // Modals state
@@ -168,6 +169,7 @@ export default function App() {
       if (loansData.loans) setLoans(loansData.loans);
       if (clientsData.clients) setClients(clientsData.clients);
       if (remindersData) setReminders(remindersData);
+      setDataRefreshKey(k => k + 1);
 
       // If owner, also fetch agents list for loan assignments
       if (currentUser?.role === 'OWNER') {
@@ -187,6 +189,7 @@ export default function App() {
     setSelectedLoanForPayment(null);
     setActiveReceipt(receipt);
     loadAllData(); // Refresh metrics and balances
+    setDataRefreshKey(k => k + 1);
   };
 
   const reminderCount = (reminders?.due_today?.length || 0) + (reminders?.overdue?.length || 0) + (reminders?.penalties?.length || 0);
@@ -566,6 +569,7 @@ export default function App() {
             <ReportsView
               token={token}
               currentUser={currentUser}
+              dataRefreshKey={dataRefreshKey}
               onReprintReceipt={(receipt) => setActiveReceipt(receipt)}
             />
           )}

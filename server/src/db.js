@@ -1823,6 +1823,7 @@ const db = {
 
   // MONTHLY FINANCIAL REPORT & ANALYTICS
   getMonthlyReport: async (yearMonth) => {
+    await db.autoApplyOverduePenalties();
     loadLocalStore();
     const targetMonth = yearMonth || new Date().toISOString().slice(0, 7);
 
@@ -1970,6 +1971,7 @@ const db = {
 
   // MASTER TRANSACTIONS & RECEIPTS LEDGER
   getAllTransactions: async ({ month, search, payment_method, limit = 200, offset = 0 } = {}) => {
+    await db.autoApplyOverduePenalties();
     loadLocalStore();
 
     if (usePostgres) {
