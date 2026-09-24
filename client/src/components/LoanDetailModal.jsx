@@ -18,8 +18,7 @@ export default function LoanDetailModal({ loanId, token, currentUser, onClose, o
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [activeTab, setActiveTab] = useState('installments'); // 'installments' | 'payments'
-  const [penaltyLoading, setPenaltyLoading] = useState(false);
-
+ 
   useEffect(() => {
     async function fetchLoan() {
       try {
@@ -37,34 +36,6 @@ export default function LoanDetailModal({ loanId, token, currentUser, onClose, o
     }
     fetchLoan();
   }, [loanId, token]);
-
-  const handleApplyPenalty = async () => {
-    if (!loan) return;
-    const penaltyAmt = Math.round(Number(loan.remaining_balance) * 0.08);
-    if (!window.confirm(`Apply 8% overdue penalty (Rs. ${penaltyAmt.toLocaleString()}) to ${loan.loan_code}?`)) return;
-    setPenaltyLoading(true);
-    try {
-      const res = await fetch(`/api/loans/${loan.id}/penalty`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`
-        },
-        body: JSON.stringify({ penalty_pct: 8.0 })
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Failed to apply penalty');
-      const detailRes = await fetch(`/api/loans/${loan.id}`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      const detailData = await detailRes.json();
-      if (detailData.loan) setLoan(detailData.loan);
-    } catch (err) {
-      alert(err.message);
-    } finally {
-      setPenaltyLoading(false);
-    }
-  };
 
   if (loading) {
     return (
@@ -185,8 +156,8 @@ export default function LoanDetailModal({ loanId, token, currentUser, onClose, o
             </div>
           </div>
 
-          {/* Overdue Penalty Banner (Exceeded 58-Day Limit) */}
-          {loan.status === 'ACTIVE' && loan.end_date && new Date().toISOString().split('T')[0] > loan.end_date && (
+          {/* Overdue Penalty Banner (Exceeded 58-Day Limit - Auto-Applied) */}
+          {((loan.end_date && new Date().toISOString().split('T')[0] > loan.end_date) || (loan.notes && loan.notes.includes('[Penalty applied'))) && (
             <div style={{
               background: 'rgba(239, 68, 68, 0.12)',
               border: '1px solid rgba(239, 68, 68, 0.35)',
@@ -200,30 +171,25 @@ export default function LoanDetailModal({ loanId, token, currentUser, onClose, o
               flexWrap: 'wrap'
             }}>
               <div>
-                <div style={{ fontWeight: '700', color: '#f87171', fontSize: '0.88rem' }}>
-                  ⚠️ 58-Day Limit Exceeded
+                <div style={{ fontWeight: '700', color: '#f87171', fontSize: '0.88rem', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <AlertTriangle size={16} />
+                  <span>58-Day Limit Exceeded • 8% Penalty Auto-Applied</span>
                 </div>
-                <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginTop: '2px' }}>
-                  58-day window ended on {formatCleanDate(loan.end_date)}. Unpaid: Rs. {Math.round(Number(loan.remaining_balance)).toLocaleString()}.
+                <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginTop: '3px' }}>
+                  {loan.end_date ? `58-day window ended on ${formatCleanDate(loan.end_date)}.` : ''} 8% overdue penalty added to outstanding balance.
                 </div>
               </div>
-              {currentUser?.role === 'OWNER' && (
-                <button
-                  className="btn btn-sm"
-                  style={{
-                    background: '#dc2626',
-                    color: '#fff',
-                    fontWeight: '700',
-                    padding: '6px 12px',
-                    fontSize: '0.8rem',
-                    whiteSpace: 'nowrap'
-                  }}
-                  onClick={handleApplyPenalty}
-                  disabled={penaltyLoading}
-                >
-                  {penaltyLoading ? 'Applying...' : `Apply 8% Penalty (+Rs. ${Math.round(Number(loan.remaining_balance) * 0.08).toLocaleString()})`}
-                </button>
-              )}
+              <span style={{
+                background: 'rgba(239, 68, 68, 0.2)',
+                color: '#f87171',
+                padding: '5px 12px',
+                borderRadius: '6px',
+                fontSize: '0.75rem',
+                fontWeight: '700',
+                border: '1px solid rgba(239, 68, 68, 0.4)'
+              }}>
+                8% Auto-Penalty Active
+              </span>
             </div>
           )}
 

@@ -4,7 +4,7 @@ import { Bell, AlertTriangle, Clock, CheckCircle, X, DollarSign } from 'lucide-r
 export default function NotificationCenter({ reminders, onClose, onQuickPay }) {
   if (!reminders) return null;
 
-  const totalCount = (reminders.due_today?.length || 0) + (reminders.overdue?.length || 0);
+  const totalCount = (reminders.due_today?.length || 0) + (reminders.overdue?.length || 0) + (reminders.penalties?.length || 0);
 
   return (
     <div className="modal-overlay">
@@ -28,6 +28,72 @@ export default function NotificationCenter({ reminders, onClose, onQuickPay }) {
             </div>
           ) : (
             <div>
+              {/* 58-Day Overdue Penalties Auto-Applied */}
+              {reminders.penalties?.length > 0 && (
+                <div style={{ marginBottom: '24px' }}>
+                  <div style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                    color: '#ef4444',
+                    fontWeight: '800',
+                    fontSize: '0.88rem',
+                    marginBottom: '10px'
+                  }}>
+                    <AlertTriangle size={18} />
+                    <span>58-DAY LIMIT EXCEEDED • 8% PENALTIES ({reminders.penalties.length})</span>
+                  </div>
+
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                    {reminders.penalties.map((item, idx) => (
+                      <div
+                        key={`penalty-${idx}`}
+                        style={{
+                          background: 'rgba(239, 68, 68, 0.12)',
+                          border: '1px solid rgba(239, 68, 68, 0.35)',
+                          borderRadius: 'var(--radius-md)',
+                          padding: '12px 16px',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'space-between',
+                          gap: '12px'
+                        }}
+                      >
+                        <div>
+                          <div style={{ fontWeight: '800', color: '#f87171', fontSize: '0.92rem' }}>
+                            {item.client_name} • 58-Day Limit Exceeded
+                          </div>
+                          <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginTop: '2px' }}>
+                            {item.loan_code} • {item.days_overdue} days past 58-day window • 8% auto-added
+                          </div>
+                          <div style={{ fontSize: '0.88rem', fontWeight: '800', color: 'var(--text-primary)', marginTop: '4px' }}>
+                            Outstanding Balance: Rs. {Math.round(Number(item.remaining_balance)).toLocaleString()}
+                          </div>
+                        </div>
+
+                        <button
+                          className="btn btn-success btn-sm"
+                          style={{ gap: '6px', flexShrink: 0 }}
+                          onClick={() => {
+                            onClose();
+                            onQuickPay({
+                              id: item.loan_id,
+                              loan_code: item.loan_code,
+                              client_name: item.client_name,
+                              installment_amount: item.installment_amount || item.remaining_balance,
+                              remaining_balance: item.remaining_balance
+                            });
+                          }}
+                        >
+                          <DollarSign size={14} />
+                          Collect
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
               {/* Overdue Section */}
               {reminders.overdue?.length > 0 && (
                 <div style={{ marginBottom: '24px' }}>
@@ -67,7 +133,7 @@ export default function NotificationCenter({ reminders, onClose, onQuickPay }) {
                             {item.loan_code} • Inst #{item.installment_no} • Due: {item.due_date}
                           </div>
                           <div style={{ fontSize: '0.88rem', fontWeight: '800', color: 'var(--text-primary)', marginTop: '4px' }}>
-                            Due Amount: Rs. {Number(item.balance_due).toFixed(2)}
+                            Due Amount: Rs. {Math.round(Number(item.balance_due)).toLocaleString()}
                           </div>
                         </div>
 
@@ -130,10 +196,10 @@ export default function NotificationCenter({ reminders, onClose, onQuickPay }) {
                             {item.client_name}
                           </div>
                           <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginTop: '2px' }}>
-                            {item.loan_code} • Inst #{item.installment_no} of 58
+                            {item.loan_code} • Inst #{item.installment_no}
                           </div>
                           <div style={{ fontSize: '0.88rem', fontWeight: '800', color: 'var(--text-primary)', marginTop: '4px' }}>
-                            Amount: Rs. {Number(item.balance_due).toFixed(2)}
+                            Amount: Rs. {Math.round(Number(item.balance_due)).toLocaleString()}
                           </div>
                         </div>
 

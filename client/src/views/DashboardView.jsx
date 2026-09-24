@@ -94,13 +94,21 @@ export default function DashboardView({
         </div>
       )}
 
-      {/* Reminder Notification Banner if dues exist */}
-      {((reminders?.overdue?.length || 0) > 0 || (reminders?.due_today?.length || 0) > 0) && (
+      {/* Reminder Notification Banner if dues or penalties exist */}
+      {((reminders?.penalties?.length || 0) > 0 || (reminders?.overdue?.length || 0) > 0 || (reminders?.due_today?.length || 0) > 0) && (
         <div
           onClick={onOpenReminders}
           style={{
-            background: (reminders?.overdue?.length || 0) > 0 ? 'rgba(239, 68, 68, 0.12)' : 'rgba(245, 158, 11, 0.12)',
-            border: `1px solid ${(reminders?.overdue?.length || 0) > 0 ? 'rgba(239, 68, 68, 0.3)' : 'rgba(245, 158, 11, 0.3)'}`,
+            background: (reminders?.penalties?.length || 0) > 0 
+              ? 'rgba(239, 68, 68, 0.16)' 
+              : (reminders?.overdue?.length || 0) > 0 
+                ? 'rgba(239, 68, 68, 0.12)' 
+                : 'rgba(245, 158, 11, 0.12)',
+            border: `1px solid ${(reminders?.penalties?.length || 0) > 0 
+              ? 'rgba(239, 68, 68, 0.45)' 
+              : (reminders?.overdue?.length || 0) > 0 
+                ? 'rgba(239, 68, 68, 0.3)' 
+                : 'rgba(245, 158, 11, 0.3)'}`,
             borderRadius: 'var(--radius-md)',
             padding: '12px 18px',
             marginBottom: '20px',
@@ -112,12 +120,14 @@ export default function DashboardView({
           }}
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <AlertCircle size={20} color={(reminders?.overdue?.length || 0) > 0 ? '#f87171' : '#fbbf24'} />
+            <AlertCircle size={20} color={(reminders?.penalties?.length || 0) > 0 || (reminders?.overdue?.length || 0) > 0 ? '#f87171' : '#fbbf24'} />
             <div>
               <div style={{ fontWeight: '700', fontSize: '0.9rem', color: 'var(--text-primary)' }}>
-                {(reminders?.overdue?.length || 0) > 0
-                  ? `Attention: ${reminders.overdue.length} Overdue Installments require follow up!`
-                  : `Reminder: ${reminders.due_today.length} Installments are due today.`}
+                {(reminders?.penalties?.length || 0) > 0
+                  ? `⚠️ Overdue Notice: ${reminders.penalties.length} loan(s) exceeded 58 days (8% penalty auto-added)!`
+                  : (reminders?.overdue?.length || 0) > 0
+                    ? `Attention: ${reminders.overdue.length} Overdue Installments require follow up!`
+                    : `Reminder: ${reminders.due_today.length} Installments are due today.`}
               </div>
             </div>
           </div>

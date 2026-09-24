@@ -54,7 +54,7 @@ export default function App() {
   const [loans, setLoans] = useState([]);
   const [clients, setClients] = useState([]);
   const [agents, setAgents] = useState([]);
-  const [reminders, setReminders] = useState({ due_today: [], overdue: [] });
+  const [reminders, setReminders] = useState({ due_today: [], overdue: [], penalties: [] });
   const [isLoading, setIsLoading] = useState(false);
 
   // Modals state
@@ -189,7 +189,7 @@ export default function App() {
     loadAllData(); // Refresh metrics and balances
   };
 
-  const reminderCount = (reminders?.due_today?.length || 0) + (reminders?.overdue?.length || 0);
+  const reminderCount = (reminders?.due_today?.length || 0) + (reminders?.overdue?.length || 0) + (reminders?.penalties?.length || 0);
 
   // If not logged in, render authentication page
   if (!token || !currentUser) {

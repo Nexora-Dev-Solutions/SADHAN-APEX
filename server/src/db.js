@@ -709,6 +709,7 @@ const db = {
 
   // LOANS & 58-INSTALLMENT ENGINE
   getAllLoans: async (filters = {}) => {
+    await db.autoApplyOverduePenalties();
     if (usePostgres) {
       let query = `
         SELECT l.*, c.name AS client_name, c.phone AS client_phone, c.nic_id, c.photo_url,
@@ -758,6 +759,7 @@ const db = {
   },
 
   getLoanById: async (id) => {
+    await db.autoApplyOverduePenalties();
     if (usePostgres) {
       const loanRes = await pgPool.query(`
         SELECT l.*, c.name AS client_name, c.phone AS client_phone, c.nic_id, c.address AS client_address, c.photo_url,
@@ -1182,6 +1184,55 @@ const db = {
     return true;
   },
 
+  // AUTOMATICALLY APPLY 8% PENALTY TO ALL LOANS EXCEEDING 58 DAYS
+  autoApplyOverduePenalties: async () => {
+    const todayStr = new Date().toISOString().split('T')[0];
+
+    if (usePostgres) {
+      try {
+        const overdueLoansRes = await pgPool.query(
+          `SELECT id, remaining_balance, end_date, notes FROM loans 
+           WHERE status = 'ACTIVE' 
+             AND remaining_balance > 0 
+             AND (end_date < $1 OR (end_date IS NULL AND EXISTS (
+               SELECT 1 FROM installments i WHERE i.loan_id = loans.id AND i.installment_no = 58 AND i.due_date < $1
+             )))
+             AND (notes IS NULL OR notes NOT LIKE '%[Penalty applied%')`,
+          [todayStr]
+        );
+
+        for (const row of overdueLoansRes.rows) {
+          try {
+            await db.applyPenalty(row.id, 8.0);
+            console.log(`[Auto-Penalty] Auto-applied 8% penalty on loan ID ${row.id}`);
+          } catch (err) {
+            console.error(`[Auto-Penalty Error] Loan ${row.id}:`, err);
+          }
+        }
+      } catch (err) {
+        console.error('[Auto-Penalty] Postgres query error:', err);
+      }
+      return;
+    }
+
+    loadLocalStore();
+    const overdueLoans = (localStore.loans || []).filter(l => {
+      if (l.status !== 'ACTIVE' || parseFloat(l.remaining_balance) <= 0) return false;
+      if (l.notes && l.notes.includes('[Penalty applied')) return false;
+      const loanEndDate = l.end_date || (localStore.installments.filter(i => i.loan_id === l.id && i.installment_no === 58)[0]?.due_date);
+      return loanEndDate && todayStr > loanEndDate;
+    });
+
+    for (const loan of overdueLoans) {
+      try {
+        await db.applyPenalty(loan.id, 8.0);
+        console.log(`[Auto-Penalty] Auto-applied 8% penalty on loan ID ${loan.id}`);
+      } catch (err) {
+        console.error(`[Auto-Penalty Error] Loan ${loan.id}:`, err);
+      }
+    }
+  },
+
   // APPLY 8% OVERDUE PENALTY (After 58 days / unpaid limit)
   applyPenalty: async (loanId, penaltyPct = 8.0) => {
     const id = parseInt(loanId, 10);
@@ -1194,6 +1245,12 @@ const db = {
         const loanRes = await client.query('SELECT * FROM loans WHERE id = $1 FOR UPDATE', [id]);
         if (loanRes.rows.length === 0) throw new Error('Loan not found');
         const loan = loanRes.rows[0];
+
+        // Idempotency: if penalty already applied, do not duplicate
+        if (loan.notes && loan.notes.includes('[Penalty applied')) {
+          await client.query('COMMIT');
+          return loan;
+        }
 
         const rem = parseFloat(loan.remaining_balance);
         if (rem <= 0 || loan.status === 'COMPLETED') {
@@ -1283,6 +1340,10 @@ const db = {
     loadLocalStore();
     const loan = localStore.loans.find(l => l.id === id);
     if (!loan) throw new Error('Loan not found');
+
+    if (loan.notes && loan.notes.includes('[Penalty applied')) {
+      return loan;
+    }
 
     const rem = parseFloat(loan.remaining_balance);
     if (rem <= 0 || loan.status === 'COMPLETED') {
@@ -1579,10 +1640,13 @@ const db = {
 
   // LEAN NOTIFICATION & REMINDER CALCULATOR (No cloud storage waste)
   getReminders: async (userId, role) => {
+    await db.autoApplyOverduePenalties();
     loadLocalStore();
     const todayStr = new Date().toISOString().split('T')[0];
 
     let loans = [];
+    let penaltyLoansList = [];
+
     if (usePostgres) {
       let query = `
         SELECT l.id AS loan_id, l.loan_code, l.installment_amount, l.remaining_balance, l.assigned_agent_id,
@@ -1595,6 +1659,18 @@ const db = {
       `;
       const res = await pgPool.query(query);
       loans = res.rows;
+
+      const penaltyRes = await pgPool.query(`
+        SELECT l.id AS loan_id, l.loan_code, l.installment_amount, l.remaining_balance, l.end_date, l.notes,
+               c.name AS client_name, c.phone AS client_phone
+        FROM loans l
+        JOIN clients c ON l.client_id = c.id
+        WHERE l.status = 'ACTIVE' 
+          AND l.remaining_balance > 0 
+          AND (l.end_date < $1 OR l.notes LIKE '%[Penalty applied%')
+        ORDER BY l.end_date ASC
+      `, [todayStr]);
+      penaltyLoansList = penaltyRes.rows;
     } else {
       const activeLoans = localStore.loans.filter(l => l.status === 'ACTIVE');
 
@@ -1619,6 +1695,24 @@ const db = {
           });
         }
       }
+
+      penaltyLoansList = (localStore.loans || [])
+        .filter(l => l.status === 'ACTIVE' && parseFloat(l.remaining_balance) > 0 && (
+          (l.end_date && todayStr > l.end_date) || (l.notes && l.notes.includes('[Penalty applied'))
+        ))
+        .map(l => {
+          const client = localStore.clients.find(c => c.id === l.client_id) || {};
+          return {
+            loan_id: l.id,
+            loan_code: l.loan_code,
+            installment_amount: l.installment_amount,
+            remaining_balance: l.remaining_balance,
+            end_date: l.end_date,
+            notes: l.notes,
+            client_name: client.name || 'Unknown',
+            client_phone: client.phone || ''
+          };
+        });
     }
 
     const dueToday = [];
@@ -1632,7 +1726,7 @@ const db = {
           balance_due: balanceDue,
           urgency: 'HIGH',
           title: `Due Today: Inst #${item.installment_no}`,
-          message: `${item.client_name} has Rs. ${balanceDue} due today for ${item.loan_code}.`
+          message: `${item.client_name} has Rs. ${Math.round(balanceDue).toLocaleString()} due today for ${item.loan_code}.`
         });
       } else if (item.due_date < todayStr) {
         const daysLate = Math.floor((new Date(todayStr) - new Date(item.due_date)) / 86400000);
@@ -1642,21 +1736,36 @@ const db = {
           days_late: daysLate,
           urgency: 'CRITICAL',
           title: `Overdue (${daysLate} days late): Inst #${item.installment_no}`,
-          message: `${item.client_name} is ${daysLate} days late. Amount due: Rs. ${balanceDue}.`
+          message: `${item.client_name} is ${daysLate} days late. Amount due: Rs. ${Math.round(balanceDue).toLocaleString()}.`
         });
       }
     }
 
+    const penalties = penaltyLoansList.map(item => {
+      const daysOverdue = item.end_date ? Math.max(1, Math.floor((new Date(todayStr) - new Date(item.end_date)) / 86400000)) : 1;
+      return {
+        ...item,
+        urgency: 'PENALTY',
+        days_overdue: daysOverdue,
+        title: `8% Overdue Penalty Auto-Applied`,
+        message: `${item.client_name} exceeded 58 installments (${daysOverdue} days overdue). 8% penalty was auto-added. Outstanding: Rs. ${Math.round(parseFloat(item.remaining_balance)).toLocaleString()}.`
+      };
+    });
+
     return {
       due_today_count: dueToday.length,
       overdue_count: overdue.length,
+      penalties_count: penalties.length,
+      total_count: dueToday.length + overdue.length + penalties.length,
       due_today: dueToday,
-      overdue: overdue
+      overdue: overdue,
+      penalties: penalties
     };
   },
 
   // FINANCIAL DASHBOARD SUMMARY
   getDashboardMetrics: async () => {
+    await db.autoApplyOverduePenalties();
     loadLocalStore();
     const todayStr = new Date().toISOString().split('T')[0];
 

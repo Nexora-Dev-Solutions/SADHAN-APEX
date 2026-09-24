@@ -329,7 +329,8 @@ app.get('/api/dashboard', verifyToken, async (req, res) => {
     return res.json({
       metrics,
       due_today_count: reminders.due_today_count,
-      overdue_count: reminders.overdue_count
+      overdue_count: reminders.overdue_count,
+      penalties_count: reminders.penalties_count || 0
     });
   } catch (err) {
     console.error('Error fetching dashboard metrics:', err);
