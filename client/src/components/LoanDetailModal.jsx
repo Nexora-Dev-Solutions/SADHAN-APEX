@@ -61,6 +61,9 @@ export default function LoanDetailModal({ loanId, token, currentUser, onClose, o
   const paidCount = (loan.installments || []).filter(i => i.status === 'PAID').length;
   const partialCount = (loan.installments || []).filter(i => i.status === 'PARTIAL').length;
   const progressPct = Math.round((paidCount / (loan.installment_count || 58)) * 100);
+  const hasPenalty = Boolean(loan.penalty_applied || (loan.notes && loan.notes.includes('[Penalty applied')));
+  const penaltyMatch = loan.notes ? loan.notes.match(/Rs\.\s*([\d,]+(?:\.\d+)?)/) : null;
+  const penaltyAmountStr = penaltyMatch ? penaltyMatch[1] : '';
 
   return (
     <div className="modal-overlay">
@@ -129,19 +132,23 @@ export default function LoanDetailModal({ loanId, token, currentUser, onClose, o
           }}>
             <div style={{ background: 'rgba(255,255,255,0.03)', padding: '10px 12px', borderRadius: 'var(--radius-md)', border: '1px solid var(--surface-border)' }}>
               <div style={{ fontSize: '0.68rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>PRINCIPAL</div>
-              <div style={{ fontSize: '1.05rem', fontWeight: '700', marginTop: '2px' }}>Rs. {Number(loan.principal_amount).toLocaleString()}</div>
+              <div style={{ fontSize: '1.05rem', fontWeight: '700', marginTop: '2px' }}>Rs. {Math.round(Number(loan.principal_amount)).toLocaleString()}</div>
             </div>
             <div style={{ background: 'rgba(255,255,255,0.03)', padding: '10px 12px', borderRadius: 'var(--radius-md)', border: '1px solid var(--surface-border)' }}>
-              <div style={{ fontSize: '0.68rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>TOTAL PAYABLE ({loan.interest_rate_pct}%)</div>
-              <div style={{ fontSize: '1.05rem', fontWeight: '700', color: '#93c5fd', marginTop: '2px' }}>Rs. {Number(loan.total_payable).toLocaleString()}</div>
+              <div style={{ fontSize: '0.68rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                TOTAL PAYABLE {hasPenalty ? '(INCL. 8% PENALTY)' : `(${loan.interest_rate_pct}%)`}
+              </div>
+              <div style={{ fontSize: '1.05rem', fontWeight: '700', color: '#93c5fd', marginTop: '2px' }}>
+                Rs. {Math.round(Number(loan.total_payable)).toLocaleString()}
+              </div>
             </div>
             <div style={{ background: 'rgba(255,255,255,0.03)', padding: '10px 12px', borderRadius: 'var(--radius-md)', border: '1px solid var(--surface-border)' }}>
               <div style={{ fontSize: '0.68rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>TOTAL COLLECTED</div>
-              <div style={{ fontSize: '1.05rem', fontWeight: '700', color: '#34d399', marginTop: '2px' }}>Rs. {Number(loan.total_paid).toLocaleString()}</div>
+              <div style={{ fontSize: '1.05rem', fontWeight: '700', color: '#34d399', marginTop: '2px' }}>Rs. {Math.round(Number(loan.total_paid)).toLocaleString()}</div>
             </div>
             <div style={{ background: 'rgba(255,255,255,0.03)', padding: '10px 12px', borderRadius: 'var(--radius-md)', border: '1px solid var(--surface-border)' }}>
               <div style={{ fontSize: '0.68rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>OUTSTANDING BALANCE</div>
-              <div style={{ fontSize: '1.05rem', fontWeight: '800', color: '#f87171', marginTop: '2px' }}>Rs. {Number(loan.remaining_balance).toLocaleString()}</div>
+              <div style={{ fontSize: '1.05rem', fontWeight: '800', color: '#f87171', marginTop: '2px' }}>Rs. {Math.round(Number(loan.remaining_balance)).toLocaleString()}</div>
             </div>
           </div>
 
@@ -157,7 +164,7 @@ export default function LoanDetailModal({ loanId, token, currentUser, onClose, o
           </div>
 
           {/* Overdue Penalty Banner (Exceeded 58-Day Limit - Auto-Applied) */}
-          {((loan.end_date && new Date().toISOString().split('T')[0] > loan.end_date) || (loan.notes && loan.notes.includes('[Penalty applied'))) && (
+          {(hasPenalty || (loan.end_date && new Date().toISOString().split('T')[0] > loan.end_date)) && (
             <div style={{
               background: 'rgba(239, 68, 68, 0.12)',
               border: '1px solid rgba(239, 68, 68, 0.35)',
@@ -173,10 +180,11 @@ export default function LoanDetailModal({ loanId, token, currentUser, onClose, o
               <div>
                 <div style={{ fontWeight: '700', color: '#f87171', fontSize: '0.88rem', display: 'flex', alignItems: 'center', gap: '6px' }}>
                   <AlertTriangle size={16} />
-                  <span>58-Day Limit Exceeded • 8% Penalty Auto-Applied</span>
+                  <span>58-Day Limit Exceeded • 8% Overdue Penalty Added</span>
                 </div>
                 <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginTop: '3px' }}>
-                  {loan.end_date ? `58-day window ended on ${formatCleanDate(loan.end_date)}.` : ''} 8% overdue penalty added to outstanding balance.
+                  {loan.end_date ? `58-day window ended on ${formatCleanDate(loan.end_date)}. ` : ''}
+                  8% penalty{penaltyAmountStr ? ` (+Rs. ${penaltyAmountStr})` : ''} on remaining payable amount added to Total Payable and Outstanding Balance.
                 </div>
               </div>
               <span style={{
@@ -188,7 +196,7 @@ export default function LoanDetailModal({ loanId, token, currentUser, onClose, o
                 fontWeight: '700',
                 border: '1px solid rgba(239, 68, 68, 0.4)'
               }}>
-                8% Auto-Penalty Active
+                8% Penalty Applied
               </span>
             </div>
           )}

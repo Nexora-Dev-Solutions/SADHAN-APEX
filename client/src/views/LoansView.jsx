@@ -162,9 +162,26 @@ export default function LoansView({
                       Rs. {Math.round(Number(loan.remaining_balance)).toLocaleString()}
                     </td>
                     <td>
-                      <span className={`status-badge badge-${loan.status.toLowerCase()}`}>
-                        {loan.status}
-                      </span>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                        <span className={`status-badge badge-${loan.status.toLowerCase()}`}>
+                          {loan.status}
+                        </span>
+                        {(loan.penalty_applied || (loan.notes && loan.notes.includes('[Penalty applied'))) && (
+                          <span style={{
+                            fontSize: '0.68rem',
+                            fontWeight: '700',
+                            color: '#f87171',
+                            background: 'rgba(239, 68, 68, 0.15)',
+                            padding: '2px 6px',
+                            borderRadius: '4px',
+                            border: '1px solid rgba(239, 68, 68, 0.3)',
+                            textAlign: 'center',
+                            whiteSpace: 'nowrap'
+                          }}>
+                            +8% PENALTY
+                          </span>
+                        )}
+                      </div>
                     </td>
                     <td style={{ textAlign: 'right' }}>
                       <div style={{ display: 'inline-flex', gap: '6px' }}>

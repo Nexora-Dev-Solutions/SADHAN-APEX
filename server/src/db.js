@@ -145,6 +145,9 @@ async function initPostgresSchema() {
     ALTER TABLE clients ADD COLUMN IF NOT EXISTS kyc_status VARCHAR(20) DEFAULT 'VERIFIED';
     ALTER TABLE clients ADD COLUMN IF NOT EXISTS kyc_notes TEXT;
     ALTER TABLE clients ADD COLUMN IF NOT EXISTS photo_url TEXT;
+
+    ALTER TABLE loans ADD COLUMN IF NOT EXISTS notes TEXT;
+    ALTER TABLE loans ADD COLUMN IF NOT EXISTS penalty_applied BOOLEAN DEFAULT FALSE;
   `;
   await pgPool.query(schemaSql);
 }
@@ -1316,7 +1319,8 @@ const db = {
           `UPDATE loans 
            SET remaining_balance = $1, total_payable = $2, total_interest = $3,
                installment_count = $4, end_date = $5,
-               notes = COALESCE(notes, '') || $6
+               notes = COALESCE(notes, '') || $6,
+               penalty_applied = TRUE
            WHERE id = $7 RETURNING *`,
           [
             newRemaining, newTotalPayable, newTotalInterest,
@@ -1357,6 +1361,7 @@ const db = {
     loan.remaining_balance = newRemaining;
     loan.total_payable = Math.round(parseFloat(loan.total_payable) + penaltyAmount);
     loan.total_interest = Math.round(parseFloat(loan.total_interest) + penaltyAmount);
+    loan.penalty_applied = true;
     loan.notes = (loan.notes ? loan.notes + ' ' : '') + `[Penalty applied: Rs. ${penaltyAmount} (${rate}% overdue penalty)]`;
 
     const loanInsts = localStore.installments

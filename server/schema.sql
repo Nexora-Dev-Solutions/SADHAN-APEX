@@ -48,6 +48,8 @@ CREATE TABLE IF NOT EXISTS loans (
   total_paid NUMERIC(12, 2) DEFAULT 0.00,
   remaining_balance NUMERIC(12, 2) NOT NULL,
   status VARCHAR(20) DEFAULT 'ACTIVE',
+  penalty_applied BOOLEAN DEFAULT FALSE,
+  notes TEXT,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
