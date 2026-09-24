@@ -23,14 +23,28 @@ export default function NewLoanModal({ token, clients, agents, currentUser, onCl
   const rawTotalPayable = parsedPrincipal + rawInterest;
   const rawInstallment = parsedCount > 0 ? (rawTotalPayable / parsedCount) : 0;
 
-  // Round installment to 100s (e.g. 1788 -> 1800, 200 -> 200)
-  let installmentAmount = Math.round(rawInstallment);
-  if (rawInstallment >= 100) {
+  // Round installment cleanly:
+  // - >= 1000: round to nearest 100 (e.g. 1788 -> 1800)
+  // - 300 to 1000: round to nearest 50 (e.g. 430 -> 450)
+  // - < 300: round to nearest 10 (e.g. 116 -> 120)
+  let installmentAmount = 0;
+  if (rawInstallment >= 1000) {
     installmentAmount = Math.round(rawInstallment / 100) * 100;
-  } else if (rawInstallment >= 50) {
+  } else if (rawInstallment >= 300) {
     installmentAmount = Math.round(rawInstallment / 50) * 50;
   } else if (rawInstallment > 0) {
     installmentAmount = Math.round(rawInstallment / 10) * 10 || 10;
+  }
+
+  // Safety: A loan with interest must NEVER round down so much that profit drops to 0 or below principal
+  if (parsedCount > 0 && parsedPrincipal > 0 && parsedRate > 0 && (installmentAmount * parsedCount) <= parsedPrincipal) {
+    if (rawInstallment >= 1000) {
+      installmentAmount = Math.ceil(rawInstallment / 100) * 100;
+    } else if (rawInstallment >= 300) {
+      installmentAmount = Math.ceil(rawInstallment / 50) * 50;
+    } else {
+      installmentAmount = Math.ceil(rawInstallment / 10) * 10;
+    }
   }
 
   const totalPayable = parsedCount > 0 && parsedPrincipal > 0 ? (installmentAmount * parsedCount) : 0;
