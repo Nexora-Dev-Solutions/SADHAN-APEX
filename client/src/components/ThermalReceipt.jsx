@@ -16,6 +16,15 @@ export default function ThermalReceipt({ receipt, onClose }) {
     minute: '2-digit'
   });
 
+  const formatReceiptDateOnly = (val) => {
+    if (!val || val === 'Completed') return val;
+    const str = typeof val === 'string' ? val.split('T')[0] : new Date(val).toISOString().split('T')[0];
+    const [y, m, d] = str.split('-').map(Number);
+    if (!y || !m || !d) return str;
+    const dateObj = new Date(y, m - 1, d);
+    return dateObj.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+  };
+
   return (
     <div className="modal-overlay thermal-receipt-modal">
       <div className="modal-content" style={{ maxWidth: '420px' }}>
@@ -124,7 +133,7 @@ export default function ThermalReceipt({ receipt, onClose }) {
                 <div className="receipt-divider"></div>
                 <div className="receipt-row">
                   <span className="receipt-label">NEXT DUE DATE:</span>
-                  <span className="receipt-value">{receipt.next_due_date}</span>
+                  <span className="receipt-value">{formatReceiptDateOnly(receipt.next_due_date)}</span>
                 </div>
                 {receipt.next_due_amount > 0 && (
                   <div className="receipt-row">

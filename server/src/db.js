@@ -1539,7 +1539,7 @@ const db = {
           client_name: clientInfo.name,
           client_phone: clientInfo.phone,
           collector_name: collectorInfo ? collectorInfo.name : 'Collector',
-          next_due_date: nextInstRes.rows.length ? nextInstRes.rows[0].due_date : 'Completed',
+          next_due_date: nextInstRes.rows.length ? (nextInstRes.rows[0].due_date instanceof Date ? nextInstRes.rows[0].due_date.toISOString().split('T')[0] : String(nextInstRes.rows[0].due_date).split('T')[0]) : 'Completed',
           next_due_amount: nextInstRes.rows.length ? (parseFloat(nextInstRes.rows[0].expected_amount) - parseFloat(nextInstRes.rows[0].paid_amount)) : 0
         };
       } catch (err) {
@@ -1640,7 +1640,7 @@ const db = {
       client_name: clientInfo.name || 'Client',
       client_phone: clientInfo.phone || '',
       collector_name: collectorInfo.name || 'Collector',
-      next_due_date: nextInst ? nextInst.due_date : 'Completed',
+      next_due_date: nextInst ? (nextInst.due_date instanceof Date ? nextInst.due_date.toISOString().split('T')[0] : String(nextInst.due_date).split('T')[0]) : 'Completed',
       next_due_amount: nextInst ? (parseFloat(nextInst.expected_amount) - parseFloat(nextInst.paid_amount)) : 0
     };
   },
