@@ -442,14 +442,15 @@ const db = {
       throw new Error(`Invalid Phone Number '${phone}'. Must be a 10-digit Sri Lankan phone number (e.g., 0771234567).`);
     }
 
-    // Normalize and validate NIC (if provided)
+    // Normalize and validate NIC (Required)
     const cleanNic = nic_id ? nic_id.trim().toUpperCase() : '';
-    if (cleanNic) {
-      const oldNicPattern = /^[0-9]{9}[VX]$/;
-      const newNicPattern = /^[0-9]{12}$/;
-      if (!oldNicPattern.test(cleanNic) && !newNicPattern.test(cleanNic)) {
-        throw new Error(`Invalid NIC format '${cleanNic}'. Sri Lankan NIC must be 9 digits with V/X (e.g. 842100452V) or 12 digits (e.g. 198421004521).`);
-      }
+    if (!cleanNic) {
+      throw new Error('National Identity Card (NIC) is required.');
+    }
+    const oldNicPattern = /^[0-9]{9}[VX]$/;
+    const newNicPattern = /^[0-9]{12}$/;
+    if (!oldNicPattern.test(cleanNic) && !newNicPattern.test(cleanNic)) {
+      throw new Error(`Invalid NIC format '${cleanNic}'. Sri Lankan NIC must be 9 digits with V/X (e.g. 842100452V) or 12 digits (e.g. 198421004521).`);
     }
 
     if (usePostgres) {
@@ -572,12 +573,13 @@ const db = {
     let cleanNic = undefined;
     if (nic_id !== undefined) {
       cleanNic = nic_id.trim().toUpperCase();
-      if (cleanNic) {
-        const oldNicPattern = /^[0-9]{9}[VX]$/;
-        const newNicPattern = /^[0-9]{12}$/;
-        if (!oldNicPattern.test(cleanNic) && !newNicPattern.test(cleanNic)) {
-          throw new Error(`Invalid NIC format '${cleanNic}'. Sri Lankan NIC must be 9 digits with V/X (e.g. 842100452V) or 12 digits (e.g. 198421004521).`);
-        }
+      if (!cleanNic) {
+        throw new Error('National Identity Card (NIC) cannot be empty.');
+      }
+      const oldNicPattern = /^[0-9]{9}[VX]$/;
+      const newNicPattern = /^[0-9]{12}$/;
+      if (!oldNicPattern.test(cleanNic) && !newNicPattern.test(cleanNic)) {
+        throw new Error(`Invalid NIC format '${cleanNic}'. Sri Lankan NIC must be 9 digits with V/X (e.g. 842100452V) or 12 digits (e.g. 198421004521).`);
       }
     }
 

@@ -107,8 +107,8 @@ app.post('/api/clients', verifyToken, async (req, res) => {
       name, phone, nic_id, address, notes,
       business_type, kyc_status, kyc_notes, photo_url
     } = req.body;
-    if (!name || !phone) {
-      return res.status(400).json({ error: 'Client name and phone number are required' });
+    if (!name || !name.trim() || !phone || !phone.trim() || !nic_id || !nic_id.trim()) {
+      return res.status(400).json({ error: 'Client name, phone number, and NIC are required' });
     }
 
     const newClient = await db.createClient({

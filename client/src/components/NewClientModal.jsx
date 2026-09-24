@@ -5,13 +5,13 @@ import ClientPhotoCapture from './ClientPhotoCapture';
 
 // Sri Lankan NIC format: 9 digits + V/X (Old) OR 12 digits (New)
 export function validateSriLankanNic(val) {
-  if (!val || !val.trim()) return { valid: true, type: null, clean: '' };
+  if (!val || !val.trim()) return { valid: false, type: null, clean: '', empty: true };
   const clean = val.trim().toUpperCase();
   const oldRegex = /^[0-9]{9}[VX]$/;
   const newRegex = /^[0-9]{12}$/;
-  if (oldRegex.test(clean)) return { valid: true, type: 'OLD', clean };
-  if (newRegex.test(clean)) return { valid: true, type: 'NEW', clean };
-  return { valid: false, type: null, clean };
+  if (oldRegex.test(clean)) return { valid: true, type: 'OLD', clean, empty: false };
+  if (newRegex.test(clean)) return { valid: true, type: 'NEW', clean, empty: false };
+  return { valid: false, type: null, clean, empty: false };
 }
 
 // Sri Lankan Phone format: 10 digits starting with 0 (e.g. 0771234567)
@@ -55,7 +55,12 @@ export default function NewClientModal({ token, onClose, onSuccess }) {
       return;
     }
 
-    if (nicId.trim() && !nicValidation.valid) {
+    if (!nicId.trim()) {
+      setError('NIC / National Identity Card number is required.');
+      return;
+    }
+
+    if (!nicValidation.valid) {
       setError('Invalid NIC format. Must be 9 digits followed by V/X (e.g., 842100452V) or 12 digits (e.g., 198421004521).');
       return;
     }
@@ -179,7 +184,7 @@ export default function NewClientModal({ token, onClose, onSuccess }) {
 
               <div className="form-group">
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
-                  <label className="form-label" style={{ margin: 0 }}>NIC / National ID</label>
+                  <label className="form-label" style={{ margin: 0 }}>NIC / National ID *</label>
                   {nicId.trim() && (
                     nicValidation.valid ? (
                       <span style={{ fontSize: '0.72rem', color: '#10b981', display: 'flex', alignItems: 'center', gap: '3px' }}>
@@ -201,6 +206,7 @@ export default function NewClientModal({ token, onClose, onSuccess }) {
                   style={{
                     borderColor: nicId.trim() ? (nicValidation.valid ? 'rgba(16, 185, 129, 0.5)' : 'rgba(239, 68, 68, 0.5)') : undefined
                   }}
+                  required
                 />
               </div>
             </div>
