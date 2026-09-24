@@ -94,7 +94,7 @@ export default function CollectionsView({
                         <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '1.05rem', marginTop: '4px' }}>
                           <span style={{ fontWeight: '600' }}>Due Amount:</span>
                           <span style={{ fontWeight: '800', color: '#f87171' }}>
-                            Rs. {Number(item.balance_due).toFixed(2)}
+                            Rs. {Math.round(Number(item.balance_due)).toLocaleString()}
                           </span>
                         </div>
                       </div>
@@ -186,7 +186,7 @@ export default function CollectionsView({
                         <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '1.05rem' }}>
                           <span style={{ fontWeight: '600' }}>Due Amount:</span>
                           <span style={{ fontWeight: '800', color: '#60a5fa' }}>
-                            Rs. {Number(item.balance_due).toFixed(2)}
+                            Rs. {Math.round(Number(item.balance_due)).toLocaleString()}
                           </span>
                         </div>
                       </div>

@@ -105,17 +105,17 @@ export default function ThermalReceipt({ receipt, onClose }) {
             {/* Prominent Amount Box */}
             <div className="receipt-amount-box">
               <div className="receipt-amount-title">AMOUNT RECEIVED</div>
-              <div className="receipt-amount-main">Rs. {Number(receipt.amount_paid).toFixed(2)}</div>
+              <div className="receipt-amount-main">Rs. {Math.round(Number(receipt.amount_paid)).toLocaleString()}</div>
             </div>
 
             <div className="receipt-row">
               <span className="receipt-label">PREV BALANCE:</span>
-              <span className="receipt-value">Rs. {Number(receipt.previous_balance).toFixed(2)}</span>
+              <span className="receipt-value">Rs. {Math.round(Number(receipt.previous_balance)).toLocaleString()}</span>
             </div>
             <div className="receipt-row">
               <span className="receipt-label" style={{ fontWeight: '800' }}>REMAINING BAL:</span>
               <span className="receipt-value" style={{ fontWeight: '800' }}>
-                Rs. {Number(receipt.remaining_balance).toFixed(2)}
+                Rs. {Math.round(Number(receipt.remaining_balance)).toLocaleString()}
               </span>
             </div>
 
@@ -129,7 +129,7 @@ export default function ThermalReceipt({ receipt, onClose }) {
                 {receipt.next_due_amount > 0 && (
                   <div className="receipt-row">
                     <span className="receipt-label">NEXT DUE AMT:</span>
-                    <span className="receipt-value">Rs. {Number(receipt.next_due_amount).toFixed(2)}</span>
+                    <span className="receipt-value">Rs. {Math.round(Number(receipt.next_due_amount)).toLocaleString()}</span>
                   </div>
                 )}
               </>

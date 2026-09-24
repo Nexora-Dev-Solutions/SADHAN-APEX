@@ -8,7 +8,7 @@ export default function PaymentModal({ loan, token, onClose, onSuccess }) {
   const remainingBal = parseFloat(loan.remaining_balance) || 0;
 
   const [amountPaid, setAmountPaid] = useState(
-    Math.min(installmentAmt, remainingBal).toFixed(2)
+    Math.round(Math.min(installmentAmt, remainingBal)).toString()
   );
   const [paymentMethod, setPaymentMethod] = useState('CASH');
   const [notes, setNotes] = useState('');
@@ -127,13 +127,13 @@ export default function PaymentModal({ loan, token, onClose, onSuccess }) {
               <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px' }}>
                 <span style={{ fontSize: '0.82rem', color: 'var(--text-muted)' }}>STANDARD INSTALLMENT</span>
                 <span style={{ fontSize: '0.88rem', fontWeight: '600' }}>
-                  Rs. {installmentAmt.toFixed(2)}
+                  Rs. {Math.round(installmentAmt).toLocaleString()}
                 </span>
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', borderTop: '1px solid rgba(255,255,255,0.06)', paddingTop: '6px' }}>
                 <span style={{ fontSize: '0.82rem', color: 'var(--text-muted)' }}>CURRENT OUTSTANDING</span>
                 <span style={{ fontSize: '0.95rem', fontWeight: '800', color: '#f87171' }}>
-                  Rs. {remainingBal.toFixed(2)}
+                  Rs. {Math.round(remainingBal).toLocaleString()}
                 </span>
               </div>
             </div>
@@ -163,25 +163,25 @@ export default function PaymentModal({ loan, token, onClose, onSuccess }) {
                   type="button"
                   className="btn btn-secondary btn-sm"
                   style={{ justifyContent: 'center', padding: '8px 4px', fontSize: '0.8rem' }}
-                  onClick={() => setAmountPaid(installmentAmt.toFixed(2))}
+                  onClick={() => setAmountPaid(Math.round(installmentAmt).toString())}
                 >
-                  Full (Rs. {installmentAmt.toFixed(0)})
+                  Full (Rs. {Math.round(installmentAmt).toLocaleString()})
                 </button>
                 <button
                   type="button"
                   className="btn btn-secondary btn-sm"
                   style={{ justifyContent: 'center', padding: '8px 4px', fontSize: '0.8rem' }}
-                  onClick={() => setAmountPaid((installmentAmt / 2).toFixed(2))}
+                  onClick={() => setAmountPaid(Math.round(installmentAmt / 2).toString())}
                 >
-                  Half (Rs. {(installmentAmt / 2).toFixed(0)})
+                  Half (Rs. {Math.round(installmentAmt / 2).toLocaleString()})
                 </button>
                 <button
                   type="button"
                   className="btn btn-secondary btn-sm"
                   style={{ justifyContent: 'center', padding: '8px 4px', fontSize: '0.8rem' }}
-                  onClick={() => setAmountPaid(remainingBal.toFixed(2))}
+                  onClick={() => setAmountPaid(Math.round(remainingBal).toString())}
                 >
-                  Payoff (Rs. {remainingBal.toFixed(0)})
+                  Payoff (Rs. {Math.round(remainingBal).toLocaleString()})
                 </button>
               </div>
             </div>
@@ -190,7 +190,7 @@ export default function PaymentModal({ loan, token, onClose, onSuccess }) {
               <label className="form-label">Payment Amount (Rs.)</label>
               <input
                 type="number"
-                step="0.01"
+                step="1"
                 min="1"
                 max={remainingBal}
                 className="form-input"

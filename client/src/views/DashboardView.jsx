@@ -135,7 +135,7 @@ export default function DashboardView({
             </div>
           </div>
           <div className="stat-value" style={{ color: '#f87171' }}>
-            Rs. {Number(m.total_outstanding || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+            Rs. {Math.round(Number(m.total_outstanding || 0)).toLocaleString()}
           </div>
           <div className="stat-subtext">Pending loan recovery across all clients</div>
         </div>
@@ -148,7 +148,7 @@ export default function DashboardView({
             </div>
           </div>
           <div className="stat-value" style={{ color: '#c084fc' }}>
-            Rs. {Number(m.total_collected || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+            Rs. {Math.round(Number(m.total_collected || 0)).toLocaleString()}
           </div>
           <div className="stat-subtext">Repayments received to date</div>
         </div>
@@ -161,7 +161,7 @@ export default function DashboardView({
             </div>
           </div>
           <div className="stat-value" style={{ color: '#60a5fa' }}>
-            Rs. {Number(m.today_collected_amount || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+            Rs. {Math.round(Number(m.today_collected_amount || 0)).toLocaleString()}
           </div>
           <div className="stat-subtext">{m.today_payments_count || 0} receipt(s) issued today</div>
         </div>
@@ -169,7 +169,7 @@ export default function DashboardView({
         {isOwner && (
           <div className="stat-card">
             <div className="stat-header">
-              <span className="stat-label">Capital Lent (8% Plan)</span>
+              <span className="stat-label">Capital Lent (58-Plan)</span>
               <div className="stat-icon-wrapper" style={{ background: 'rgba(16, 185, 129, 0.15)', color: '#10b981' }}>
                 <CreditCard size={20} />
               </div>
@@ -232,13 +232,13 @@ export default function DashboardView({
                       </div>
                     </td>
                     <td style={{ fontWeight: '700' }}>
-                      Rs. {Number(loan.installment_amount).toFixed(2)}
+                      Rs. {Math.round(Number(loan.installment_amount)).toLocaleString()}
                       <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', display: 'block' }}>
                         ({loan.frequency})
                       </span>
                     </td>
                     <td style={{ fontWeight: '800', color: loan.remaining_balance > 0 ? '#f87171' : '#10b981' }}>
-                      Rs. {Number(loan.remaining_balance).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      Rs. {Math.round(Number(loan.remaining_balance)).toLocaleString()}
                     </td>
                     <td>
                       <span className={`status-badge badge-${loan.status.toLowerCase()}`}>
@@ -318,7 +318,7 @@ export default function DashboardView({
                 <div>
                   <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>INSTALLMENT</div>
                   <div style={{ fontWeight: '800', color: '#60a5fa', fontSize: '0.95rem' }}>
-                    Rs. {Number(loan.installment_amount).toFixed(2)}
+                    Rs. {Math.round(Number(loan.installment_amount)).toLocaleString()}
                   </div>
                   <div style={{ fontSize: '0.68rem', color: 'var(--text-muted)' }}>58x ({loan.frequency})</div>
                 </div>
@@ -326,9 +326,9 @@ export default function DashboardView({
                 <div>
                   <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>REMAINING</div>
                   <div style={{ fontWeight: '800', color: loan.remaining_balance > 0 ? '#f87171' : '#10b981', fontSize: '1rem' }}>
-                    Rs. {Number(loan.remaining_balance).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    Rs. {Math.round(Number(loan.remaining_balance)).toLocaleString()}
                   </div>
-                  <div style={{ fontSize: '0.68rem', color: '#34d399' }}>8% Plan</div>
+                  <div style={{ fontSize: '0.68rem', color: '#34d399' }}>58-Plan</div>
                 </div>
               </div>
 

@@ -32,10 +32,23 @@ export default function EditLoanModal({ loan, token, agents, currentUser, onClos
   const parsedTopup = parseFloat(topupAmount) || 0;
   const calculatedNewPrincipal = activeTab === 'topup' ? currentPrincipal + parsedTopup : (parseFloat(editPrincipal) || currentPrincipal);
   const calculatedRate = parseFloat(interestRate) || currentRate;
-  const calculatedInterest = Math.round(((calculatedNewPrincipal * calculatedRate) / 100) * 100) / 100;
-  const calculatedTotalPayable = Math.round((calculatedNewPrincipal + calculatedInterest) * 100) / 100;
-  const calculatedNewRemaining = Math.max(0, Math.round((calculatedTotalPayable - currentPaid) * 100) / 100);
-  const calculatedNewInstAmt = Math.round((calculatedTotalPayable / currentCount) * 100) / 100;
+
+  const rawNewInterest = (calculatedNewPrincipal * calculatedRate) / 100;
+  const rawNewPayable = calculatedNewPrincipal + rawNewInterest;
+  const rawNewInst = currentCount > 0 ? (rawNewPayable / currentCount) : 0;
+
+  let calculatedNewInstAmt = Math.round(rawNewInst);
+  if (rawNewInst >= 100) {
+    calculatedNewInstAmt = Math.round(rawNewInst / 100) * 100;
+  } else if (rawNewInst >= 50) {
+    calculatedNewInstAmt = Math.round(rawNewInst / 50) * 50;
+  } else if (rawNewInst > 0) {
+    calculatedNewInstAmt = Math.round(rawNewInst / 10) * 10 || 10;
+  }
+
+  const calculatedTotalPayable = Math.round(calculatedNewInstAmt * currentCount);
+  const calculatedInterest = Math.max(0, calculatedTotalPayable - calculatedNewPrincipal);
+  const calculatedNewRemaining = Math.max(0, Math.round(calculatedTotalPayable - currentPaid));
 
   const handleUpdate = async (e) => {
     e.preventDefault();
@@ -303,13 +316,13 @@ export default function EditLoanModal({ loan, token, agents, currentUser, onClos
                 <div>
                   <div style={{ color: 'var(--text-muted)', fontSize: '0.76rem' }}>New Balance to Recover:</div>
                   <div style={{ fontWeight: '800', color: '#f87171', fontSize: '1rem', wordBreak: 'break-word' }}>
-                    Rs. {calculatedNewRemaining.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    Rs. {Math.round(calculatedNewRemaining).toLocaleString()}
                   </div>
                 </div>
                 <div>
                   <div style={{ color: 'var(--text-muted)', fontSize: '0.76rem' }}>Per Installment ({currentCount}x):</div>
                   <div style={{ fontWeight: '800', color: '#38bdf8', fontSize: '1rem', wordBreak: 'break-word' }}>
-                    Rs. {calculatedNewInstAmt.toFixed(2)}
+                    Rs. {Math.round(calculatedNewInstAmt).toLocaleString()}
                   </div>
                 </div>
               </div>

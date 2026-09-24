@@ -7,21 +7,34 @@ export default function NewLoanModal({ token, clients, agents, currentUser, onCl
     currentUser.role === 'AGENT' ? currentUser.id : (agents.length ? agents[0].id : '')
   );
   const [principal, setPrincipal] = useState('50000');
-  const [interestRate, setInterestRate] = useState('8'); // Default 8% as requested
+  const [interestRate, setInterestRate] = useState('16'); // Default 16% (8%/month for 58 installments)
   const [installmentCount, setInstallmentCount] = useState('58'); // Default 58 installments
   const [frequency, setFrequency] = useState('DAILY');
   const [startDate, setStartDate] = useState(new Date().toISOString().split('T')[0]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState('');
 
-  // Live calculations
+  // Live calculations (Automatic Rounding to clean 100s/50s)
   const parsedPrincipal = parseFloat(principal) || 0;
   const parsedRate = parseFloat(interestRate) || 0;
   const parsedCount = parseInt(installmentCount, 10) || 58;
 
-  const totalInterest = Math.round(((parsedPrincipal * parsedRate) / 100) * 100) / 100;
-  const totalPayable = Math.round((parsedPrincipal + totalInterest) * 100) / 100;
-  const installmentAmount = parsedCount > 0 ? (Math.round((totalPayable / parsedCount) * 100) / 100).toFixed(2) : '0.00';
+  const rawInterest = (parsedPrincipal * parsedRate) / 100;
+  const rawTotalPayable = parsedPrincipal + rawInterest;
+  const rawInstallment = parsedCount > 0 ? (rawTotalPayable / parsedCount) : 0;
+
+  // Round installment to 100s (e.g. 1788 -> 1800, 200 -> 200)
+  let installmentAmount = Math.round(rawInstallment);
+  if (rawInstallment >= 100) {
+    installmentAmount = Math.round(rawInstallment / 100) * 100;
+  } else if (rawInstallment >= 50) {
+    installmentAmount = Math.round(rawInstallment / 50) * 50;
+  } else if (rawInstallment > 0) {
+    installmentAmount = Math.round(rawInstallment / 10) * 10 || 10;
+  }
+
+  const totalPayable = parsedCount > 0 && parsedPrincipal > 0 ? (installmentAmount * parsedCount) : 0;
+  const totalInterest = Math.max(0, totalPayable - parsedPrincipal);
 
   const stepDays = frequency === 'DAILY' ? 1 : frequency === 'WEEKLY' ? 7 : 30;
   const endDate = new Date(new Date(startDate).getTime() + parsedCount * stepDays * 86400000)
@@ -224,16 +237,16 @@ export default function NewLoanModal({ token, clients, agents, currentUser, onCl
                   <div style={{ fontWeight: '600' }}>Rs. {parsedPrincipal.toLocaleString()}</div>
                 </div>
                 <div>
-                  <div style={{ color: 'var(--text-muted)', fontSize: '0.76rem' }}>Interest (8%):</div>
-                  <div style={{ fontWeight: '600', color: '#34d399' }}>+ Rs. {totalInterest.toLocaleString()}</div>
+                  <div style={{ color: 'var(--text-muted)', fontSize: '0.76rem' }}>Interest ({parsedRate}%):</div>
+                  <div style={{ fontWeight: '600', color: '#34d399' }}>+ Rs. {Math.round(totalInterest).toLocaleString()}</div>
                 </div>
                 <div>
                   <div style={{ color: 'var(--text-muted)', fontSize: '0.76rem' }}>Total To Pay Back:</div>
-                  <div style={{ fontWeight: '800', color: '#f8fafc', fontSize: '0.98rem' }}>Rs. {totalPayable.toLocaleString()}</div>
+                  <div style={{ fontWeight: '800', color: '#f8fafc', fontSize: '0.98rem' }}>Rs. {Math.round(totalPayable).toLocaleString()}</div>
                 </div>
                 <div>
                   <div style={{ color: 'var(--text-muted)', fontSize: '0.76rem' }}>Per Installment ({parsedCount}x):</div>
-                  <div style={{ fontWeight: '800', color: '#38bdf8', fontSize: '1.02rem', wordBreak: 'break-word' }}>Rs. {installmentAmount}</div>
+                  <div style={{ fontWeight: '800', color: '#38bdf8', fontSize: '1.02rem', wordBreak: 'break-word' }}>Rs. {Math.round(installmentAmount).toLocaleString()}</div>
                 </div>
                 <div>
                   <div style={{ color: 'var(--text-muted)', fontSize: '0.76rem' }}>Plan Duration:</div>

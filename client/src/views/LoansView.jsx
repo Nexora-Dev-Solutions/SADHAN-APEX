@@ -147,19 +147,19 @@ export default function LoansView({
                       </span>
                     </td>
                     <td>
-                      <div style={{ fontWeight: '700' }}>Rs. {Number(loan.installment_amount).toFixed(2)}</div>
+                      <div style={{ fontWeight: '700' }}>Rs. {Math.round(Number(loan.installment_amount)).toLocaleString()}</div>
                       <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
                         58x ({loan.frequency})
                       </span>
                     </td>
                     <td>
-                      <div>Rs. {Number(loan.total_paid).toLocaleString()}</div>
+                      <div>Rs. {Math.round(Number(loan.total_paid)).toLocaleString()}</div>
                       <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
-                        of Rs. {Number(loan.total_payable).toLocaleString()}
+                        of Rs. {Math.round(Number(loan.total_payable)).toLocaleString()}
                       </div>
                     </td>
                     <td style={{ fontWeight: '800', color: loan.remaining_balance > 0 ? '#f87171' : '#10b981' }}>
-                      Rs. {Number(loan.remaining_balance).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      Rs. {Math.round(Number(loan.remaining_balance)).toLocaleString()}
                     </td>
                     <td>
                       <span className={`status-badge badge-${loan.status.toLowerCase()}`}>
@@ -266,7 +266,7 @@ export default function LoansView({
                   <div>
                     <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>INSTALLMENT (58x)</div>
                     <div style={{ fontWeight: '800', color: '#60a5fa', fontSize: '0.98rem' }}>
-                      Rs. {Number(loan.installment_amount).toFixed(2)}
+                      Rs. {Math.round(Number(loan.installment_amount)).toLocaleString()}
                     </div>
                     <div style={{ fontSize: '0.68rem', color: 'var(--text-muted)' }}>{loan.frequency}</div>
                   </div>
@@ -274,9 +274,9 @@ export default function LoansView({
                   <div>
                     <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>REMAINING BALANCE</div>
                     <div style={{ fontWeight: '800', color: loan.remaining_balance > 0 ? '#f87171' : '#10b981', fontSize: '1.05rem' }}>
-                      Rs. {Number(loan.remaining_balance).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      Rs. {Math.round(Number(loan.remaining_balance)).toLocaleString()}
                     </div>
-                    <div style={{ fontSize: '0.68rem', color: '#34d399', fontWeight: '600' }}>8% Interest Plan</div>
+                    <div style={{ fontSize: '0.68rem', color: '#34d399', fontWeight: '600' }}>58-Installment Plan</div>
                   </div>
                 </div>
 

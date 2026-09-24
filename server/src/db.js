@@ -823,17 +823,33 @@ const db = {
     created_by,
     assigned_agent_id,
     principal_amount,
-    interest_rate_pct = 8.00,
+    interest_rate_pct = 16.00,
     installment_count = 58,
     frequency = 'DAILY',
     start_date
   }) => {
     const principal = parseFloat(principal_amount);
-    const rate = parseFloat(interest_rate_pct);
-    const totalInterest = Math.round(((principal * rate) / 100) * 100) / 100;
-    const totalPayable = Math.round((principal + totalInterest) * 100) / 100;
+    const rate = parseFloat(interest_rate_pct) || 16.00;
     const count = parseInt(installment_count, 10) || 58;
-    const installmentAmount = Math.round((totalPayable / count) * 100) / 100;
+
+    // 1. Calculate raw interest & raw installment
+    const rawTotalInterest = (principal * rate) / 100;
+    const rawTotalPayable = principal + rawTotalInterest;
+    const rawInstallment = count > 0 ? (rawTotalPayable / count) : 0;
+
+    // 2. Round off installment to 100s (e.g. 1788 -> 1800, 200 -> 200)
+    let installmentAmount = Math.round(rawInstallment);
+    if (rawInstallment >= 100) {
+      installmentAmount = Math.round(rawInstallment / 100) * 100;
+    } else if (rawInstallment >= 50) {
+      installmentAmount = Math.round(rawInstallment / 50) * 50;
+    } else {
+      installmentAmount = Math.round(rawInstallment / 10) * 10 || 10;
+    }
+
+    // 3. Derive total payable directly from clean rounded installments
+    const totalPayable = Math.round(installmentAmount * count);
+    const totalInterest = Math.max(0, Math.round(totalPayable - principal));
 
     const start = new Date(start_date || new Date().toISOString().split('T')[0]);
 
@@ -957,12 +973,25 @@ const db = {
         }
 
         const newRate = interest_rate_pct !== undefined ? parseFloat(interest_rate_pct) : parseFloat(loan.interest_rate_pct);
-        const newTotalInterest = Math.round(((newPrincipal * newRate) / 100) * 100) / 100;
-        const newTotalPayable = Math.round((newPrincipal + newTotalInterest) * 100) / 100;
-        const currentPaid = parseFloat(loan.total_paid);
-        const newRemaining = Math.max(0, Math.round((newTotalPayable - currentPaid) * 100) / 100);
         const count = parseInt(loan.installment_count, 10) || 58;
-        const newInstAmount = Math.round((newTotalPayable / count) * 100) / 100;
+
+        const rawNewInterest = (newPrincipal * newRate) / 100;
+        const rawNewPayable = newPrincipal + rawNewInterest;
+        const rawNewInst = count > 0 ? (rawNewPayable / count) : 0;
+
+        let newInstAmount = Math.round(rawNewInst);
+        if (rawNewInst >= 100) {
+          newInstAmount = Math.round(rawNewInst / 100) * 100;
+        } else if (rawNewInst >= 50) {
+          newInstAmount = Math.round(rawNewInst / 50) * 50;
+        } else {
+          newInstAmount = Math.round(rawNewInst / 10) * 10 || 10;
+        }
+
+        const newTotalPayable = Math.round(newInstAmount * count);
+        const newTotalInterest = Math.max(0, Math.round(newTotalPayable - newPrincipal));
+        const currentPaid = parseFloat(loan.total_paid);
+        const newRemaining = Math.max(0, Math.round(newTotalPayable - currentPaid));
         const newAgent = assigned_agent_id !== undefined ? (assigned_agent_id ? parseInt(assigned_agent_id, 10) : null) : loan.assigned_agent_id;
         const newStatus = status || (newRemaining <= 0 ? 'COMPLETED' : 'ACTIVE');
 
@@ -987,17 +1016,11 @@ const db = {
 
         if (unpaidRes.rows.length > 0) {
           const unpaidCount = unpaidRes.rows.length;
-          const adjustedExpected = Math.round((newRemaining / unpaidCount) * 100) / 100;
           for (let i = 0; i < unpaidCount; i++) {
             const inst = unpaidRes.rows[i];
-            const isLast = (i === unpaidCount - 1);
-            // On last unpaid, reconcile any cent rounding
-            const exp = isLast 
-              ? Math.round((newRemaining - (adjustedExpected * (unpaidCount - 1))) * 100) / 100
-              : adjustedExpected;
             await client.query(
               `UPDATE installments SET expected_amount = $1 WHERE id = $2`,
-              [Math.max(0, exp), inst.id]
+              [newInstAmount, inst.id]
             );
           }
         }
@@ -1025,12 +1048,25 @@ const db = {
     }
 
     const newRate = interest_rate_pct !== undefined ? parseFloat(interest_rate_pct) : parseFloat(loan.interest_rate_pct);
-    const newTotalInterest = Math.round(((newPrincipal * newRate) / 100) * 100) / 100;
-    const newTotalPayable = Math.round((newPrincipal + newTotalInterest) * 100) / 100;
-    const currentPaid = parseFloat(loan.total_paid);
-    const newRemaining = Math.max(0, Math.round((newTotalPayable - currentPaid) * 100) / 100);
     const count = parseInt(loan.installment_count, 10) || 58;
-    const newInstAmount = Math.round((newTotalPayable / count) * 100) / 100;
+
+    const rawNewInterest = (newPrincipal * newRate) / 100;
+    const rawNewPayable = newPrincipal + rawNewInterest;
+    const rawNewInst = count > 0 ? (rawNewPayable / count) : 0;
+
+    let newInstAmount = Math.round(rawNewInst);
+    if (rawNewInst >= 100) {
+      newInstAmount = Math.round(rawNewInst / 100) * 100;
+    } else if (rawNewInst >= 50) {
+      newInstAmount = Math.round(rawNewInst / 50) * 50;
+    } else {
+      newInstAmount = Math.round(rawNewInst / 10) * 10 || 10;
+    }
+
+    const newTotalPayable = Math.round(newInstAmount * count);
+    const newTotalInterest = Math.max(0, Math.round(newTotalPayable - newPrincipal));
+    const currentPaid = parseFloat(loan.total_paid);
+    const newRemaining = Math.max(0, Math.round(newTotalPayable - currentPaid));
 
     loan.principal_amount = newPrincipal;
     loan.interest_rate_pct = newRate;

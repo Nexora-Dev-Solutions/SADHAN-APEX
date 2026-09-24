@@ -203,7 +203,7 @@ app.post('/api/loans', verifyToken, async (req, res) => {
       client_id,
       assigned_agent_id,
       principal_amount,
-      interest_rate_pct = 8.00,
+      interest_rate_pct = 16.00,
       installment_count = 58,
       frequency = 'DAILY',
       start_date
@@ -222,7 +222,7 @@ app.post('/api/loans', verifyToken, async (req, res) => {
       created_by: req.user.id,
       assigned_agent_id: assigned_agent_id || (req.user.role === 'AGENT' ? req.user.id : null),
       principal_amount,
-      interest_rate_pct: parseFloat(interest_rate_pct) || 8.00,
+      interest_rate_pct: parseFloat(interest_rate_pct) || 16.00,
       installment_count: parseInt(installment_count, 10) || 58,
       frequency: frequency || 'DAILY',
       start_date: start_date || new Date().toISOString().split('T')[0]
