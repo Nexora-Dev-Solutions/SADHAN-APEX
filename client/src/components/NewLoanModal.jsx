@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { PlusCircle, X, Calculator, Calendar, UserCheck } from 'lucide-react';
 
-export default function NewLoanModal({ token, clients, agents, currentUser, onClose, onSuccess }) {
-  const [clientId, setClientId] = useState(clients.length ? clients[0].id : '');
+export default function NewLoanModal({ token, clients, agents, currentUser, onClose, onSuccess, initialClientId }) {
+  const [clientId, setClientId] = useState(
+    initialClientId ? String(initialClientId) : (clients.length ? String(clients[0].id) : '')
+  );
   const [assignedAgentId, setAssignedAgentId] = useState(
     currentUser.role === 'AGENT' ? currentUser.id : (agents.length ? agents[0].id : '')
   );
@@ -13,6 +15,12 @@ export default function NewLoanModal({ token, clients, agents, currentUser, onCl
   const [startDate, setStartDate] = useState(new Date().toISOString().split('T')[0]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState('');
+
+  useEffect(() => {
+    if (initialClientId) {
+      setClientId(String(initialClientId));
+    }
+  }, [initialClientId]);
 
   // Live calculations (Automatic Rounding to clean 100s/50s)
   const parsedPrincipal = parseFloat(principal) || 0;

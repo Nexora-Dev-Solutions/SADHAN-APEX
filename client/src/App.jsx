@@ -59,6 +59,7 @@ export default function App() {
 
   // Modals state
   const [showNewLoanModal, setShowNewLoanModal] = useState(false);
+  const [selectedClientForNewLoan, setSelectedClientForNewLoan] = useState(null);
   const [showNewClientModal, setShowNewClientModal] = useState(false);
   const [selectedLoanForPayment, setSelectedLoanForPayment] = useState(null);
   const [selectedLoanIdForDetail, setSelectedLoanIdForDetail] = useState(null);
@@ -494,11 +495,14 @@ export default function App() {
             {isOwner && (
               <button
                 className="btn btn-primary btn-sm no-mobile-btn"
-                onClick={() => setShowNewLoanModal(true)}
+                onClick={() => {
+                  setSelectedClientForNewLoan(null);
+                  setShowNewLoanModal(true);
+                }}
                 style={{ gap: '6px' }}
               >
                 <PlusCircle size={16} />
-                <span>New 58-Loan</span>
+                <span>Issue Loan</span>
               </button>
             )}
           </div>
@@ -513,7 +517,10 @@ export default function App() {
               loans={loans}
               currentUser={currentUser}
               isTvMode={isTvMode}
-              onOpenNewLoan={() => setShowNewLoanModal(true)}
+              onOpenNewLoan={() => {
+                setSelectedClientForNewLoan(null);
+                setShowNewLoanModal(true);
+              }}
               onOpenNewClient={() => setShowNewClientModal(true)}
               onOpenPayment={(loan) => setSelectedLoanForPayment(loan)}
               onOpenLoanDetail={(loanId) => setSelectedLoanIdForDetail(loanId)}
@@ -525,7 +532,10 @@ export default function App() {
             <LoansView
               loans={loans}
               currentUser={currentUser}
-              onOpenNewLoan={() => setShowNewLoanModal(true)}
+              onOpenNewLoan={() => {
+                setSelectedClientForNewLoan(null);
+                setShowNewLoanModal(true);
+              }}
               onOpenPayment={(loan) => setSelectedLoanForPayment(loan)}
               onOpenLoanDetail={(loanId) => setSelectedLoanIdForDetail(loanId)}
               onEditLoan={(loan) => setSelectedLoanForEdit(loan)}
@@ -537,7 +547,10 @@ export default function App() {
               clients={clients}
               currentUser={currentUser}
               onOpenNewClient={() => setShowNewClientModal(true)}
-              onOpenNewLoanForClient={(client) => setShowNewLoanModal(true)}
+              onOpenNewLoanForClient={(client) => {
+                setSelectedClientForNewLoan(client?.id || client);
+                setShowNewLoanModal(true);
+              }}
               onEditClient={(client) => setSelectedClientForEdit(client)}
             />
           )}
@@ -631,9 +644,14 @@ export default function App() {
           clients={clients}
           agents={agents}
           currentUser={currentUser}
-          onClose={() => setShowNewLoanModal(false)}
+          initialClientId={selectedClientForNewLoan}
+          onClose={() => {
+            setShowNewLoanModal(false);
+            setSelectedClientForNewLoan(null);
+          }}
           onSuccess={() => {
             setShowNewLoanModal(false);
+            setSelectedClientForNewLoan(null);
             loadAllData();
           }}
         />

@@ -354,7 +354,7 @@ export default function ClientsView({
                       onClick={() => onOpenNewLoanForClient(client)}
                     >
                       <PlusCircle size={16} />
-                      Issue 58-Loan
+                      Issue Loan
                     </button>
                   )}
                 </div>
