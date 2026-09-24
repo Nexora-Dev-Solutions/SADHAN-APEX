@@ -149,7 +149,7 @@ export default function LoansView({
                     <td>
                       <div style={{ fontWeight: '700' }}>Rs. {Math.round(Number(loan.installment_amount)).toLocaleString()}</div>
                       <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
-                        58x ({loan.frequency})
+                        54x ({loan.frequency})
                       </span>
                     </td>
                     <td>
