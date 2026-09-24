@@ -234,13 +234,17 @@ export default function NewLoanModal({ token, clients, agents, currentUser, onCl
 
             <div className="form-group">
               <label className="form-label">Loan Start Date</label>
-              <input
-                type="date"
-                className="form-input"
-                value={startDate}
-                onChange={(e) => setStartDate(e.target.value)}
-                required
-              />
+              <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+                <Calendar size={18} color="#60a5fa" style={{ position: 'absolute', left: '14px', pointerEvents: 'none', zIndex: 1 }} />
+                <input
+                  type="date"
+                  className="form-input"
+                  style={{ paddingLeft: '44px', minHeight: '46px', cursor: 'pointer' }}
+                  value={startDate}
+                  onChange={(e) => setStartDate(e.target.value)}
+                  required
+                />
+              </div>
             </div>
 
             {/* Live Financial Breakdown Card */}
@@ -273,7 +277,7 @@ export default function NewLoanModal({ token, clients, agents, currentUser, onCl
                 </div>
                 <div>
                   <div style={{ color: 'var(--text-muted)', fontSize: '0.76rem' }}>Scheduled Payback:</div>
-                  <div style={{ fontWeight: '600', color: '#60a5fa' }}>{baseScheduleCount} {frequency.toLowerCase()}s</div>
+                  <div style={{ fontWeight: '600', color: '#60a5fa' }}>{baseScheduleCount} {frequency === 'DAILY' ? 'days' : frequency === 'WEEKLY' ? 'weeks' : 'months'}</div>
                 </div>
                 <div>
                   <div style={{ color: 'var(--text-muted)', fontSize: '0.76rem' }}>Limit Window:</div>

@@ -220,7 +220,7 @@ export default function App() {
               SADHAN APEX (PVT) LTD
             </h1>
             <div style={{ fontSize: '0.82rem', color: '#60a5fa', fontWeight: '700', marginBottom: '4px' }}>
-              📞 0702263041 / 0743150900
+              📞 +94 76 108 3006
             </div>
             <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>
               58-Installment Micro Loans & Field Collection Terminal
@@ -429,7 +429,7 @@ export default function App() {
               {currentView === 'collections' && 'Field Collections Queue'}
               {currentView === 'reports' && 'Monthly Reports & Master Ledger'}
             </h2>
-            <p>SADHAN APEX (PVT) LTD • 📞 0702263041 / 0743150900 • Powered by Nexora</p>
+            <p>SADHAN APEX (PVT) LTD • 📞 +94 76 108 3006 • Powered by Nexora</p>
           </div>
 
           <div className="top-actions">

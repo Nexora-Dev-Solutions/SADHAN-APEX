@@ -40,7 +40,7 @@ export default function ThermalReceipt({ receipt, onClose }) {
                 MICRO FINANCIAL SERVICES
               </div>
               <div style={{ fontSize: '10px', color: '#333', fontWeight: '600', marginTop: '3px' }}>
-                TEL: 0702263041 / 0743150900
+                TEL: +94 76 108 3006
               </div>
               <div style={{ fontSize: '9px', color: '#666', marginTop: '1px' }}>
                 OFFICIAL REPAYMENT RECEIPT
