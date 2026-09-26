@@ -6,8 +6,34 @@ export default function CollectionsView({
   onOpenPayment
 }) {
   const penaltiesList = reminders?.penalties || [];
-  const overdueList = reminders?.overdue || [];
-  const dueTodayList = reminders?.due_today || [];
+
+  // Group overdue accounts by loan so each account appears only once with highest days late
+  const rawOverdue = reminders?.overdue || [];
+  const overdueMap = new Map();
+  for (const item of rawOverdue) {
+    const key = item.loan_id || item.loan_code;
+    if (!overdueMap.has(key)) {
+      overdueMap.set(key, { ...item });
+    } else {
+      const existing = overdueMap.get(key);
+      existing.missed_installments_count = (existing.missed_installments_count || 1) + 1;
+      if (item.days_late > existing.days_late) {
+        existing.days_late = item.days_late;
+        existing.due_date = item.due_date;
+        existing.installment_no = item.installment_no;
+      }
+    }
+  }
+  const overdueList = Array.from(overdueMap.values()).sort((a, b) => b.days_late - a.days_late);
+
+  const rawDueToday = reminders?.due_today || [];
+  const dueTodayMap = new Map();
+  for (const item of rawDueToday) {
+    const key = item.loan_id || item.loan_code;
+    if (!dueTodayMap.has(key)) dueTodayMap.set(key, { ...item });
+  }
+  const dueTodayList = Array.from(dueTodayMap.values());
+
   const totalCollections = penaltiesList.length + overdueList.length + dueTodayList.length;
 
   return (
@@ -171,6 +197,7 @@ export default function CollectionsView({
                           </div>
                           <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>
                             {item.loan_code} • Installment #{item.installment_no}
+                            {item.missed_installments_count > 1 ? ` (${item.missed_installments_count} missed)` : ''}
                           </div>
                         </div>
                         <span className="status-badge badge-overdue">

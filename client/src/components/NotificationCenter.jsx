@@ -4,7 +4,34 @@ import { Bell, AlertTriangle, Clock, CheckCircle, X, DollarSign } from 'lucide-r
 export default function NotificationCenter({ reminders, onClose, onQuickPay }) {
   if (!reminders) return null;
 
-  const totalCount = (reminders.due_today?.length || 0) + (reminders.overdue?.length || 0) + (reminders.penalties?.length || 0);
+  const rawOverdue = reminders.overdue || [];
+  const overdueMap = new Map();
+  for (const item of rawOverdue) {
+    const key = item.loan_id || item.loan_code;
+    if (!overdueMap.has(key)) {
+      overdueMap.set(key, { ...item });
+    } else {
+      const existing = overdueMap.get(key);
+      existing.missed_installments_count = (existing.missed_installments_count || 1) + 1;
+      if (item.days_late > existing.days_late) {
+        existing.days_late = item.days_late;
+        existing.due_date = item.due_date;
+        existing.installment_no = item.installment_no;
+      }
+    }
+  }
+  const overdueList = Array.from(overdueMap.values()).sort((a, b) => b.days_late - a.days_late);
+
+  const rawDueToday = reminders.due_today || [];
+  const dueTodayMap = new Map();
+  for (const item of rawDueToday) {
+    const key = item.loan_id || item.loan_code;
+    if (!dueTodayMap.has(key)) dueTodayMap.set(key, { ...item });
+  }
+  const dueTodayList = Array.from(dueTodayMap.values());
+  const penaltiesList = reminders.penalties || [];
+
+  const totalCount = dueTodayList.length + overdueList.length + penaltiesList.length;
 
   return (
     <div className="modal-overlay">
@@ -95,7 +122,7 @@ export default function NotificationCenter({ reminders, onClose, onQuickPay }) {
               )}
 
               {/* Overdue Section */}
-              {reminders.overdue?.length > 0 && (
+              {overdueList.length > 0 && (
                 <div style={{ marginBottom: '24px' }}>
                   <div style={{
                     display: 'flex',
@@ -107,11 +134,11 @@ export default function NotificationCenter({ reminders, onClose, onQuickPay }) {
                     marginBottom: '10px'
                   }}>
                     <AlertTriangle size={18} />
-                    <span>OVERDUE INSTALLMENTS ({reminders.overdue.length})</span>
+                    <span>OVERDUE ACCOUNTS ({overdueList.length})</span>
                   </div>
 
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                    {reminders.overdue.map((item, idx) => (
+                    {overdueList.map((item, idx) => (
                       <div
                         key={`overdue-${idx}`}
                         style={{
@@ -130,7 +157,7 @@ export default function NotificationCenter({ reminders, onClose, onQuickPay }) {
                             {item.client_name} • {item.days_late} Days Late
                           </div>
                           <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginTop: '2px' }}>
-                            {item.loan_code} • Inst #{item.installment_no} • Due: {item.due_date}
+                            {item.loan_code} • Inst #{item.installment_no} {item.missed_installments_count > 1 ? `(${item.missed_installments_count} missed)` : ''} • Due: {item.due_date}
                           </div>
                           <div style={{ fontSize: '0.88rem', fontWeight: '800', color: 'var(--text-primary)', marginTop: '4px' }}>
                             Due Amount: Rs. {Math.round(Number(item.balance_due)).toLocaleString()}
@@ -146,7 +173,7 @@ export default function NotificationCenter({ reminders, onClose, onQuickPay }) {
                               id: item.loan_id,
                               loan_code: item.loan_code,
                               client_name: item.client_name,
-                              installment_amount: item.balance_due,
+                              installment_amount: item.installment_amount || item.balance_due,
                               remaining_balance: item.remaining_balance
                             });
                           }}
@@ -161,7 +188,7 @@ export default function NotificationCenter({ reminders, onClose, onQuickPay }) {
               )}
 
               {/* Due Today Section */}
-              {reminders.due_today?.length > 0 && (
+              {dueTodayList.length > 0 && (
                 <div>
                   <div style={{
                     display: 'flex',
@@ -173,11 +200,11 @@ export default function NotificationCenter({ reminders, onClose, onQuickPay }) {
                     marginBottom: '10px'
                   }}>
                     <Clock size={18} />
-                    <span>DUE TODAY ({reminders.due_today.length})</span>
+                    <span>DUE TODAY ({dueTodayList.length})</span>
                   </div>
 
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                    {reminders.due_today.map((item, idx) => (
+                    {dueTodayList.map((item, idx) => (
                       <div
                         key={`today-${idx}`}
                         style={{

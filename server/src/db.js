@@ -1792,31 +1792,56 @@ const db = {
         });
     }
 
-    const dueToday = [];
-    const overdue = [];
+    const dueTodayMap = new Map();
+    const overdueMap = new Map();
 
     for (const item of loans) {
       const balanceDue = Math.round((parseFloat(item.expected_amount) - parseFloat(item.paid_amount)) * 100) / 100;
+      if (balanceDue <= 0) continue;
+
       if (item.due_date === todayStr) {
-        dueToday.push({
-          ...item,
-          balance_due: balanceDue,
-          urgency: 'HIGH',
-          title: `Due Today: Inst #${item.installment_no}`,
-          message: `${item.client_name} has Rs. ${Math.round(balanceDue).toLocaleString()} due today for ${item.loan_code}.`
-        });
+        if (!dueTodayMap.has(item.loan_id)) {
+          dueTodayMap.set(item.loan_id, {
+            ...item,
+            balance_due: balanceDue,
+            urgency: 'HIGH',
+            title: `Due Today: Inst #${item.installment_no}`,
+            message: `${item.client_name} has Rs. ${Math.round(balanceDue).toLocaleString()} due today for ${item.loan_code}.`
+          });
+        }
       } else if (item.due_date < todayStr) {
-        const daysLate = Math.floor((new Date(todayStr) - new Date(item.due_date)) / 86400000);
-        overdue.push({
-          ...item,
-          balance_due: balanceDue,
-          days_late: daysLate,
-          urgency: 'CRITICAL',
-          title: `Overdue (${daysLate} days late): Inst #${item.installment_no}`,
-          message: `${item.client_name} is ${daysLate} days late. Amount due: Rs. ${Math.round(balanceDue).toLocaleString()}.`
-        });
+        const daysLate = Math.max(1, Math.floor((new Date(todayStr) - new Date(item.due_date)) / 86400000));
+        
+        if (!overdueMap.has(item.loan_id)) {
+          overdueMap.set(item.loan_id, {
+            ...item,
+            balance_due: balanceDue,
+            days_late: daysLate,
+            missed_installments_count: 1,
+            total_missed_amount: balanceDue,
+            urgency: 'CRITICAL',
+            title: `Overdue (${daysLate} days late): Inst #${item.installment_no}`,
+            message: `${item.client_name} is ${daysLate} days late. Amount due: Rs. ${Math.round(balanceDue).toLocaleString()}.`
+          });
+        } else {
+          const existing = overdueMap.get(item.loan_id);
+          existing.missed_installments_count = (existing.missed_installments_count || 1) + 1;
+          existing.total_missed_amount = Math.round(((existing.total_missed_amount || existing.balance_due) + balanceDue) * 100) / 100;
+          
+          // Keep the highest days late (oldest missed installment)
+          if (daysLate > existing.days_late) {
+            existing.days_late = daysLate;
+            existing.due_date = item.due_date;
+            existing.installment_no = item.installment_no;
+            existing.title = `Overdue (${daysLate} days late): Inst #${item.installment_no}`;
+            existing.message = `${existing.client_name} is ${daysLate} days late. Amount due: Rs. ${Math.round(existing.balance_due).toLocaleString()}.`;
+          }
+        }
       }
     }
+
+    const dueToday = Array.from(dueTodayMap.values());
+    const overdue = Array.from(overdueMap.values()).sort((a, b) => b.days_late - a.days_late);
 
     const penalties = penaltyLoansList.map(item => {
       const daysOverdue = item.end_date ? Math.max(1, Math.floor((new Date(todayStr) - new Date(item.end_date)) / 86400000)) : 1;
