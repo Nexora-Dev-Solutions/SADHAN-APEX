@@ -61,9 +61,22 @@ export default function LoanDetailModal({ loanId, token, currentUser, onClose, o
   const paidCount = (loan.installments || []).filter(i => i.status === 'PAID').length;
   const partialCount = (loan.installments || []).filter(i => i.status === 'PARTIAL').length;
   const progressPct = Math.round((paidCount / (loan.installment_count || 58)) * 100);
-  const hasPenalty = Boolean(loan.penalty_applied || (loan.notes && loan.notes.includes('[Penalty applied')));
-  const penaltyMatch = loan.notes ? loan.notes.match(/Rs\.\s*([\d,]+(?:\.\d+)?)/) : null;
-  const penaltyAmountStr = penaltyMatch ? penaltyMatch[1] : '';
+  
+  const pCountFromLoan = parseInt(loan.penalty_count, 10);
+  const pCountFromNotes = loan.notes ? (loan.notes.match(/\[Penalty/g) || []).length : 0;
+  const penaltyCount = !isNaN(pCountFromLoan) && pCountFromLoan > 0
+    ? pCountFromLoan
+    : (pCountFromNotes > 0 ? pCountFromNotes : (loan.penalty_applied ? 1 : 0));
+
+  const hasPenalty = Boolean(penaltyCount > 0 || loan.penalty_applied || (loan.notes && loan.notes.includes('[Penalty')));
+
+  let totalPenalties = parseFloat(loan.total_penalties) || 0;
+  if (!totalPenalties && loan.notes) {
+    const matches = loan.notes.match(/Rs\.\s*([\d,]+(?:\.\d+)?)/g);
+    if (matches) {
+      totalPenalties = matches.reduce((sum, m) => sum + parseFloat(m.replace(/[^\d.]/g, '') || 0), 0);
+    }
+  }
 
   return (
     <div className="modal-overlay">
@@ -136,7 +149,7 @@ export default function LoanDetailModal({ loanId, token, currentUser, onClose, o
             </div>
             <div style={{ background: 'rgba(255,255,255,0.03)', padding: '10px 12px', borderRadius: 'var(--radius-md)', border: '1px solid var(--surface-border)' }}>
               <div style={{ fontSize: '0.68rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-                TOTAL PAYABLE {hasPenalty ? '(INCL. 8% PENALTY)' : `(${loan.interest_rate_pct}%)`}
+                TOTAL PAYABLE {hasPenalty ? `(INCL. ${penaltyCount * 8}% PENALTIES)` : `(${loan.interest_rate_pct}%)`}
               </div>
               <div style={{ fontSize: '1.05rem', fontWeight: '700', color: '#93c5fd', marginTop: '2px' }}>
                 Rs. {Math.round(Number(loan.total_payable)).toLocaleString()}
@@ -163,7 +176,7 @@ export default function LoanDetailModal({ loanId, token, currentUser, onClose, o
             </div>
           </div>
 
-          {/* Overdue Penalty Banner (Exceeded 58-Day Limit - Auto-Applied) */}
+          {/* Overdue Penalty Banner (Exceeded 58-Installment Cycle Limits - Auto-Applied) */}
           {(hasPenalty || (loan.end_date && new Date().toISOString().split('T')[0] > loan.end_date)) && (
             <div style={{
               background: 'rgba(239, 68, 68, 0.12)',
@@ -180,11 +193,17 @@ export default function LoanDetailModal({ loanId, token, currentUser, onClose, o
               <div>
                 <div style={{ fontWeight: '700', color: '#f87171', fontSize: '0.88rem', display: 'flex', alignItems: 'center', gap: '6px' }}>
                   <AlertTriangle size={16} />
-                  <span>58-Day Limit Exceeded • 8% Overdue Penalty Added</span>
+                  <span>
+                    {penaltyCount > 1 
+                      ? `${penaltyCount}x 58-Installment Sets Exceeded • ${penaltyCount * 8}% Overdue Penalties Added`
+                      : '58-Day Limit Exceeded • 8% Overdue Penalty Added'}
+                  </span>
                 </div>
                 <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginTop: '3px' }}>
-                  {loan.end_date ? `58-day window ended on ${formatCleanDate(loan.end_date)}. ` : ''}
-                  8% penalty{penaltyAmountStr ? ` (+Rs. ${penaltyAmountStr})` : ''} on remaining payable amount added to Total Payable and Outstanding Balance.
+                  {penaltyCount > 1 
+                    ? `Borrower exceeded ${penaltyCount} cycles of 58 installments. Total overdue penalties of ${penaltyCount * 8}% (+Rs. ${Math.round(totalPenalties).toLocaleString()}) added to balance. Schedule extended to ${loan.installment_count || 58} slots.`
+                    : `58-day window exceeded. 8% penalty (+Rs. ${Math.round(totalPenalties).toLocaleString()}) added to balance. Schedule extended to ${loan.installment_count || 116} slots.`
+                  }
                 </div>
               </div>
               <span style={{
@@ -196,7 +215,7 @@ export default function LoanDetailModal({ loanId, token, currentUser, onClose, o
                 fontWeight: '700',
                 border: '1px solid rgba(239, 68, 68, 0.4)'
               }}>
-                8% Penalty Applied
+                {penaltyCount * 8}% Penalty Applied
               </span>
             </div>
           )}

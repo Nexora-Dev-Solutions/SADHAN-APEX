@@ -25,6 +25,22 @@ export default function ThermalReceipt({ receipt, onClose }) {
     return dateObj.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
   };
 
+  const pCountFromReceipt = parseInt(receipt.penalty_count, 10);
+  const pCountFromNotes = receipt.loan_notes ? (receipt.loan_notes.match(/\[Penalty/g) || []).length : 0;
+  const penaltyCount = !isNaN(pCountFromReceipt) && pCountFromReceipt > 0
+    ? pCountFromReceipt
+    : (pCountFromNotes > 0 ? pCountFromNotes : (receipt.penalty_applied ? 1 : 0));
+  
+  const hasPenalty = Boolean(penaltyCount > 0 || receipt.penalty_applied || (receipt.current_installment_no > 58));
+
+  let totalPenalties = parseFloat(receipt.total_penalties) || 0;
+  if (!totalPenalties && receipt.loan_notes) {
+    const matches = receipt.loan_notes.match(/Rs\.\s*([\d,]+(?:\.\d+)?)/g);
+    if (matches) {
+      totalPenalties = matches.reduce((sum, m) => sum + parseFloat(m.replace(/[^\d.]/g, '') || 0), 0);
+    }
+  }
+
   return (
     <div className="modal-overlay thermal-receipt-modal">
       <div className="modal-content" style={{ maxWidth: '420px' }}>
@@ -89,11 +105,13 @@ export default function ThermalReceipt({ receipt, onClose }) {
             </div>
             <div className="receipt-row">
               <span className="receipt-label">PLAN:</span>
-              <span className="receipt-value">54 Days (58-Day Limit)</span>
+              <span className="receipt-value" style={{ fontWeight: hasPenalty ? '800' : 'normal' }}>
+                {hasPenalty ? `Extended (${penaltyCount}x 58-Cycles Exceeded)` : '54 Days (58-Day Limit)'}
+              </span>
             </div>
             <div className="receipt-row">
               <span className="receipt-label">INSTALLMENT #:</span>
-              <span className="receipt-value" style={{ textDecoration: 'underline' }}>
+              <span className="receipt-value" style={{ textDecoration: 'underline', fontWeight: '800' }}>
                 #{receipt.current_installment_no || 1} of {receipt.installment_count || 58}
               </span>
             </div>
@@ -111,6 +129,35 @@ export default function ThermalReceipt({ receipt, onClose }) {
               <span className="receipt-value">{receipt.payment_method || 'CASH'}</span>
             </div>
 
+            {/* Overdue Penalty Notice Box if loan exceeded 58-day cycles */}
+            {hasPenalty && (
+              <div style={{
+                margin: '8px 0',
+                padding: '6px 8px',
+                border: '1.5px dashed #000',
+                borderRadius: '4px',
+                background: '#fafafa',
+                textAlign: 'center'
+              }}>
+                <div style={{ fontSize: '10px', fontWeight: '900', letterSpacing: '0.04em' }}>
+                  *** OVERDUE PENALTY NOTICE ***
+                </div>
+                <div style={{ fontSize: '9px', fontWeight: '700', marginTop: '2px', color: '#111' }}>
+                  {penaltyCount > 1 
+                    ? `${penaltyCount}x 58-Installment Sets Exceeded (+${penaltyCount * 8}% Overdue Penalties)`
+                    : '58-Installment Limit Exceeded (+8% Overdue Penalty)'}
+                </div>
+                {totalPenalties > 0 && (
+                  <div style={{ fontSize: '9.5px', fontWeight: '800', marginTop: '2px' }}>
+                    Total Penalty Added: + Rs. {Math.round(totalPenalties).toLocaleString()}
+                  </div>
+                )}
+                <div style={{ fontSize: '8.5px', color: '#333', marginTop: '2px' }}>
+                  Installment count extended to #{receipt.installment_count || 58} slots.
+                </div>
+              </div>
+            )}
+
             {/* Prominent Amount Box */}
             <div className="receipt-amount-box">
               <div className="receipt-amount-title">AMOUNT RECEIVED</div>
@@ -127,6 +174,14 @@ export default function ThermalReceipt({ receipt, onClose }) {
                 Rs. {Math.round(Number(receipt.remaining_balance)).toLocaleString()}
               </span>
             </div>
+            {hasPenalty && totalPenalties > 0 && (
+              <div className="receipt-row" style={{ fontSize: '9px', color: '#444', marginTop: '1px' }}>
+                <span className="receipt-label">INCL. OVERDUE PENALTY:</span>
+                <span className="receipt-value" style={{ fontWeight: '700' }}>
+                  + Rs. {Math.round(totalPenalties).toLocaleString()} ({penaltyCount}x 8%)
+                </span>
+              </div>
+            )}
 
             {receipt.next_due_date && receipt.next_due_date !== 'Completed' && (
               <>

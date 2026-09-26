@@ -148,6 +148,9 @@ async function initPostgresSchema() {
 
     ALTER TABLE loans ADD COLUMN IF NOT EXISTS notes TEXT;
     ALTER TABLE loans ADD COLUMN IF NOT EXISTS penalty_applied BOOLEAN DEFAULT FALSE;
+    ALTER TABLE loans ADD COLUMN IF NOT EXISTS penalty_count INT DEFAULT 0;
+    ALTER TABLE loans ADD COLUMN IF NOT EXISTS total_penalties NUMERIC(12, 2) DEFAULT 0.00;
+    ALTER TABLE payments ADD COLUMN IF NOT EXISTS installment_no INT;
   `;
   await pgPool.query(schemaSql);
 }
@@ -1189,29 +1192,47 @@ const db = {
     return true;
   },
 
-  // AUTOMATICALLY APPLY 8% PENALTY TO ALL LOANS EXCEEDING 58 DAYS
+  // AUTOMATICALLY APPLY 8% PENALTY TO ALL LOANS FOR EVERY 58 INSTALLMENTS EXCEEDED
   autoApplyOverduePenalties: async () => {
     const todayStr = new Date().toISOString().split('T')[0];
 
     if (usePostgres) {
       try {
-        const overdueLoansRes = await pgPool.query(
-          `SELECT id, remaining_balance, end_date, notes FROM loans 
-           WHERE status = 'ACTIVE' 
-             AND remaining_balance > 0 
-             AND (end_date < $1 OR (end_date IS NULL AND EXISTS (
-               SELECT 1 FROM installments i WHERE i.loan_id = loans.id AND i.installment_no = 58 AND i.due_date < $1
-             )))
-             AND (notes IS NULL OR notes NOT LIKE '%[Penalty applied%')`,
-          [todayStr]
+        const activeLoansRes = await pgPool.query(
+          `SELECT id, start_date, frequency, remaining_balance, end_date, notes, penalty_count, total_penalties, created_at 
+           FROM loans 
+           WHERE status = 'ACTIVE' AND remaining_balance > 0`
         );
 
-        for (const row of overdueLoansRes.rows) {
+        for (const loan of activeLoansRes.rows) {
           try {
-            await db.applyPenalty(row.id, 8.0);
-            console.log(`[Auto-Penalty] Auto-applied 8% penalty on loan ID ${row.id}`);
+            const start = new Date(loan.start_date || loan.created_at);
+            let stepDays = 1;
+            if (loan.frequency === 'WEEKLY') stepDays = 7;
+            if (loan.frequency === 'MONTHLY') stepDays = 30;
+
+            let currentCount = parseInt(loan.penalty_count, 10) || 0;
+            if (currentCount === 0 && loan.notes && loan.notes.includes('[Penalty')) {
+              const m = loan.notes.match(/\[Penalty/g);
+              currentCount = m ? m.length : 1;
+            }
+
+            let cycle = currentCount + 1;
+            while (true) {
+              const cycleDue = new Date(start.getTime() + (cycle * 58 - 1) * stepDays * 86400000);
+              const cycleDueStr = cycleDue.toISOString().split('T')[0];
+
+              if (todayStr > cycleDueStr) {
+                console.log(`[Auto-Penalty] Auto-applying 8% penalty cycle #${cycle} on loan ID ${loan.id}`);
+                const updated = await db.applyPenalty(loan.id, 8.0, cycle);
+                if (!updated || parseFloat(updated.remaining_balance) <= 0) break;
+                cycle++;
+              } else {
+                break;
+              }
+            }
           } catch (err) {
-            console.error(`[Auto-Penalty Error] Loan ${row.id}:`, err);
+            console.error(`[Auto-Penalty Error] Loan ${loan.id}:`, err);
           }
         }
       } catch (err) {
@@ -1220,26 +1241,45 @@ const db = {
       return;
     }
 
+    // LocalStore fallback
     loadLocalStore();
-    const overdueLoans = (localStore.loans || []).filter(l => {
-      if (l.status !== 'ACTIVE' || parseFloat(l.remaining_balance) <= 0) return false;
-      if (l.notes && l.notes.includes('[Penalty applied')) return false;
-      const loanEndDate = l.end_date || (localStore.installments.filter(i => i.loan_id === l.id && i.installment_no === 58)[0]?.due_date);
-      return loanEndDate && todayStr > loanEndDate;
-    });
+    const activeLoans = (localStore.loans || []).filter(l => l.status === 'ACTIVE' && parseFloat(l.remaining_balance) > 0);
 
-    for (const loan of overdueLoans) {
+    for (const loan of activeLoans) {
       try {
-        await db.applyPenalty(loan.id, 8.0);
-        console.log(`[Auto-Penalty] Auto-applied 8% penalty on loan ID ${loan.id}`);
+        const start = new Date(loan.start_date || loan.created_at);
+        let stepDays = 1;
+        if (loan.frequency === 'WEEKLY') stepDays = 7;
+        if (loan.frequency === 'MONTHLY') stepDays = 30;
+
+        let currentCount = parseInt(loan.penalty_count, 10) || 0;
+        if (currentCount === 0 && loan.notes && loan.notes.includes('[Penalty')) {
+          const m = loan.notes.match(/\[Penalty/g);
+          currentCount = m ? m.length : 1;
+        }
+
+        let cycle = currentCount + 1;
+        while (true) {
+          const cycleDue = new Date(start.getTime() + (cycle * 58 - 1) * stepDays * 86400000);
+          const cycleDueStr = cycleDue.toISOString().split('T')[0];
+
+          if (todayStr > cycleDueStr) {
+            console.log(`[Auto-Penalty] Auto-applying 8% penalty cycle #${cycle} on loan ID ${loan.id}`);
+            const updated = await db.applyPenalty(loan.id, 8.0, cycle);
+            if (!updated || parseFloat(updated.remaining_balance) <= 0) break;
+            cycle++;
+          } else {
+            break;
+          }
+        }
       } catch (err) {
         console.error(`[Auto-Penalty Error] Loan ${loan.id}:`, err);
       }
     }
   },
 
-  // APPLY 8% OVERDUE PENALTY (After 58 days / unpaid limit)
-  applyPenalty: async (loanId, penaltyPct = 8.0) => {
+  // APPLY 8% OVERDUE PENALTY (Recurring every 58-installment cycle exceeded)
+  applyPenalty: async (loanId, penaltyPct = 8.0, targetCycle = null) => {
     const id = parseInt(loanId, 10);
     const rate = parseFloat(penaltyPct) || 8.0;
 
@@ -1251,64 +1291,70 @@ const db = {
         if (loanRes.rows.length === 0) throw new Error('Loan not found');
         const loan = loanRes.rows[0];
 
-        // Idempotency: if penalty already applied, do not duplicate
-        if (loan.notes && loan.notes.includes('[Penalty applied')) {
+        const rem = parseFloat(loan.remaining_balance);
+        if (rem <= 0 || loan.status === 'COMPLETED') {
           await client.query('COMMIT');
           return loan;
         }
 
-        const rem = parseFloat(loan.remaining_balance);
-        if (rem <= 0 || loan.status === 'COMPLETED') {
-          throw new Error('Loan is already fully repaid');
+        let currentPenaltyCount = parseInt(loan.penalty_count, 10) || 0;
+        if (currentPenaltyCount === 0 && loan.notes && loan.notes.includes('[Penalty')) {
+          const m = loan.notes.match(/\[Penalty/g);
+          currentPenaltyCount = m ? m.length : 1;
+        }
+
+        const nextCycle = targetCycle !== null ? targetCycle : (currentPenaltyCount + 1);
+        if (nextCycle <= currentPenaltyCount) {
+          await client.query('COMMIT');
+          return loan;
         }
 
         const penaltyAmount = Math.round(rem * (rate / 100));
         if (penaltyAmount <= 0) {
-          throw new Error('Penalty amount is zero');
+          await client.query('COMMIT');
+          return loan;
         }
 
         const newRemaining = Math.round(rem + penaltyAmount);
         const newTotalPayable = Math.round(parseFloat(loan.total_payable) + penaltyAmount);
         const newTotalInterest = Math.round(parseFloat(loan.total_interest) + penaltyAmount);
+        const newTotalPenalties = Math.round((parseFloat(loan.total_penalties) || 0) + penaltyAmount);
 
-        // Fetch all installments
+        let stepDays = 1;
+        if (loan.frequency === 'WEEKLY') stepDays = 7;
+        if (loan.frequency === 'MONTHLY') stepDays = 30;
+        const start = new Date(loan.start_date || loan.created_at);
+
+        // Every penalty cycle unlocks an extra set of 58 installments
+        // Cycle 1: (1 + 1) * 58 = 116 slots
+        // Cycle 2: (2 + 1) * 58 = 174 slots
+        // Cycle 3: (3 + 1) * 58 = 232 slots
+        const targetSlots = Math.max(parseInt(loan.installment_count, 10) || 58, (nextCycle + 1) * 58);
+        const instAmt = parseFloat(loan.installment_amount) || 100;
+
         const instsRes = await client.query(
-          'SELECT * FROM installments WHERE loan_id = $1 ORDER BY installment_no ASC',
+          'SELECT id, installment_no, status FROM installments WHERE loan_id = $1 ORDER BY installment_no ASC',
           [id]
         );
-        const insts = instsRes.rows;
-        let lastInst = insts[insts.length - 1];
-        let lastNo = lastInst ? lastInst.installment_no : 58;
-        let lastDate = lastInst ? new Date(lastInst.due_date) : new Date();
+        const existingInsts = instsRes.rows;
+        const maxExistingNo = existingInsts.length ? Math.max(...existingInsts.map(i => i.installment_no)) : 58;
 
-        const instAmt = parseFloat(loan.installment_amount) || 100;
-        const blankInsts = insts.filter(i => i.status === 'BLANK');
-        let remainingPenaltyToAllocate = penaltyAmount;
+        // Activate existing BLANK buffer slots
+        await client.query(
+          `UPDATE installments 
+           SET expected_amount = $1, status = 'PENDING' 
+           WHERE loan_id = $2 AND status = 'BLANK'`,
+          [instAmt, id]
+        );
 
-        // Activate existing blank buffer slots if available
-        for (const blank of blankInsts) {
-          if (remainingPenaltyToAllocate <= 0) break;
-          const alloc = Math.min(instAmt, remainingPenaltyToAllocate);
-          await client.query(
-            `UPDATE installments SET expected_amount = $1, status = 'PENDING' WHERE id = $2`,
-            [alloc, blank.id]
-          );
-          remainingPenaltyToAllocate -= alloc;
-        }
-
-        // If penalty extends beyond existing slots, append new slots
-        let newMaxSlots = lastNo;
-        while (remainingPenaltyToAllocate > 0) {
-          lastNo++;
-          newMaxSlots = lastNo;
-          lastDate = new Date(lastDate.getTime() + 86400000);
-          const alloc = Math.min(instAmt, remainingPenaltyToAllocate);
+        // Append new 58-installment set slots up to targetSlots
+        for (let i = maxExistingNo + 1; i <= targetSlots; i++) {
+          const instDate = new Date(start.getTime() + (i - 1) * stepDays * 86400000);
           await client.query(
             `INSERT INTO installments (loan_id, installment_no, due_date, expected_amount, paid_amount, status)
              VALUES ($1, $2, $3, $4, 0.00, 'PENDING')`,
-            [id, lastNo, lastDate.toISOString().split('T')[0], alloc]
+            [id, i, instDate.toISOString().split('T')[0], instAmt]
           );
-          remainingPenaltyToAllocate -= alloc;
         }
 
         const newEndDateRes = await client.query(
@@ -1316,18 +1362,23 @@ const db = {
           [id]
         );
         const newEndDate = newEndDateRes.rows[0].due_date;
+        const penaltyNote = ` [Penalty Cycle #${nextCycle}: Rs. ${penaltyAmount} (${rate}% overdue penalty on remaining Rs. ${rem})]`;
 
         const updatedRes = await client.query(
           `UPDATE loans 
            SET remaining_balance = $1, total_payable = $2, total_interest = $3,
                installment_count = $4, end_date = $5,
                notes = COALESCE(notes, '') || $6,
-               penalty_applied = TRUE
-           WHERE id = $7 RETURNING *`,
+               penalty_applied = TRUE,
+               penalty_count = $7,
+               total_penalties = $8
+           WHERE id = $9 RETURNING *`,
           [
             newRemaining, newTotalPayable, newTotalInterest,
-            newMaxSlots, newEndDate,
-            ` [Penalty applied: Rs. ${penaltyAmount} (${rate}% overdue penalty)]`,
+            targetSlots, newEndDate,
+            penaltyNote,
+            nextCycle,
+            newTotalPenalties,
             id
           ]
         );
@@ -1347,63 +1398,65 @@ const db = {
     const loan = localStore.loans.find(l => l.id === id);
     if (!loan) throw new Error('Loan not found');
 
-    if (loan.notes && loan.notes.includes('[Penalty applied')) {
+    const rem = parseFloat(loan.remaining_balance);
+    if (rem <= 0 || loan.status === 'COMPLETED') {
       return loan;
     }
 
-    const rem = parseFloat(loan.remaining_balance);
-    if (rem <= 0 || loan.status === 'COMPLETED') {
-      throw new Error('Loan is already fully repaid');
+    let currentPenaltyCount = parseInt(loan.penalty_count, 10) || 0;
+    if (currentPenaltyCount === 0 && loan.notes && loan.notes.includes('[Penalty')) {
+      const m = loan.notes.match(/\[Penalty/g);
+      currentPenaltyCount = m ? m.length : 1;
+    }
+
+    const nextCycle = targetCycle !== null ? targetCycle : (currentPenaltyCount + 1);
+    if (nextCycle <= currentPenaltyCount) {
+      return loan;
     }
 
     const penaltyAmount = Math.round(rem * (rate / 100));
-    if (penaltyAmount <= 0) throw new Error('Penalty amount is zero');
+    if (penaltyAmount <= 0) return loan;
 
     const newRemaining = Math.round(rem + penaltyAmount);
     loan.remaining_balance = newRemaining;
     loan.total_payable = Math.round(parseFloat(loan.total_payable) + penaltyAmount);
     loan.total_interest = Math.round(parseFloat(loan.total_interest) + penaltyAmount);
+    loan.total_penalties = Math.round((parseFloat(loan.total_penalties) || 0) + penaltyAmount);
+    loan.penalty_count = nextCycle;
     loan.penalty_applied = true;
-    loan.notes = (loan.notes ? loan.notes + ' ' : '') + `[Penalty applied: Rs. ${penaltyAmount} (${rate}% overdue penalty)]`;
+    loan.notes = (loan.notes ? loan.notes + ' ' : '') + `[Penalty Cycle #${nextCycle}: Rs. ${penaltyAmount} (${rate}% overdue penalty on remaining Rs. ${rem})]`;
 
-    const loanInsts = localStore.installments
-      .filter(i => i.loan_id === id)
-      .sort((a, b) => a.installment_no - b.installment_no);
+    let stepDays = 1;
+    if (loan.frequency === 'WEEKLY') stepDays = 7;
+    if (loan.frequency === 'MONTHLY') stepDays = 30;
+    const start = new Date(loan.start_date || loan.created_at);
 
-    let lastInst = loanInsts[loanInsts.length - 1];
-    let lastNo = lastInst ? lastInst.installment_no : 58;
-    let lastDate = lastInst ? new Date(lastInst.due_date) : new Date();
-
+    const targetSlots = Math.max(parseInt(loan.installment_count, 10) || 58, (nextCycle + 1) * 58);
     const instAmt = parseFloat(loan.installment_amount) || 100;
-    const blankInsts = loanInsts.filter(i => i.status === 'BLANK');
-    let remainingPenaltyToAllocate = penaltyAmount;
 
-    for (const blank of blankInsts) {
-      if (remainingPenaltyToAllocate <= 0) break;
-      const alloc = Math.min(instAmt, remainingPenaltyToAllocate);
-      blank.expected_amount = alloc;
+    const loanInsts = localStore.installments.filter(i => i.loan_id === id);
+    const maxExistingNo = loanInsts.length ? Math.max(...loanInsts.map(i => i.installment_no)) : 58;
+
+    loanInsts.filter(i => i.status === 'BLANK').forEach(blank => {
+      blank.expected_amount = instAmt;
       blank.status = 'PENDING';
-      remainingPenaltyToAllocate -= alloc;
-    }
+    });
 
-    while (remainingPenaltyToAllocate > 0) {
-      lastNo++;
-      lastDate = new Date(lastDate.getTime() + 86400000);
-      const alloc = Math.min(instAmt, remainingPenaltyToAllocate);
-      const instId = localStore.installments.length ? Math.max(...localStore.installments.map(i => i.id)) + 1 : 1;
+    for (let i = maxExistingNo + 1; i <= targetSlots; i++) {
+      const instDate = new Date(start.getTime() + (i - 1) * stepDays * 86400000);
+      const instId = localStore.installments.length ? Math.max(...localStore.installments.map(inst => inst.id)) + 1 : 1;
       localStore.installments.push({
         id: instId,
         loan_id: id,
-        installment_no: lastNo,
-        due_date: lastDate.toISOString().split('T')[0],
-        expected_amount: alloc,
+        installment_no: i,
+        due_date: instDate.toISOString().split('T')[0],
+        expected_amount: instAmt,
         paid_amount: 0.00,
         status: 'PENDING'
       });
-      remainingPenaltyToAllocate -= alloc;
     }
 
-    loan.installment_count = lastNo;
+    loan.installment_count = targetSlots;
     const finalInst = localStore.installments
       .filter(i => i.loan_id === id)
       .sort((a, b) => b.installment_no - a.installment_no)[0];
@@ -1505,13 +1558,14 @@ const db = {
           `INSERT INTO payments (
             receipt_no, loan_id, client_id, collector_id,
             amount_paid, previous_balance, remaining_balance,
-            payment_type, payment_method, notes
-          ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+            payment_type, payment_method, notes, installment_no
+          ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
           RETURNING *`,
           [
             receiptNo, loan_id, loan.client_id, collector_id,
             payAmount, prevBalance, newBalance,
-            isPartial ? 'PARTIAL' : 'FULL', payment_method, notes
+            isPartial ? 'PARTIAL' : 'FULL', payment_method, notes,
+            affectedInstallmentNo || 1
           ]
         );
         const payment = payRes.rows[0];
@@ -1531,16 +1585,22 @@ const db = {
 
         await client.query('COMMIT');
 
+        const pCount = parseInt(loan.penalty_count, 10) || (loan.penalty_applied ? 1 : 0);
         return {
           ...payment,
           loan_code: loan.loan_code,
           installment_count: loan.installment_count,
           current_installment_no: affectedInstallmentNo || 1,
+          installment_no: affectedInstallmentNo || 1,
           client_name: clientInfo.name,
           client_phone: clientInfo.phone,
           collector_name: collectorInfo ? collectorInfo.name : 'Collector',
           next_due_date: nextInstRes.rows.length ? (nextInstRes.rows[0].due_date instanceof Date ? nextInstRes.rows[0].due_date.toISOString().split('T')[0] : String(nextInstRes.rows[0].due_date).split('T')[0]) : 'Completed',
-          next_due_amount: nextInstRes.rows.length ? (parseFloat(nextInstRes.rows[0].expected_amount) - parseFloat(nextInstRes.rows[0].paid_amount)) : 0
+          next_due_amount: nextInstRes.rows.length ? (parseFloat(nextInstRes.rows[0].expected_amount) - parseFloat(nextInstRes.rows[0].paid_amount)) : 0,
+          penalty_applied: Boolean(loan.penalty_applied || pCount > 0),
+          penalty_count: pCount,
+          total_penalties: parseFloat(loan.total_penalties || 0),
+          loan_notes: loan.notes || ''
         };
       } catch (err) {
         await client.query('ROLLBACK');
@@ -1621,6 +1681,7 @@ const db = {
       payment_type: isPartial ? 'PARTIAL' : 'FULL',
       payment_method,
       notes,
+      installment_no: affectedInstallmentNo || 1,
       created_at: new Date().toISOString()
     };
     localStore.payments.push(newPayment);
@@ -1632,16 +1693,22 @@ const db = {
       .filter(i => i.loan_id === loan.id && i.status !== 'PAID' && i.status !== 'BLANK' && parseFloat(i.expected_amount) > 0)
       .sort((a, b) => a.installment_no - b.installment_no)[0];
 
+    const pCount = parseInt(loan.penalty_count, 10) || (loan.penalty_applied ? 1 : 0);
     return {
       ...newPayment,
       loan_code: loan.loan_code,
       installment_count: loan.installment_count,
       current_installment_no: affectedInstallmentNo || 1,
+      installment_no: affectedInstallmentNo || 1,
       client_name: clientInfo.name || 'Client',
       client_phone: clientInfo.phone || '',
       collector_name: collectorInfo.name || 'Collector',
       next_due_date: nextInst ? (nextInst.due_date instanceof Date ? nextInst.due_date.toISOString().split('T')[0] : String(nextInst.due_date).split('T')[0]) : 'Completed',
-      next_due_amount: nextInst ? (parseFloat(nextInst.expected_amount) - parseFloat(nextInst.paid_amount)) : 0
+      next_due_amount: nextInst ? (parseFloat(nextInst.expected_amount) - parseFloat(nextInst.paid_amount)) : 0,
+      penalty_applied: Boolean(loan.penalty_applied || pCount > 0),
+      penalty_count: pCount,
+      total_penalties: parseFloat(loan.total_penalties || 0),
+      loan_notes: loan.notes || ''
     };
   },
 
@@ -1669,12 +1736,13 @@ const db = {
 
       const penaltyRes = await pgPool.query(`
         SELECT l.id AS loan_id, l.loan_code, l.installment_amount, l.remaining_balance, l.end_date, l.notes,
+               COALESCE(l.penalty_count, 1) AS penalty_count, COALESCE(l.total_penalties, 0) AS total_penalties,
                c.name AS client_name, c.phone AS client_phone
         FROM loans l
         JOIN clients c ON l.client_id = c.id
         WHERE l.status = 'ACTIVE' 
           AND l.remaining_balance > 0 
-          AND (l.end_date < $1 OR l.notes LIKE '%[Penalty applied%')
+          AND (l.end_date < $1 OR l.notes LIKE '%[Penalty%' OR l.penalty_applied = TRUE OR COALESCE(l.penalty_count, 0) > 0)
         ORDER BY l.end_date ASC
       `, [todayStr]);
       penaltyLoansList = penaltyRes.rows;
@@ -1705,7 +1773,7 @@ const db = {
 
       penaltyLoansList = (localStore.loans || [])
         .filter(l => l.status === 'ACTIVE' && parseFloat(l.remaining_balance) > 0 && (
-          (l.end_date && todayStr > l.end_date) || (l.notes && l.notes.includes('[Penalty applied'))
+          (l.end_date && todayStr > l.end_date) || (l.notes && l.notes.includes('[Penalty')) || l.penalty_applied || (l.penalty_count > 0)
         ))
         .map(l => {
           const client = localStore.clients.find(c => c.id === l.client_id) || {};
@@ -1716,6 +1784,8 @@ const db = {
             remaining_balance: l.remaining_balance,
             end_date: l.end_date,
             notes: l.notes,
+            penalty_count: l.penalty_count || 1,
+            total_penalties: l.total_penalties || 0,
             client_name: client.name || 'Unknown',
             client_phone: client.phone || ''
           };
@@ -1750,12 +1820,13 @@ const db = {
 
     const penalties = penaltyLoansList.map(item => {
       const daysOverdue = item.end_date ? Math.max(1, Math.floor((new Date(todayStr) - new Date(item.end_date)) / 86400000)) : 1;
+      const count = parseInt(item.penalty_count, 10) || 1;
       return {
         ...item,
         urgency: 'PENALTY',
         days_overdue: daysOverdue,
-        title: `8% Overdue Penalty Auto-Applied`,
-        message: `${item.client_name} exceeded 58 installments (${daysOverdue} days overdue). 8% penalty was auto-added. Outstanding: Rs. ${Math.round(parseFloat(item.remaining_balance)).toLocaleString()}.`
+        title: `${count * 8}% Overdue Penalty (${count}x 58-Cycles)`,
+        message: `${item.client_name} exceeded ${count * 58} installments (${daysOverdue} days overdue). ${count}x 8% overdue penalties applied. Outstanding: Rs. ${Math.round(parseFloat(item.remaining_balance)).toLocaleString()}.`
       };
     });
 
@@ -1980,9 +2051,14 @@ const db = {
       let query = `
         SELECT 
           p.*,
+          COALESCE(p.installment_no, 1) AS current_installment_no,
           l.loan_code,
           l.installment_amount,
           l.installment_count,
+          l.penalty_applied,
+          COALESCE(l.penalty_count, 0) AS penalty_count,
+          COALESCE(l.total_penalties, 0) AS total_penalties,
+          l.notes AS loan_notes,
           c.name AS client_name,
           c.phone AS client_phone,
           c.nic_id AS client_nic,
@@ -2028,11 +2104,17 @@ const db = {
       const loan = localStore.loans.find(l => l.id === p.loan_id) || {};
       const client = localStore.clients.find(c => c.id === p.client_id) || {};
       const user = localStore.users.find(u => u.id === p.collector_id) || {};
+      const pCount = parseInt(loan.penalty_count, 10) || (loan.penalty_applied ? 1 : 0);
       return {
         ...p,
+        current_installment_no: p.installment_no || 1,
         loan_code: loan.loan_code || 'LN-UNKNOWN',
         installment_amount: loan.installment_amount || 0,
         installment_count: loan.installment_count || 58,
+        penalty_applied: Boolean(loan.penalty_applied || pCount > 0),
+        penalty_count: pCount,
+        total_penalties: parseFloat(loan.total_penalties || 0),
+        loan_notes: loan.notes || '',
         client_name: client.name || 'Unknown Client',
         client_phone: client.phone || '',
         client_nic: client.nic_id || '',
