@@ -125,10 +125,27 @@ export default function CollectionsView({
                         padding: '10px 14px',
                         margin: '10px 0'
                       }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '1.05rem' }}>
-                          <span style={{ fontWeight: '600' }}>Due Amount:</span>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem' }}>
+                          <span style={{ color: 'var(--text-muted)' }}>Today's Installment:</span>
+                          <span style={{ fontWeight: '600' }}>Rs. {Math.round(Number(item.installment_amount || item.balance_due)).toLocaleString()}</span>
+                        </div>
+                        {Number(item.past_overdue_amount) > 0 && (
+                          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.82rem', marginTop: '4px', color: '#f87171' }}>
+                            <span>Past Arrears ({item.missed_installments_count} missed):</span>
+                            <span style={{ fontWeight: '700' }}>Rs. {Math.round(Number(item.past_overdue_amount)).toLocaleString()}</span>
+                          </div>
+                        )}
+                        <div style={{
+                          display: 'flex',
+                          justifyContent: 'space-between',
+                          fontSize: '1.05rem',
+                          marginTop: Number(item.past_overdue_amount) > 0 ? '6px' : '2px',
+                          borderTop: Number(item.past_overdue_amount) > 0 ? '1px solid rgba(255,255,255,0.1)' : 'none',
+                          paddingTop: Number(item.past_overdue_amount) > 0 ? '6px' : 0
+                        }}>
+                          <span style={{ fontWeight: '700' }}>{Number(item.past_overdue_amount) > 0 ? 'Total to Pay Today:' : 'Due Amount:'}</span>
                           <span style={{ fontWeight: '800', color: '#60a5fa' }}>
-                            Rs. {Math.round(Number(item.balance_due)).toLocaleString()}
+                            Rs. {Math.round(Number(item.total_due_to_date || item.balance_due)).toLocaleString()}
                           </span>
                         </div>
                       </div>
@@ -152,7 +169,7 @@ export default function CollectionsView({
                           id: item.loan_id,
                           loan_code: item.loan_code,
                           client_name: item.client_name,
-                          installment_amount: item.installment_amount || item.balance_due,
+                          installment_amount: item.total_due_to_date || item.balance_due,
                           remaining_balance: item.remaining_balance
                         })}
                       >
@@ -203,8 +220,7 @@ export default function CollectionsView({
                             {item.client_name}
                           </div>
                           <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>
-                            {item.loan_code} • Installment #{item.installment_no}
-                            {item.missed_installments_count > 1 ? ` (${item.missed_installments_count} missed)` : ''}
+                            {item.loan_code} • {item.missed_installments_count} missed installment{item.missed_installments_count > 1 ? 's' : ''} (since #{item.installment_no})
                           </div>
                         </div>
                         <span className="status-badge badge-overdue">
@@ -219,13 +235,36 @@ export default function CollectionsView({
                         margin: '10px 0'
                       }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem' }}>
-                          <span style={{ color: 'var(--text-muted)' }}>Due Date:</span>
+                          <span style={{ color: 'var(--text-muted)' }}>Overdue Since:</span>
                           <span style={{ fontWeight: '600' }}>{item.due_date}</span>
                         </div>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '1.05rem', marginTop: '4px' }}>
-                          <span style={{ fontWeight: '600' }}>Due Amount:</span>
+                        {Number(item.missed_installments_count) > 0 && (
+                          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.82rem', marginTop: '4px', color: 'var(--text-muted)' }}>
+                            <span>Past Missed ({item.missed_installments_count} days):</span>
+                            <span style={{ fontWeight: '600', color: '#fca5a5' }}>
+                              Rs. {Math.round(Number(item.past_overdue_amount || item.total_missed_amount || item.balance_due)).toLocaleString()}
+                            </span>
+                          </div>
+                        )}
+                        {Number(item.today_installment_amount) > 0 && (
+                          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.82rem', marginTop: '2px', color: 'var(--text-muted)' }}>
+                            <span>Due Today:</span>
+                            <span style={{ fontWeight: '600', color: '#fbbf24' }}>
+                              Rs. {Math.round(Number(item.today_installment_amount)).toLocaleString()}
+                            </span>
+                          </div>
+                        )}
+                        <div style={{
+                          display: 'flex',
+                          justifyContent: 'space-between',
+                          fontSize: '1.05rem',
+                          marginTop: '6px',
+                          borderTop: '1px solid rgba(255, 255, 255, 0.1)',
+                          paddingTop: '6px'
+                        }}>
+                          <span style={{ fontWeight: '700' }}>Total to Pay to Date:</span>
                           <span style={{ fontWeight: '800', color: '#f87171' }}>
-                            Rs. {Math.round(Number(item.balance_due)).toLocaleString()}
+                            Rs. {Math.round(Number(item.total_due_to_date || item.balance_due)).toLocaleString()}
                           </span>
                         </div>
                       </div>
@@ -249,7 +288,7 @@ export default function CollectionsView({
                           id: item.loan_id,
                           loan_code: item.loan_code,
                           client_name: item.client_name,
-                          installment_amount: item.installment_amount || item.balance_due,
+                          installment_amount: item.total_due_to_date || item.balance_due,
                           remaining_balance: item.remaining_balance
                         })}
                       >

@@ -1837,7 +1837,7 @@ const db = {
             total_missed_amount: balanceDue,
             urgency: 'CRITICAL',
             title: `Overdue (${daysLate} days late): Inst #${item.installment_no}`,
-            message: `${item.client_name} is ${daysLate} days late. Amount due: Rs. ${Math.round(balanceDue).toLocaleString()}.`
+            message: `${item.client_name} is ${daysLate} days late.`
           });
         } else {
           const existing = overdueMap.get(item.loan_id);
@@ -1849,10 +1849,39 @@ const db = {
             existing.days_late = daysLate;
             existing.due_date = itemDueDate;
             existing.installment_no = item.installment_no;
-            existing.title = `Overdue (${daysLate} days late): Inst #${item.installment_no}`;
-            existing.message = `${existing.client_name} is ${daysLate} days late. Amount due: Rs. ${Math.round(existing.balance_due).toLocaleString()}.`;
           }
         }
+      }
+    }
+
+    // Finalize total amount due to date (past missed installments + today's installment if due)
+    for (const [loanId, overdueItem] of overdueMap.entries()) {
+      const remainingBal = parseFloat(overdueItem.remaining_balance) || 0;
+      const todayItem = dueTodayMap.get(loanId);
+      const todayDueAmt = todayItem ? todayItem.balance_due : 0;
+
+      const pastMissedAmt = Math.min(overdueItem.total_missed_amount, remainingBal);
+      const totalToDate = Math.min(Math.round((pastMissedAmt + todayDueAmt) * 100) / 100, remainingBal);
+
+      overdueItem.past_overdue_amount = pastMissedAmt;
+      overdueItem.today_installment_amount = todayDueAmt;
+      overdueItem.total_due_to_date = totalToDate;
+      // balance_due reflects total amount they have to pay to that day
+      overdueItem.balance_due = totalToDate;
+      overdueItem.title = `Overdue (${overdueItem.days_late} days late): ${overdueItem.missed_installments_count} missed`;
+      overdueItem.message = `${overdueItem.client_name} is ${overdueItem.days_late} days late (${overdueItem.missed_installments_count} missed). Total to pay to date: Rs. ${Math.round(totalToDate).toLocaleString()}.`;
+    }
+
+    for (const [loanId, todayItem] of dueTodayMap.entries()) {
+      const overdueItem = overdueMap.get(loanId);
+      if (overdueItem) {
+        todayItem.past_overdue_amount = overdueItem.past_overdue_amount;
+        todayItem.missed_installments_count = overdueItem.missed_installments_count;
+        todayItem.total_due_to_date = overdueItem.total_due_to_date;
+      } else {
+        todayItem.past_overdue_amount = 0;
+        todayItem.missed_installments_count = 0;
+        todayItem.total_due_to_date = todayItem.balance_due;
       }
     }
 
