@@ -1716,7 +1716,7 @@ const db = {
   getReminders: async (userId, role) => {
     await db.autoApplyOverduePenalties();
     loadLocalStore();
-    const todayStr = new Date().toISOString().split('T')[0];
+    const todayStr = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Colombo' }).format(new Date());
 
     let loans = [];
     let penaltyLoansList = [];
@@ -1725,11 +1725,14 @@ const db = {
       let query = `
         SELECT l.id AS loan_id, l.loan_code, l.installment_amount, l.remaining_balance, l.assigned_agent_id,
                c.name AS client_name, c.phone AS client_phone,
-               i.id AS installment_id, i.installment_no, i.due_date, i.expected_amount, i.paid_amount, i.status AS inst_status
+               i.id AS installment_id, i.installment_no,
+               TO_CHAR(i.due_date, 'YYYY-MM-DD') AS due_date,
+               i.expected_amount, i.paid_amount, i.status AS inst_status
         FROM installments i
         JOIN loans l ON i.loan_id = l.id
         JOIN clients c ON l.client_id = c.id
         WHERE l.status = 'ACTIVE' AND i.status NOT IN ('PAID', 'BLANK') AND i.expected_amount > 0
+        ORDER BY i.installment_no ASC
       `;
       const res = await pgPool.query(query);
       loans = res.rows;
@@ -1795,26 +1798,39 @@ const db = {
     const dueTodayMap = new Map();
     const overdueMap = new Map();
 
+    const toCleanDate = (val) => {
+      if (!val) return '';
+      if (typeof val === 'string') return val.split('T')[0];
+      if (val instanceof Date) {
+        return new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Colombo' }).format(val);
+      }
+      return String(val).split('T')[0];
+    };
+
     for (const item of loans) {
       const balanceDue = Math.round((parseFloat(item.expected_amount) - parseFloat(item.paid_amount)) * 100) / 100;
       if (balanceDue <= 0) continue;
 
-      if (item.due_date === todayStr) {
+      const itemDueDate = toCleanDate(item.due_date);
+
+      if (itemDueDate === todayStr) {
         if (!dueTodayMap.has(item.loan_id)) {
           dueTodayMap.set(item.loan_id, {
             ...item,
+            due_date: itemDueDate,
             balance_due: balanceDue,
             urgency: 'HIGH',
             title: `Due Today: Inst #${item.installment_no}`,
             message: `${item.client_name} has Rs. ${Math.round(balanceDue).toLocaleString()} due today for ${item.loan_code}.`
           });
         }
-      } else if (item.due_date < todayStr) {
-        const daysLate = Math.max(1, Math.floor((new Date(todayStr) - new Date(item.due_date)) / 86400000));
+      } else if (itemDueDate < todayStr) {
+        const daysLate = Math.max(1, Math.floor((new Date(todayStr + 'T00:00:00') - new Date(itemDueDate + 'T00:00:00')) / 86400000));
         
         if (!overdueMap.has(item.loan_id)) {
           overdueMap.set(item.loan_id, {
             ...item,
+            due_date: itemDueDate,
             balance_due: balanceDue,
             days_late: daysLate,
             missed_installments_count: 1,
@@ -1831,7 +1847,7 @@ const db = {
           // Keep the highest days late (oldest missed installment)
           if (daysLate > existing.days_late) {
             existing.days_late = daysLate;
-            existing.due_date = item.due_date;
+            existing.due_date = itemDueDate;
             existing.installment_no = item.installment_no;
             existing.title = `Overdue (${daysLate} days late): Inst #${item.installment_no}`;
             existing.message = `${existing.client_name} is ${daysLate} days late. Amount due: Rs. ${Math.round(existing.balance_due).toLocaleString()}.`;

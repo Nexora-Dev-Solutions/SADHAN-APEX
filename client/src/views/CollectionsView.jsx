@@ -63,29 +63,40 @@ export default function CollectionsView({
         </div>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
-          {/* 58-DAY LIMIT EXCEEDED PENALTIES SECTION */}
-          {penaltiesList.length > 0 && (
-            <div>
-              <div style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '8px',
-                color: '#ef4444',
-                fontWeight: '800',
-                fontSize: '0.95rem',
-                marginBottom: '12px'
-              }}>
-                <AlertTriangle size={20} />
-                <span>58-DAY LIMIT EXCEEDED • PENALTIES ({penaltiesList.length})</span>
-              </div>
+          {/* 1. SCHEDULED FOR TODAY SECTION (Priority Queue) */}
+          <div>
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              color: '#fbbf24',
+              fontWeight: '800',
+              fontSize: '0.95rem',
+              marginBottom: '12px'
+            }}>
+              <Clock size={20} />
+              <span>SCHEDULED FOR TODAY ({dueTodayList.length})</span>
+            </div>
 
+            {dueTodayList.length === 0 ? (
+              <div style={{
+                background: 'rgba(245, 158, 11, 0.05)',
+                border: '1px dashed rgba(245, 158, 11, 0.25)',
+                borderRadius: 'var(--radius-md)',
+                padding: '16px 20px',
+                color: 'var(--text-muted)',
+                fontSize: '0.88rem'
+              }}>
+                No standard installments scheduled specifically for today. All active accounts are either collected or listed in Overdue below.
+              </div>
+            ) : (
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 280px), 1fr))', gap: '14px' }}>
-                {penaltiesList.map((item, idx) => (
+                {dueTodayList.map((item, idx) => (
                   <div
-                    key={`col-penalty-${idx}`}
+                    key={`col-today-${idx}`}
                     style={{
-                      background: 'rgba(239, 68, 68, 0.12)',
-                      border: '1px solid rgba(239, 68, 68, 0.35)',
+                      background: 'rgba(245, 158, 11, 0.08)',
+                      border: '1px solid rgba(245, 158, 11, 0.25)',
                       borderRadius: 'var(--radius-lg)',
                       padding: '18px',
                       display: 'flex',
@@ -96,32 +107,28 @@ export default function CollectionsView({
                     <div>
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '8px' }}>
                         <div>
-                          <div style={{ fontSize: '1.05rem', fontWeight: '800', color: '#f87171' }}>
+                          <div style={{ fontSize: '1.05rem', fontWeight: '800', color: 'var(--text-primary)' }}>
                             {item.client_name}
                           </div>
-                          <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginTop: '2px' }}>
-                            {item.loan_code} • 58-Day Limit Exceeded
+                          <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>
+                            {item.loan_code} • Installment #{item.installment_no}
                           </div>
                         </div>
-                        <span className="status-badge" style={{ background: '#ef4444', color: '#fff', fontWeight: '800' }}>
-                          8% Penalty Added
+                        <span className="status-badge" style={{ background: 'rgba(245, 158, 11, 0.2)', color: '#fbbf24' }}>
+                          Due Today
                         </span>
                       </div>
 
                       <div style={{
-                        background: 'rgba(0, 0, 0, 0.35)',
+                        background: 'rgba(0, 0, 0, 0.3)',
                         borderRadius: 'var(--radius-md)',
                         padding: '10px 14px',
                         margin: '10px 0'
                       }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.82rem' }}>
-                          <span style={{ color: 'var(--text-muted)' }}>Overdue Window:</span>
-                          <span style={{ fontWeight: '600', color: '#fca5a5' }}>{item.days_overdue} days past 58 days</span>
-                        </div>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '1.05rem', marginTop: '6px' }}>
-                          <span style={{ fontWeight: '600' }}>Outstanding Balance:</span>
-                          <span style={{ fontWeight: '800', color: '#f87171' }}>
-                            Rs. {Math.round(Number(item.remaining_balance)).toLocaleString()}
+                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '1.05rem' }}>
+                          <span style={{ fontWeight: '600' }}>Due Amount:</span>
+                          <span style={{ fontWeight: '800', color: '#60a5fa' }}>
+                            Rs. {Math.round(Number(item.balance_due)).toLocaleString()}
                           </span>
                         </div>
                       </div>
@@ -145,7 +152,7 @@ export default function CollectionsView({
                           id: item.loan_id,
                           loan_code: item.loan_code,
                           client_name: item.client_name,
-                          installment_amount: item.installment_amount || item.remaining_balance,
+                          installment_amount: item.installment_amount || item.balance_due,
                           remaining_balance: item.remaining_balance
                         })}
                       >
@@ -156,10 +163,10 @@ export default function CollectionsView({
                   </div>
                 ))}
               </div>
-            </div>
-          )}
+            )}
+          </div>
 
-          {/* OVERDUE SECTION */}
+          {/* 2. OVERDUE ACCOUNTS SECTION */}
           {overdueList.length > 0 && (
             <div>
               <div style={{
@@ -242,7 +249,7 @@ export default function CollectionsView({
                           id: item.loan_id,
                           loan_code: item.loan_code,
                           client_name: item.client_name,
-                          installment_amount: item.balance_due,
+                          installment_amount: item.installment_amount || item.balance_due,
                           remaining_balance: item.remaining_balance
                         })}
                       >
@@ -256,29 +263,29 @@ export default function CollectionsView({
             </div>
           )}
 
-          {/* DUE TODAY SECTION */}
-          {dueTodayList.length > 0 && (
+          {/* 3. 58-DAY LIMIT EXCEEDED PENALTIES SECTION */}
+          {penaltiesList.length > 0 && (
             <div>
               <div style={{
                 display: 'flex',
                 alignItems: 'center',
                 gap: '8px',
-                color: '#fbbf24',
+                color: '#ef4444',
                 fontWeight: '800',
                 fontSize: '0.95rem',
                 marginBottom: '12px'
               }}>
-                <Clock size={20} />
-                <span>SCHEDULED FOR TODAY ({dueTodayList.length})</span>
+                <AlertTriangle size={20} />
+                <span>58-DAY LIMIT EXCEEDED • PENALTIES ({penaltiesList.length})</span>
               </div>
 
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 280px), 1fr))', gap: '14px' }}>
-                {dueTodayList.map((item, idx) => (
+                {penaltiesList.map((item, idx) => (
                   <div
-                    key={`col-today-${idx}`}
+                    key={`col-penalty-${idx}`}
                     style={{
-                      background: 'rgba(245, 158, 11, 0.08)',
-                      border: '1px solid rgba(245, 158, 11, 0.25)',
+                      background: 'rgba(239, 68, 68, 0.12)',
+                      border: '1px solid rgba(239, 68, 68, 0.35)',
                       borderRadius: 'var(--radius-lg)',
                       padding: '18px',
                       display: 'flex',
@@ -289,28 +296,32 @@ export default function CollectionsView({
                     <div>
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '8px' }}>
                         <div>
-                          <div style={{ fontSize: '1.05rem', fontWeight: '800', color: 'var(--text-primary)' }}>
+                          <div style={{ fontSize: '1.05rem', fontWeight: '800', color: '#f87171' }}>
                             {item.client_name}
                           </div>
-                          <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>
-                            {item.loan_code} • Installment #{item.installment_no}
+                          <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginTop: '2px' }}>
+                            {item.loan_code} • 58-Day Limit Exceeded
                           </div>
                         </div>
-                        <span className="status-badge" style={{ background: 'rgba(245, 158, 11, 0.2)', color: '#fbbf24' }}>
-                          Due Today
+                        <span className="status-badge" style={{ background: '#ef4444', color: '#fff', fontWeight: '800' }}>
+                          8% Penalty Added
                         </span>
                       </div>
 
                       <div style={{
-                        background: 'rgba(0, 0, 0, 0.3)',
+                        background: 'rgba(0, 0, 0, 0.35)',
                         borderRadius: 'var(--radius-md)',
                         padding: '10px 14px',
                         margin: '10px 0'
                       }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '1.05rem' }}>
-                          <span style={{ fontWeight: '600' }}>Due Amount:</span>
-                          <span style={{ fontWeight: '800', color: '#60a5fa' }}>
-                            Rs. {Math.round(Number(item.balance_due)).toLocaleString()}
+                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.82rem' }}>
+                          <span style={{ color: 'var(--text-muted)' }}>Overdue Window:</span>
+                          <span style={{ fontWeight: '600', color: '#fca5a5' }}>{item.days_overdue} days past 58 days</span>
+                        </div>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '1.05rem', marginTop: '6px' }}>
+                          <span style={{ fontWeight: '600' }}>Outstanding Balance:</span>
+                          <span style={{ fontWeight: '800', color: '#f87171' }}>
+                            Rs. {Math.round(Number(item.remaining_balance)).toLocaleString()}
                           </span>
                         </div>
                       </div>
@@ -334,7 +345,7 @@ export default function CollectionsView({
                           id: item.loan_id,
                           loan_code: item.loan_code,
                           client_name: item.client_name,
-                          installment_amount: item.balance_due,
+                          installment_amount: item.installment_amount || item.remaining_balance,
                           remaining_balance: item.remaining_balance
                         })}
                       >
