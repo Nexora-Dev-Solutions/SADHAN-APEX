@@ -1,66 +1,43 @@
-import React, { useState } from 'react';
-import { Printer, X, CheckCircle, Bluetooth, Share2, Copy, Check, Smartphone } from 'lucide-react';
-import { printDirectWebBluetooth, generateTextReceipt, generateEscPos } from '../utils/thermalPrinter';
+import React from 'react';
+import { Printer, X, Share2 } from 'lucide-react';
 
 export default function ThermalReceipt({ receipt, onClose }) {
   if (!receipt) return null;
-
-  const [paperWidth, setPaperWidth] = useState('58mm'); // '58mm' | '80mm'
-  const [isBluetoothPrinting, setIsBluetoothPrinting] = useState(false);
-  const [btStatus, setBtStatus] = useState('');
-  const [copied, setCopied] = useState(false);
 
   const handlePrint = () => {
     window.print();
   };
 
-  const handleBluetoothPrint = async () => {
-    setIsBluetoothPrinting(true);
-    setBtStatus('Pairing with Bluetooth printer...');
-    try {
-      await printDirectWebBluetooth(receipt, paperWidth === '80mm' ? 48 : 32);
-      setBtStatus('✓ Printed successfully!');
-      setTimeout(() => setBtStatus(''), 4000);
-    } catch (err) {
-      console.warn('Bluetooth print notice:', err);
-      // If user cancelled device picker, or bluetooth not available
-      setBtStatus(err.message.includes('User cancelled') ? 'Pairing cancelled' : (err.message || 'Bluetooth connection failed'));
-      setTimeout(() => setBtStatus(''), 6000);
-    } finally {
-      setIsBluetoothPrinting(false);
-    }
-  };
-
-  const handleRawBtPrint = () => {
-    try {
-      const escBytes = generateEscPos(receipt, paperWidth === '80mm' ? 48 : 32);
-      let binary = '';
-      for (let i = 0; i < escBytes.byteLength; i++) {
-        binary += String.fromCharCode(escBytes[i]);
-      }
-      const base64 = btoa(binary);
-      // RawBT / Thermal Bluetooth Printer Android intent URL
-      window.location.href = `rawbt:data:application/octet-stream;base64,${base64}`;
-    } catch (err) {
-      handlePrint();
-    }
-  };
-
   const handleWhatsAppShare = () => {
-    const text = generateTextReceipt(receipt, 32);
+    const lines = [
+      'SADHAN APEX (PVT) LTD',
+      'TEL: +94 76 108 3006',
+      '--------------------------------',
+      `RECEIPT NO: ${receipt.receipt_no}`,
+      `DATE: ${formattedDate}`,
+      `COLLECTOR: ${receipt.collector_name || 'Staff'}`,
+      '--------------------------------',
+      `CLIENT: ${receipt.client_name}`,
+      receipt.client_phone ? `CONTACT: ${receipt.client_phone}` : '',
+      `LOAN REF: ${receipt.loan_code}`,
+      `INSTALLMENT: #${receipt.current_installment_no || 1} of ${receipt.installment_count || 58}`,
+      '================================',
+      `AMOUNT RECEIVED: Rs. ${Math.round(Number(receipt.amount_paid)).toLocaleString()}`,
+      '================================',
+      `PREV BALANCE: Rs. ${Math.round(Number(receipt.previous_balance)).toLocaleString()}`,
+      `REMAINING BAL: Rs. ${Math.round(Number(receipt.remaining_balance)).toLocaleString()}`,
+      receipt.next_due_date && receipt.next_due_date !== 'Completed' ? `NEXT DUE: ${formatReceiptDateOnly(receipt.next_due_date)}` : '',
+      receipt.next_due_amount > 0 ? `NEXT AMOUNT: Rs. ${Math.round(Number(receipt.next_due_amount)).toLocaleString()}` : '',
+      '--------------------------------',
+      'Thank you for your payment!'
+    ].filter(Boolean).join('\n');
+
     const phone = (receipt.client_phone || '').replace(/[^0-9]/g, '');
     const cleanPhone = phone.startsWith('0') ? '94' + phone.slice(1) : phone;
     const url = cleanPhone
-      ? `https://wa.me/${cleanPhone}?text=${encodeURIComponent(text)}`
-      : `https://wa.me/?text=${encodeURIComponent(text)}`;
+      ? `https://wa.me/${cleanPhone}?text=${encodeURIComponent(lines)}`
+      : `https://wa.me/?text=${encodeURIComponent(lines)}`;
     window.open(url, '_blank');
-  };
-
-  const handleCopyText = () => {
-    const text = generateTextReceipt(receipt, 32);
-    navigator.clipboard.writeText(text);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2500);
   };
 
   const formattedDate = new Date(receipt.created_at || Date.now()).toLocaleString('en-GB', {
@@ -103,67 +80,13 @@ export default function ThermalReceipt({ receipt, onClose }) {
 
   return (
     <div className="modal-overlay thermal-receipt-modal">
-      <div className="modal-content" style={{ maxWidth: '420px' }}>
+      <div className="modal-content" style={{ maxWidth: '380px' }}>
         <div className="modal-header no-print">
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <Printer size={20} color="#3b82f6" />
-            <h3 style={{ fontSize: '1.05rem', fontWeight: '700' }}>Thermal Receipt Terminal</h3>
+            <Printer size={18} color="#3b82f6" />
+            <h3 style={{ fontSize: '1rem', fontWeight: '700' }}>Thermal Receipt (58mm)</h3>
           </div>
-          <button className="btn btn-secondary btn-sm" onClick={onClose}>
-            <X size={16} />
-          </button>
-        </div>
-
-        {/* Paper Size & Direct Bluetooth Bar */}
-        <div className="no-print" style={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          padding: '8px 16px',
-          background: 'rgba(255,255,255,0.03)',
-          borderBottom: '1px solid var(--surface-border)',
-          gap: '8px',
-          flexWrap: 'wrap'
-        }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-            <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: '600' }}>ROLL WIDTH:</span>
-            <div style={{ display: 'inline-flex', background: 'rgba(0,0,0,0.4)', borderRadius: '6px', padding: '2px', border: '1px solid var(--surface-border)' }}>
-              <button
-                type="button"
-                onClick={() => setPaperWidth('58mm')}
-                style={{
-                  border: 'none',
-                  background: paperWidth === '58mm' ? 'var(--accent-primary)' : 'transparent',
-                  color: paperWidth === '58mm' ? '#fff' : 'var(--text-muted)',
-                  padding: '3px 8px',
-                  borderRadius: '4px',
-                  fontSize: '0.72rem',
-                  fontWeight: '700',
-                  cursor: 'pointer'
-                }}
-              >
-                58mm (Pocket POS)
-              </button>
-              <button
-                type="button"
-                onClick={() => setPaperWidth('80mm')}
-                style={{
-                  border: 'none',
-                  background: paperWidth === '80mm' ? 'var(--accent-primary)' : 'transparent',
-                  color: paperWidth === '80mm' ? '#fff' : 'var(--text-muted)',
-                  padding: '3px 8px',
-                  borderRadius: '4px',
-                  fontSize: '0.72rem',
-                  fontWeight: '700',
-                  cursor: 'pointer'
-                }}
-              >
-                80mm (Counter POS)
-              </button>
-            </div>
-          </div>
-
-          <div style={{ display: 'flex', gap: '6px' }}>
             <button
               className="btn btn-secondary btn-sm"
               onClick={handleWhatsAppShare}
@@ -173,46 +96,26 @@ export default function ThermalReceipt({ receipt, onClose }) {
               <Share2 size={13} />
               WhatsApp
             </button>
-            <button
-              className="btn btn-secondary btn-sm"
-              onClick={handleCopyText}
-              title="Copy receipt plain text"
-              style={{ padding: '4px 8px', fontSize: '0.75rem', gap: '4px' }}
-            >
-              {copied ? <Check size={13} color="#10b981" /> : <Copy size={13} />}
-              {copied ? 'Copied' : 'Copy'}
+            <button className="btn btn-secondary btn-sm" onClick={onClose}>
+              <X size={16} />
             </button>
           </div>
         </div>
 
-        {btStatus && (
-          <div className="no-print" style={{
-            background: btStatus.includes('✓') ? 'rgba(16, 185, 129, 0.15)' : 'rgba(59, 130, 246, 0.15)',
-            color: btStatus.includes('✓') ? '#34d399' : '#60a5fa',
-            padding: '8px 16px',
-            fontSize: '0.78rem',
-            textAlign: 'center',
-            fontWeight: '600',
-            borderBottom: '1px solid var(--surface-border)'
-          }}>
-            {btStatus}
-          </div>
-        )}
-
-        <div className="modal-body" style={{ background: '#0a0e17' }}>
-          {/* Thermal Receipt Paper representation */}
-          <div className={`thermal-receipt-container ${paperWidth === '80mm' ? 'roll-80mm' : ''}`}>
+        <div className="modal-body" style={{ background: '#0a0e17', padding: '14px 10px' }}>
+          {/* Thermal Receipt Paper - EXACT 48mm hardware print width */}
+          <div className="thermal-receipt-container">
             <div className="receipt-header">
-              <div className="receipt-title" style={{ fontSize: '14px', fontWeight: '800', letterSpacing: '0.04em' }}>
+              <div className="receipt-title">
                 SADHAN APEX (PVT) LTD
               </div>
-              <div className="receipt-subtitle" style={{ fontSize: '11px', fontWeight: '600', marginTop: '2px' }}>
+              <div className="receipt-subtitle">
                 MICRO FINANCIAL SERVICES
               </div>
-              <div style={{ fontSize: '10px', color: '#333', fontWeight: '600', marginTop: '3px' }}>
+              <div style={{ fontSize: '10px', color: '#222', fontWeight: '700', marginTop: '2px' }}>
                 TEL: +94 76 108 3006
               </div>
-              <div style={{ fontSize: '9px', color: '#666', marginTop: '1px' }}>
+              <div style={{ fontSize: '9px', color: '#555', marginTop: '1px' }}>
                 OFFICIAL REPAYMENT RECEIPT
               </div>
             </div>
@@ -251,11 +154,11 @@ export default function ThermalReceipt({ receipt, onClose }) {
             <div className="receipt-row">
               <span className="receipt-label">PLAN:</span>
               <span className="receipt-value" style={{ fontWeight: hasPenalty ? '800' : 'normal' }}>
-                {hasPenalty ? `Extended (${penaltyCount}x 58-Cycles Exceeded)` : '54 Days (58-Day Limit)'}
+                {hasPenalty ? `Extended (+${penaltyCount * 8}%)` : '54 Days (58-Lim)'}
               </span>
             </div>
             <div className="receipt-row">
-              <span className="receipt-label">INSTALLMENT #:</span>
+              <span className="receipt-label">INSTALLMENT:</span>
               <span className="receipt-value" style={{ textDecoration: 'underline', fontWeight: '800' }}>
                 #{receipt.current_installment_no || 1} of {receipt.installment_count || 58}
               </span>
@@ -264,46 +167,36 @@ export default function ThermalReceipt({ receipt, onClose }) {
             <div className="receipt-divider"></div>
 
             <div className="receipt-row">
-              <span className="receipt-label">PAYMENT TYPE:</span>
+              <span className="receipt-label">PAYMENT:</span>
               <span className="receipt-value" style={{ fontWeight: '800' }}>
-                {receipt.payment_type === 'PARTIAL' ? '*** PARTIAL PAYMENT ***' : 'FULL INSTALLMENT'}
+                {receipt.payment_type === 'PARTIAL' ? '*PARTIAL*' : 'FULL'} ({receipt.payment_method || 'CASH'})
               </span>
             </div>
-            <div className="receipt-row">
-              <span className="receipt-label">PAYMENT METHOD:</span>
-              <span className="receipt-value">{receipt.payment_method || 'CASH'}</span>
-            </div>
 
-            {/* Overdue Penalty Notice Box if loan exceeded 58-day cycles */}
+            {/* Overdue Penalty Notice */}
             {hasPenalty && (
               <div style={{
-                margin: '8px 0',
-                padding: '6px 8px',
-                border: '1.5px dashed #000',
-                borderRadius: '4px',
-                background: '#fafafa',
+                margin: '6px 0',
+                padding: '4px 6px',
+                border: '1px dashed #000',
+                borderRadius: '3px',
                 textAlign: 'center'
               }}>
-                <div style={{ fontSize: '10px', fontWeight: '900', letterSpacing: '0.04em' }}>
-                  *** OVERDUE PENALTY NOTICE ***
+                <div style={{ fontSize: '9px', fontWeight: '900' }}>
+                  *** OVERDUE PENALTY ***
                 </div>
-                <div style={{ fontSize: '9px', fontWeight: '700', marginTop: '2px', color: '#111' }}>
-                  {penaltyCount > 1 
-                    ? `${penaltyCount}x 58-Installment Sets Exceeded (+${penaltyCount * 8}% Overdue Penalties)`
-                    : '58-Installment Limit Exceeded (+8% Overdue Penalty)'}
+                <div style={{ fontSize: '8.5px', fontWeight: '700', color: '#111' }}>
+                  +{penaltyCount * 8}% on remaining balance
                 </div>
                 {totalPenalties > 0 && (
-                  <div style={{ fontSize: '9.5px', fontWeight: '800', marginTop: '2px' }}>
-                    Total Penalty Added: + Rs. {Math.round(totalPenalties).toLocaleString()}
+                  <div style={{ fontSize: '9px', fontWeight: '800' }}>
+                    Added: + Rs. {Math.round(totalPenalties).toLocaleString()}
                   </div>
                 )}
-                <div style={{ fontSize: '8.5px', color: '#333', marginTop: '2px' }}>
-                  Installment count extended to #{receipt.installment_count || 58} slots.
-                </div>
               </div>
             )}
 
-            {/* Prominent Amount Box */}
+            {/* Prominent Amount Box - Clean border to prevent thermal ink smear */}
             <div className="receipt-amount-box">
               <div className="receipt-amount-title">AMOUNT RECEIVED</div>
               <div className="receipt-amount-main">Rs. {Math.round(Number(receipt.amount_paid)).toLocaleString()}</div>
@@ -320,10 +213,10 @@ export default function ThermalReceipt({ receipt, onClose }) {
               </span>
             </div>
             {hasPenalty && totalPenalties > 0 && (
-              <div className="receipt-row" style={{ fontSize: '9px', color: '#444', marginTop: '1px' }}>
-                <span className="receipt-label">INCL. OVERDUE PENALTY:</span>
+              <div className="receipt-row" style={{ fontSize: '9px', color: '#333' }}>
+                <span className="receipt-label">INCL. PENALTY:</span>
                 <span className="receipt-value" style={{ fontWeight: '700' }}>
-                  + Rs. {Math.round(totalPenalties).toLocaleString()} ({penaltyCount}x 8%)
+                  + Rs. {Math.round(totalPenalties).toLocaleString()}
                 </span>
               </div>
             )}
@@ -345,86 +238,49 @@ export default function ThermalReceipt({ receipt, onClose }) {
             )}
 
             {receipt.notes && (
-              <div style={{ marginTop: '6px', fontSize: '10px', fontStyle: 'italic' }}>
+              <div style={{ marginTop: '4px', fontSize: '9px', fontStyle: 'italic' }}>
                 Note: {receipt.notes}
               </div>
             )}
 
             <div className="receipt-divider"></div>
 
-            <div className="receipt-barcode">
-              ||||| | |||| ||| || ||||
-            </div>
-
             <div className="receipt-footer">
               <div style={{ fontWeight: '700' }}>Thank you for your payment!</div>
-              <div style={{ fontSize: '9px', marginTop: '2px', color: '#666' }}>
+              <div style={{ fontSize: '8.5px', marginTop: '2px', color: '#555' }}>
                 Keep this receipt for your records.
               </div>
               <div style={{
                 fontSize: '8px',
-                marginTop: '8px',
+                marginTop: '6px',
                 color: '#777',
-                borderTop: '1px dashed #ccc',
-                paddingTop: '5px',
-                letterSpacing: '0.02em'
+                borderTop: '1px dashed #bbb',
+                paddingTop: '4px'
               }}>
-                © Nexora Software Solutions • All Rights Reserved
+                © Nexora Software Solutions
               </div>
             </div>
           </div>
         </div>
 
-        <div className="modal-footer no-print" style={{ display: 'flex', flexDirection: 'column', gap: '8px', width: '100%', padding: '14px 16px' }}>
-          {/* Main Print Actions Row */}
-          <div style={{ display: 'flex', gap: '8px', width: '100%' }}>
-            <button
-              className="btn btn-primary"
-              style={{
-                flex: 1.5,
-                justifyContent: 'center',
-                gap: '8px',
-                background: 'linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%)',
-                boxShadow: '0 4px 12px rgba(37, 99, 235, 0.35)'
-              }}
-              onClick={handleBluetoothPrint}
-              disabled={isBluetoothPrinting}
-            >
-              <Bluetooth size={18} />
-              <span>{isBluetoothPrinting ? 'Connecting...' : 'Direct Bluetooth Print'}</span>
-            </button>
-
-            <button
-              className="btn btn-secondary"
-              style={{ flex: 1, justifyContent: 'center', gap: '6px' }}
-              onClick={handlePrint}
-              title="Standard browser print (optimized for 58mm paper)"
-            >
-              <Printer size={16} />
-              <span>System Print</span>
-            </button>
-          </div>
-
-          {/* Secondary Actions Row */}
-          <div style={{ display: 'flex', gap: '8px', width: '100%' }}>
-            <button
-              className="btn btn-secondary btn-sm"
-              style={{ flex: 1, justifyContent: 'center', gap: '6px', fontSize: '0.76rem' }}
-              onClick={handleRawBtPrint}
-              title="Open directly in RawBT or Thermal Bluetooth Printer Android app"
-            >
-              <Smartphone size={14} />
-              <span>Thermal App Print</span>
-            </button>
-
-            <button
-              className="btn btn-secondary btn-sm"
-              style={{ width: '80px', justifyContent: 'center' }}
-              onClick={onClose}
-            >
-              Done
-            </button>
-          </div>
+        <div className="modal-footer no-print" style={{ display: 'flex', gap: '8px', width: '100%', padding: '12px 16px' }}>
+          <button className="btn btn-secondary" style={{ flex: 1, justifyContent: 'center' }} onClick={onClose}>
+            Done
+          </button>
+          <button
+            className="btn btn-primary"
+            style={{
+              flex: 1.8,
+              justifyContent: 'center',
+              gap: '8px',
+              fontWeight: '700',
+              background: 'linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%)'
+            }}
+            onClick={handlePrint}
+          >
+            <Printer size={18} />
+            Print Receipt
+          </button>
         </div>
       </div>
     </div>
