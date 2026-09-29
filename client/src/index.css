@@ -1177,8 +1177,15 @@ input[type="date"]::-webkit-calendar-picker-indicator {
 
   .receipt-footer {
     text-align: center !important;
-    margin-top: 20px !important;
+    margin-top: 24px !important;
+    font-size: 24px !important;
+    font-weight: 800 !important;
+    color: #000000 !important;
+  }
+
+  .receipt-footer * {
+    color: #000000 !important;
     font-size: 22px !important;
-    font-weight: 700 !important;
+    font-weight: 800 !important;
   }
 }

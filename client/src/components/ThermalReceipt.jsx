@@ -81,15 +81,15 @@ export default function ThermalReceipt({ receipt, onClose }) {
   // Generate 384px wide hardware-exact image for 57mm roll (48mm print head @ 203 DPI)
   const handleSendToThermalApp = async () => {
     try {
-      let estHeight = 520;
-      if (receipt.client_phone) estHeight += 26;
-      if (hasPenalty) estHeight += 70;
-      if (hasPenalty && totalPenalties > 0) estHeight += 26;
+      let estHeight = 620;
+      if (receipt.client_phone) estHeight += 32;
+      if (hasPenalty) estHeight += 85;
+      if (hasPenalty && totalPenalties > 0) estHeight += 32;
       if (receipt.next_due_date && receipt.next_due_date !== 'Completed') {
-        estHeight += 44;
-        if (receipt.next_due_amount > 0) estHeight += 26;
+        estHeight += 54;
+        if (receipt.next_due_amount > 0) estHeight += 32;
       }
-      if (receipt.notes) estHeight += 32;
+      if (receipt.notes) estHeight += 36;
 
       const canvas = document.createElement('canvas');
       canvas.width = 384; // 48mm hardware print width at 203 DPI (384 dots)
@@ -115,47 +115,47 @@ export default function ThermalReceipt({ receipt, onClose }) {
 
       const drawRow = (label, val, isHeavy = false, isUnderline = false) => {
         ctx.save();
-        // Use strong bold sans-serif with 15px-16px size for maximum thermal density
-        ctx.font = `bold ${isHeavy ? '16px' : '15px'} Arial, Helvetica, sans-serif`;
+        // Clear, large bold 18px font for high visibility on thermal paper
+        ctx.font = `bold ${isHeavy ? '19px' : '18px'} Arial, Helvetica, sans-serif`;
         ctx.textBaseline = 'top';
         ctx.textAlign = 'left';
-        ctx.fillText(label, 10, y);
+        ctx.fillText(label, 8, y);
         ctx.textAlign = 'right';
-        ctx.fillText(val, 374, y);
+        ctx.fillText(val, 376, y);
         if (isUnderline) {
           const tw = ctx.measureText(val).width;
-          ctx.lineWidth = 1.5;
+          ctx.lineWidth = 2;
           ctx.beginPath();
-          ctx.moveTo(374 - tw, y + 18);
-          ctx.lineTo(374, y + 18);
+          ctx.moveTo(376 - tw, y + 22);
+          ctx.lineTo(376, y + 22);
           ctx.stroke();
         }
         ctx.restore();
-        y += 26;
+        y += 30;
       };
 
       const drawDivider = () => {
         ctx.save();
         ctx.strokeStyle = '#000000';
-        ctx.lineWidth = 2;
-        ctx.setLineDash([6, 4]);
+        ctx.lineWidth = 2.5;
+        ctx.setLineDash([7, 4]);
         ctx.beginPath();
-        ctx.moveTo(10, y + 8);
-        ctx.lineTo(374, y + 8);
+        ctx.moveTo(8, y + 8);
+        ctx.lineTo(376, y + 8);
         ctx.stroke();
         ctx.restore();
-        y += 18;
+        y += 20;
       };
 
-      // Header - Bold and large
-      drawCenter('SADHAN APEX (PVT) LTD', '22px Arial, sans-serif', true);
-      y += 26;
-      drawCenter('MICRO FINANCIAL SERVICES', '14px Arial, sans-serif', true);
-      y += 18;
-      drawCenter('TEL: +94 76 108 3006', '14px Arial, sans-serif', true);
-      y += 18;
-      drawCenter('OFFICIAL REPAYMENT RECEIPT', '13px Arial, sans-serif', true);
-      y += 18;
+      // Header - Large bold headers
+      drawCenter('SADHAN APEX (PVT) LTD', '24px Arial, sans-serif', true);
+      y += 30;
+      drawCenter('MICRO FINANCIAL SERVICES', '16px Arial, sans-serif', true);
+      y += 22;
+      drawCenter('TEL: +94 76 108 3006', '16px Arial, sans-serif', true);
+      y += 22;
+      drawCenter('OFFICIAL REPAYMENT RECEIPT', '14px Arial, sans-serif', true);
+      y += 22;
 
       drawDivider();
 
@@ -179,39 +179,39 @@ export default function ThermalReceipt({ receipt, onClose }) {
 
       // Overdue Penalty Box
       if (hasPenalty) {
-        const boxH = totalPenalties > 0 ? 62 : 46;
+        const boxH = totalPenalties > 0 ? 72 : 52;
         ctx.save();
         ctx.strokeStyle = '#000000';
-        ctx.lineWidth = 2;
-        ctx.setLineDash([4, 3]);
-        ctx.strokeRect(10, y + 2, 364, boxH);
+        ctx.lineWidth = 2.5;
+        ctx.setLineDash([5, 3]);
+        ctx.strokeRect(8, y + 2, 368, boxH);
         ctx.restore();
 
-        y += 6;
-        drawCenter('*** OVERDUE PENALTY ***', '12px Arial, sans-serif', true);
-        y += 18;
-        drawCenter(`+${penaltyCount * 8}% on remaining balance`, '12px Arial, sans-serif', true);
-        y += 18;
+        y += 8;
+        drawCenter('*** OVERDUE PENALTY ***', '14px Arial, sans-serif', true);
+        y += 20;
+        drawCenter(`+${penaltyCount * 8}% on remaining balance`, '14px Arial, sans-serif', true);
+        y += 20;
         if (totalPenalties > 0) {
-          drawCenter(`Added: + Rs. ${Math.round(totalPenalties).toLocaleString()}`, '13px Arial, sans-serif', true);
-          y += 20;
+          drawCenter(`Added: + Rs. ${Math.round(totalPenalties).toLocaleString()}`, '15px Arial, sans-serif', true);
+          y += 22;
         } else {
           y += 6;
         }
       }
 
-      // Amount Received Box - Thick bold border & large typography
-      y += 4;
+      // Amount Received Box - High-impact, deep black
+      y += 6;
       ctx.save();
       ctx.strokeStyle = '#000000';
-      ctx.lineWidth = 3;
-      ctx.strokeRect(10, y, 364, 62);
+      ctx.lineWidth = 3.5;
+      ctx.strokeRect(8, y, 368, 68);
       ctx.restore();
 
-      drawCenter('AMOUNT RECEIVED', '13px Arial, sans-serif', true);
-      y += 18;
-      drawCenter(`Rs. ${Math.round(Number(receipt.amount_paid)).toLocaleString()}`, '28px Arial, sans-serif', true);
-      y += 50;
+      drawCenter('AMOUNT RECEIVED', '15px Arial, sans-serif', true);
+      y += 20;
+      drawCenter(`Rs. ${Math.round(Number(receipt.amount_paid)).toLocaleString()}`, '32px Arial, sans-serif', true);
+      y += 56;
 
       drawRow('PREV BALANCE:', `Rs. ${Math.round(Number(receipt.previous_balance)).toLocaleString()}`, false);
       drawRow('REMAINING BAL:', `Rs. ${Math.round(Number(receipt.remaining_balance)).toLocaleString()}`, true);
@@ -230,29 +230,30 @@ export default function ThermalReceipt({ receipt, onClose }) {
 
       if (receipt.notes) {
         ctx.save();
-        ctx.font = 'bold 13px Arial, sans-serif';
+        ctx.font = 'bold 15px Arial, sans-serif';
         ctx.textBaseline = 'top';
         ctx.textAlign = 'left';
-        ctx.fillText(`Note: ${receipt.notes}`, 10, y);
+        ctx.fillText(`Note: ${receipt.notes}`, 8, y);
         ctx.restore();
-        y += 22;
+        y += 26;
       }
 
       drawDivider();
 
-      drawCenter('Thank you for your payment!', '14px Arial, sans-serif', true);
-      y += 20;
-      drawCenter('Keep this receipt for your records.', '12px Arial, sans-serif', true);
-      y += 18;
-      drawCenter('© Nexora Software Solutions', '11px Arial, sans-serif', true);
+      // Clear & Prominent Credits
+      drawCenter('Thank you for your payment!', '17px Arial, sans-serif', true);
+      y += 24;
+      drawCenter('Keep this receipt for your records.', '14px Arial, sans-serif', true);
+      y += 22;
+      drawCenter('© Nexora Software Solutions', '16px Arial, sans-serif', true);
+      y += 30;
 
-      // Contrast Binarization: Convert any anti-aliased grey pixels into pure jet black
-      // This prevents the thermal head from dithering faint scattered dots
+      // Pure Black High-Contrast Binarization
       const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
       const data = imgData.data;
       for (let i = 0; i < data.length; i += 4) {
         const brightness = 0.299 * data[i] + 0.587 * data[i + 1] + 0.114 * data[i + 2];
-        if (brightness < 215) {
+        if (brightness < 230) {
           data[i] = 0;       // Red
           data[i + 1] = 0;   // Green
           data[i + 2] = 0;   // Blue
@@ -469,16 +470,17 @@ export default function ThermalReceipt({ receipt, onClose }) {
             <div className="receipt-divider"></div>
 
             <div className="receipt-footer">
-              <div style={{ fontWeight: '700' }}>Thank you for your payment!</div>
-              <div style={{ fontSize: '8.5px', marginTop: '2px', color: '#555' }}>
+              <div style={{ fontWeight: '800', fontSize: '12px', color: '#000000' }}>Thank you for your payment!</div>
+              <div style={{ fontSize: '10px', fontWeight: '700', marginTop: '2px', color: '#000000' }}>
                 Keep this receipt for your records.
               </div>
               <div style={{
-                fontSize: '8px',
-                marginTop: '6px',
-                color: '#777',
-                borderTop: '1px dashed #bbb',
-                paddingTop: '4px'
+                fontSize: '11px',
+                fontWeight: '900',
+                marginTop: '8px',
+                color: '#000000',
+                borderTop: '2px dashed #000000',
+                paddingTop: '6px'
               }}>
                 © Nexora Software Solutions
               </div>
