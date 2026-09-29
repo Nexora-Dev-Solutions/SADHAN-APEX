@@ -55,7 +55,18 @@ export default function UserManagementView({
         headers: { Authorization: `Bearer ${token}` }
       });
 
-      const data = await res.json();
+      const contentType = res.headers.get('content-type') || '';
+      let data = {};
+      if (contentType.includes('application/json')) {
+        data = await res.json();
+      } else {
+        const text = await res.text();
+        if (res.status === 404) {
+          throw new Error('Backend deployment pending: Render is still updating. Please wait a moment.');
+        }
+        throw new Error(text.slice(0, 150) || `Server request failed with status ${res.status}`);
+      }
+
       if (!res.ok) {
         throw new Error(data.error || 'Failed to delete user');
       }

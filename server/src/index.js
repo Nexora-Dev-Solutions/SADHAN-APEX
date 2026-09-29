@@ -79,6 +79,11 @@ app.get('/api/auth/me', verifyToken, async (req, res) => {
   }
 });
 
+// HEALTH CHECK & VERSION
+app.get('/api/health', (req, res) => {
+  return res.json({ status: 'ok', version: '1.1.0', time: new Date().toISOString() });
+});
+
 // USERS & AGENTS (Owner Only)
 app.get('/api/users', verifyToken, requireOwner, async (req, res) => {
   try {
@@ -118,7 +123,7 @@ app.post('/api/users', verifyToken, requireOwner, async (req, res) => {
   }
 });
 
-app.put('/api/users/:id', verifyToken, requireOwner, async (req, res) => {
+const handleUserUpdate = async (req, res) => {
   try {
     const { name, phone, role, status, permissions, password } = req.body;
     const updated = await db.updateUser(req.params.id, {
@@ -129,9 +134,12 @@ app.put('/api/users/:id', verifyToken, requireOwner, async (req, res) => {
     console.error('Error updating user:', err);
     return res.status(400).json({ error: err.message || 'Failed to update user' });
   }
-});
+};
 
-app.delete('/api/users/:id', verifyToken, requireOwner, async (req, res) => {
+app.put('/api/users/:id', verifyToken, requireOwner, handleUserUpdate);
+app.post('/api/users/:id/update', verifyToken, requireOwner, handleUserUpdate);
+
+const handleUserDelete = async (req, res) => {
   try {
     await db.deleteUser(req.params.id, req.user.id);
     return res.json({ success: true, message: 'User account deleted successfully' });
@@ -139,7 +147,10 @@ app.delete('/api/users/:id', verifyToken, requireOwner, async (req, res) => {
     console.error('Error deleting user:', err);
     return res.status(400).json({ error: err.message || 'Failed to delete user' });
   }
-});
+};
+
+app.delete('/api/users/:id', verifyToken, requireOwner, handleUserDelete);
+app.post('/api/users/:id/delete', verifyToken, requireOwner, handleUserDelete);
 
 // CLIENTS
 app.get('/api/clients', verifyToken, async (req, res) => {

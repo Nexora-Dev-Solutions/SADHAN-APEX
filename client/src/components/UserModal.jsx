@@ -107,7 +107,18 @@ export default function UserModal({ token, userToEdit, currentUserId, onClose, o
         body: JSON.stringify(payload)
       });
 
-      const data = await res.json();
+      const contentType = res.headers.get('content-type') || '';
+      let data = {};
+      if (contentType.includes('application/json')) {
+        data = await res.json();
+      } else {
+        const text = await res.text();
+        if (res.status === 404) {
+          throw new Error('Backend deployment pending: Render is still updating with the latest backend changes. Please check the Render dashboard tab to ensure the deploy has finished, or wait 1-2 minutes.');
+        }
+        throw new Error(text.slice(0, 150) || `Server request failed with status ${res.status}`);
+      }
+
       if (!res.ok) {
         throw new Error(data.error || 'Failed to save staff member');
       }
