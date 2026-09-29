@@ -18,11 +18,16 @@ export default function ThermalReceipt({ receipt, onClose }) {
 
   const formatReceiptDateOnly = (val) => {
     if (!val || val === 'Completed') return val;
-    const str = typeof val === 'string' ? val.split('T')[0] : new Date(val).toISOString().split('T')[0];
+    let str = '';
+    try {
+      str = typeof val === 'string' ? val.split('T')[0] : (val instanceof Date && !isNaN(val.getTime()) ? val.toISOString().split('T')[0] : String(val).split('T')[0]);
+    } catch (e) {
+      return String(val);
+    }
     const [y, m, d] = str.split('-').map(Number);
     if (!y || !m || !d) return str;
     const dateObj = new Date(y, m - 1, d);
-    return dateObj.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+    return !isNaN(dateObj.getTime()) ? dateObj.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : str;
   };
 
   const pCountFromReceipt = parseInt(receipt.penalty_count, 10);

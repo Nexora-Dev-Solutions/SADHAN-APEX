@@ -60,9 +60,17 @@ export default function NewLoanModal({ token, clients, agents, currentUser, onCl
   const totalInterest = Math.max(0, totalPayable - parsedPrincipal);
 
   const stepDays = frequency === 'DAILY' ? 1 : frequency === 'WEEKLY' ? 7 : 30;
-  const endDate = new Date(new Date(startDate).getTime() + parsedCount * stepDays * 86400000)
-    .toISOString()
-    .split('T')[0];
+  let endDate = '';
+  try {
+    const parsedStartTime = startDate ? new Date(startDate).getTime() : NaN;
+    if (!isNaN(parsedStartTime)) {
+      endDate = new Date(parsedStartTime + parsedCount * stepDays * 86400000)
+        .toISOString()
+        .split('T')[0];
+    }
+  } catch (err) {
+    endDate = '';
+  }
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -75,6 +83,11 @@ export default function NewLoanModal({ token, clients, agents, currentUser, onCl
 
     if (parsedPrincipal <= 0) {
       setError('Principal amount must be greater than zero.');
+      return;
+    }
+
+    if (!startDate || isNaN(new Date(startDate).getTime())) {
+      setError('Please enter a valid loan start date.');
       return;
     }
 

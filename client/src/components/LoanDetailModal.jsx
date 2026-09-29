@@ -4,7 +4,12 @@ import { FileText, X, DollarSign, Printer, CheckCircle2, Clock, AlertTriangle, E
 // Format date cleanly: '2026-09-23T00:00:00.000Z' -> '23 Sep 2026'
 function formatCleanDate(d) {
   if (!d) return '—';
-  const str = typeof d === 'string' ? d.split('T')[0] : new Date(d).toISOString().split('T')[0];
+  let str = '';
+  try {
+    str = typeof d === 'string' ? d.split('T')[0] : (d instanceof Date && !isNaN(d.getTime()) ? d.toISOString().split('T')[0] : String(d).split('T')[0]);
+  } catch (e) {
+    return '—';
+  }
   const parts = str.split('-');
   if (parts.length !== 3) return str;
   const [y, m, day] = parts;

@@ -872,7 +872,10 @@ const db = {
     const totalPayable = Math.round(installmentAmount * baseScheduleCount);
     const totalInterest = Math.max(0, Math.round(totalPayable - principal));
 
-    const start = new Date(start_date || new Date().toISOString().split('T')[0]);
+    let start = new Date(start_date || new Date().toISOString().split('T')[0]);
+    if (isNaN(start.getTime())) {
+      start = new Date();
+    }
 
     // Calculate end date based on frequency (58 days max)
     let stepDays = 1;
