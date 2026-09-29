@@ -13,12 +13,38 @@ export default function UserManagementView({
   onRefreshUsers,
   users = []
 }) {
+  const [activeTab, setActiveTab] = useState('staff'); // 'staff' | 'audit'
+  const [auditLogs, setAuditLogs] = useState([]);
+  const [isLoadingLogs, setIsLoadingLogs] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [roleFilter, setRoleFilter] = useState('ALL'); // 'ALL' | 'OWNER' | 'AGENT'
   const [statusFilter, setStatusFilter] = useState('ALL'); // 'ALL' | 'ACTIVE' | 'SUSPENDED'
   const [deletingUserId, setDeletingUserId] = useState(null);
   const [deleteError, setDeleteError] = useState('');
   const [isDeleting, setIsDeleting] = useState(false);
+
+  const loadAuditLogs = async () => {
+    setIsLoadingLogs(true);
+    try {
+      const res = await fetch('/api/audit-logs?limit=150', {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setAuditLogs(data.logs || []);
+      }
+    } catch (e) {
+      console.error('Error fetching audit logs:', e);
+    } finally {
+      setIsLoadingLogs(false);
+    }
+  };
+
+  useEffect(() => {
+    if (activeTab === 'audit') {
+      loadAuditLogs();
+    }
+  }, [activeTab]);
 
   const filteredUsers = users.filter((u) => {
     const term = searchTerm.toLowerCase();
@@ -112,6 +138,36 @@ export default function UserManagementView({
         </div>
       </div>
 
+      {/* Sub-tab Navigation */}
+      <div style={{ display: 'flex', gap: '8px', marginBottom: '18px', borderBottom: '1px solid var(--surface-border)', paddingBottom: '10px' }}>
+        <button
+          className={`btn btn-sm ${activeTab === 'staff' ? 'btn-primary' : 'btn-secondary'}`}
+          onClick={() => setActiveTab('staff')}
+          style={{ gap: '6px' }}
+        >
+          <Users size={16} />
+          <span>Staff & Agents ({users.length})</span>
+        </button>
+        <button
+          className={`btn btn-sm ${activeTab === 'audit' ? 'btn-primary' : 'btn-secondary'}`}
+          onClick={() => setActiveTab('audit')}
+          style={{ gap: '6px' }}
+        >
+          <ShieldCheck size={16} />
+          <span>Security Audit Trail</span>
+          {auditLogs.length > 0 && (
+            <span style={{
+              background: 'rgba(255,255,255,0.2)',
+              padding: '1px 6px',
+              borderRadius: '10px',
+              fontSize: '0.72rem'
+            }}>
+              {auditLogs.length}
+            </span>
+          )}
+        </button>
+      </div>
+
       {deleteError && (
         <div style={{
           background: 'var(--danger-bg)',
@@ -137,7 +193,10 @@ export default function UserManagementView({
         </div>
       )}
 
-      {/* Metric Stat Cards */}
+      {/* Staff View */}
+      {activeTab === 'staff' && (
+        <>
+          {/* Metric Stat Cards */}
       <div style={{
         display: 'grid',
         gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
@@ -389,6 +448,96 @@ export default function UserManagementView({
           </tbody>
         </table>
       </div>
+    </>
+  )}
+
+  {/* Security Audit Trail View */}
+  {activeTab === 'audit' && (
+    <div>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', flexWrap: 'wrap', gap: '10px' }}>
+        <div>
+          <div style={{ fontSize: '0.92rem', fontWeight: '700' }}>Immutable System Audit Ledger</div>
+          <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+            Real-time chronological record of authentication, staff, loan, and financial payment activities
+          </div>
+        </div>
+        <button
+          className="btn btn-secondary btn-sm"
+          onClick={loadAuditLogs}
+          disabled={isLoadingLogs}
+          style={{ gap: '6px' }}
+        >
+          <RefreshCw size={14} className={isLoadingLogs ? 'spin' : ''} />
+          <span>{isLoadingLogs ? 'Fetching Logs...' : 'Refresh Audit'}</span>
+        </button>
+      </div>
+
+      <div className="table-responsive">
+        <table className="data-table">
+          <thead>
+            <tr>
+              <th>Timestamp</th>
+              <th>Initiator</th>
+              <th>Action Performed</th>
+              <th>Audit Details</th>
+              <th>Origin IP</th>
+            </tr>
+          </thead>
+          <tbody>
+            {auditLogs.length === 0 ? (
+              <tr>
+                <td colSpan="5" style={{ textAlign: 'center', padding: '36px', color: 'var(--text-muted)' }}>
+                  {isLoadingLogs ? 'Loading security records...' : 'No security audit events recorded yet.'}
+                </td>
+              </tr>
+            ) : (
+              auditLogs.map((log) => {
+                const isSuccess = log.action.includes('SUCCESS') || log.action.includes('CREATED') || log.action.includes('COLLECTED') || log.action.includes('ISSUED');
+                const isFailure = log.action.includes('FAILED') || log.action.includes('BLOCKED') || log.action.includes('DELETED');
+
+                return (
+                  <tr key={`audit-row-${log.id}`}>
+                    <td style={{ whiteSpace: 'nowrap', fontSize: '0.78rem', color: 'var(--text-muted)' }}>
+                      {new Date(log.created_at).toLocaleString('en-GB', {
+                        day: '2-digit', month: 'short', year: 'numeric',
+                        hour: '2-digit', minute: '2-digit', second: '2-digit'
+                      })}
+                    </td>
+                    <td>
+                      <span style={{ fontFamily: 'var(--font-mono)', fontWeight: '700', color: '#60a5fa', fontSize: '0.84rem' }}>
+                        @{log.username || 'SYSTEM'}
+                      </span>
+                    </td>
+                    <td>
+                      <span style={{
+                        display: 'inline-block',
+                        padding: '3px 8px',
+                        borderRadius: '4px',
+                        fontSize: '0.72rem',
+                        fontWeight: '700',
+                        letterSpacing: '0.03em',
+                        background: isFailure ? 'rgba(239, 68, 68, 0.15)' : isSuccess ? 'rgba(16, 185, 129, 0.15)' : 'rgba(59, 130, 246, 0.15)',
+                        color: isFailure ? '#f87171' : isSuccess ? '#34d399' : '#60a5fa',
+                        border: `1px solid ${isFailure ? 'rgba(239, 68, 68, 0.3)' : isSuccess ? 'rgba(16, 185, 129, 0.3)' : 'rgba(59, 130, 246, 0.3)'}`
+                      }}>
+                        {log.action}
+                      </span>
+                    </td>
+                    <td style={{ fontSize: '0.82rem', maxWidth: '380px', wordBreak: 'break-word' }}>
+                      {log.details || '—'}
+                    </td>
+                    <td style={{ fontFamily: 'var(--font-mono)', fontSize: '0.75rem', color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>
+                      {log.ip_address || '—'}
+                    </td>
+                  </tr>
+                );
+              })
+            )}
+          </tbody>
+        </table>
+      </div>
     </div>
-  );
+  )}
+</div>
+);
 }

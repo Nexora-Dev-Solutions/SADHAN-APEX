@@ -138,6 +138,16 @@ async function initPostgresSchema() {
       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     );
 
+    CREATE TABLE IF NOT EXISTS audit_logs (
+      id SERIAL PRIMARY KEY,
+      user_id INT,
+      username VARCHAR(50),
+      action VARCHAR(100) NOT NULL,
+      details TEXT,
+      ip_address VARCHAR(50),
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    );
+
     CREATE UNIQUE INDEX IF NOT EXISTS idx_clients_unique_nic ON clients (UPPER(TRIM(nic_id))) WHERE nic_id IS NOT NULL AND TRIM(nic_id) != '';
     CREATE UNIQUE INDEX IF NOT EXISTS idx_clients_unique_phone ON clients (TRIM(phone)) WHERE phone IS NOT NULL AND TRIM(phone) != '';
 
@@ -2365,6 +2375,53 @@ const db = {
 
     transactions.sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0));
     return transactions.slice(offset, offset + limit);
+  },
+
+  logAudit: async ({ user_id = null, username = 'SYSTEM', action, details = '', ip_address = '' }) => {
+    try {
+      const detailsStr = typeof details === 'object' ? JSON.stringify(details) : String(details);
+      if (usePostgres) {
+        await pgPool.query(
+          'INSERT INTO audit_logs (user_id, username, action, details, ip_address) VALUES ($1, $2, $3, $4, $5)',
+          [user_id, username, action, detailsStr, ip_address]
+        );
+      } else {
+        loadLocalStore();
+        if (!localStore.audit_logs) localStore.audit_logs = [];
+        localStore.audit_logs.push({
+          id: localStore.audit_logs.length + 1,
+          user_id,
+          username,
+          action,
+          details: detailsStr,
+          ip_address,
+          created_at: new Date().toISOString()
+        });
+        saveLocalStore();
+      }
+    } catch (e) {
+      console.error('Audit log error:', e.message);
+    }
+  },
+
+  getAuditLogs: async (limit = 100) => {
+    try {
+      if (usePostgres) {
+        const res = await pgPool.query(
+          'SELECT * FROM audit_logs ORDER BY created_at DESC LIMIT $1',
+          [limit]
+        );
+        return res.rows;
+      }
+      loadLocalStore();
+      return (localStore.audit_logs || [])
+        .slice()
+        .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
+        .slice(0, limit);
+    } catch (e) {
+      console.error('Error fetching audit logs:', e.message);
+      return [];
+    }
   }
 };
 

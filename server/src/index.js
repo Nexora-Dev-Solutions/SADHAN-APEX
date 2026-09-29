@@ -2,13 +2,60 @@ require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const bcrypt = require('bcryptjs');
+const helmet = require('helmet');
+const rateLimit = require('express-rate-limit');
 const { initDb, db } = require('./db');
 const { generateToken, verifyToken, requireOwner, requirePermission } = require('./auth');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-app.use(cors());
+// Trust reverse proxy for accurate IP detection behind Render & Netlify
+app.set('trust proxy', 1);
+
+// Security HTTP headers
+app.use(helmet({
+  contentSecurityPolicy: false,
+  crossOriginEmbedderPolicy: false
+}));
+
+// CORS policy lockdown
+const allowedOrigins = [
+  'https://loanpro-manager.netlify.app',
+  'http://localhost:5173',
+  'http://localhost:5000',
+  'http://localhost:3000'
+];
+
+app.use(cors({
+  origin: (origin, callback) => {
+    if (!origin) return callback(null, true);
+    if (allowedOrigins.indexOf(origin) !== -1 || origin.endsWith('.netlify.app')) {
+      return callback(null, true);
+    }
+    return callback(new Error('CORS policy: Access from origin not allowed'));
+  },
+  credentials: true
+}));
+
+// Rate Limiters
+const loginLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 15, // Limit 15 failed/login requests per 15 mins per IP
+  message: { error: 'Too many login attempts from this network. Please wait 15 minutes before trying again.' },
+  standardHeaders: true,
+  legacyHeaders: false
+});
+
+const apiLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 1500, // 1500 requests per 15 minutes
+  message: { error: 'Too many requests. Please slow down.' },
+  standardHeaders: true,
+  legacyHeaders: false
+});
+
+app.use('/api/', apiLimiter);
 app.use(express.json({ limit: '10mb' }));
 
 // Request logger
@@ -18,7 +65,8 @@ app.use((req, res, next) => {
 });
 
 // AUTH ROUTES
-app.post('/api/auth/login', async (req, res) => {
+app.post('/api/auth/login', loginLimiter, async (req, res) => {
+  const clientIp = req.ip || req.headers['x-forwarded-for'] || req.socket.remoteAddress || '';
   try {
     const { username, password } = req.body;
     if (!username || !password) {
@@ -27,15 +75,35 @@ app.post('/api/auth/login', async (req, res) => {
 
     const user = await db.findUserByUsername(username);
     if (!user) {
+      await db.logAudit({
+        username: username.slice(0, 50),
+        action: 'LOGIN_FAILED',
+        details: 'User does not exist',
+        ip_address: clientIp
+      });
       return res.status(401).json({ error: 'Invalid username or password' });
     }
 
     const isMatch = bcrypt.compareSync(password, user.password_hash);
     if (!isMatch) {
+      await db.logAudit({
+        user_id: user.id,
+        username: user.username,
+        action: 'LOGIN_FAILED',
+        details: 'Incorrect password',
+        ip_address: clientIp
+      });
       return res.status(401).json({ error: 'Invalid username or password' });
     }
 
     if (user.status === 'SUSPENDED' || user.status === 'INACTIVE') {
+      await db.logAudit({
+        user_id: user.id,
+        username: user.username,
+        action: 'LOGIN_BLOCKED',
+        details: 'Account suspended/inactive',
+        ip_address: clientIp
+      });
       return res.status(403).json({ error: 'Your account has been deactivated or suspended by the business owner.' });
     }
 
@@ -51,6 +119,15 @@ app.post('/api/auth/login', async (req, res) => {
     }
 
     const token = generateToken({ ...user, permissions: userPerms });
+
+    await db.logAudit({
+      user_id: user.id,
+      username: user.username,
+      action: 'LOGIN_SUCCESS',
+      details: `Role: ${user.role}`,
+      ip_address: clientIp
+    });
+
     return res.json({
       token,
       user: {
@@ -116,6 +193,15 @@ app.post('/api/users', verifyToken, requireOwner, async (req, res) => {
       permissions,
       status
     });
+
+    await db.logAudit({
+      user_id: req.user.id,
+      username: req.user.username,
+      action: 'USER_CREATED',
+      details: `Created user ${newUser.username} (${newUser.role})`,
+      ip_address: req.ip
+    });
+
     return res.status(201).json({ user: newUser, message: 'User created successfully' });
   } catch (err) {
     console.error('Error creating user:', err);
@@ -129,6 +215,15 @@ const handleUserUpdate = async (req, res) => {
     const updated = await db.updateUser(req.params.id, {
       name, phone, role, status, permissions, password
     });
+
+    await db.logAudit({
+      user_id: req.user.id,
+      username: req.user.username,
+      action: 'USER_UPDATED',
+      details: `Updated user #${req.params.id} (${updated.username}) status: ${updated.status}`,
+      ip_address: req.ip
+    });
+
     return res.json({ user: updated, message: 'User updated successfully' });
   } catch (err) {
     console.error('Error updating user:', err);
@@ -142,6 +237,15 @@ app.post('/api/users/:id/update', verifyToken, requireOwner, handleUserUpdate);
 const handleUserDelete = async (req, res) => {
   try {
     await db.deleteUser(req.params.id, req.user.id);
+
+    await db.logAudit({
+      user_id: req.user.id,
+      username: req.user.username,
+      action: 'USER_DELETED',
+      details: `Deleted user #${req.params.id}`,
+      ip_address: req.ip
+    });
+
     return res.json({ success: true, message: 'User account deleted successfully' });
   } catch (err) {
     console.error('Error deleting user:', err);
@@ -184,6 +288,15 @@ app.post('/api/clients', verifyToken, requirePermission('REGISTER_CLIENTS'), asy
       photo_url: photo_url || '',
       created_by: req.user.id
     });
+
+    await db.logAudit({
+      user_id: req.user.id,
+      username: req.user.username,
+      action: 'CLIENT_CREATED',
+      details: `Created client ${newClient.name} (NIC: ${newClient.nic_id || 'N/A'})`,
+      ip_address: req.ip
+    });
+
     return res.status(201).json({ client: newClient });
   } catch (err) {
     console.error('Error creating client:', err.message);
@@ -221,6 +334,15 @@ app.put('/api/clients/:id', verifyToken, async (req, res) => {
 app.delete('/api/clients/:id', verifyToken, requireOwner, async (req, res) => {
   try {
     await db.deleteClient(req.params.id);
+
+    await db.logAudit({
+      user_id: req.user.id,
+      username: req.user.username,
+      action: 'CLIENT_DELETED',
+      details: `Deleted client #${req.params.id}`,
+      ip_address: req.ip
+    });
+
     return res.json({ success: true, message: 'Client and associated loans deleted successfully' });
   } catch (err) {
     return res.status(500).json({ error: err.message || 'Failed to delete client' });
@@ -289,6 +411,14 @@ app.post('/api/loans', verifyToken, requirePermission('ISSUE_LOANS'), async (req
       start_date: start_date || new Date().toISOString().split('T')[0]
     });
 
+    await db.logAudit({
+      user_id: req.user.id,
+      username: req.user.username,
+      action: 'LOAN_ISSUED',
+      details: `Issued loan ${newLoan.loan_code} Rs. ${newLoan.principal_amount} for Client #${client_id}`,
+      ip_address: req.ip
+    });
+
     return res.status(201).json({ loan: newLoan });
   } catch (err) {
     console.error('Error creating loan:', err);
@@ -330,6 +460,15 @@ app.post('/api/loans/:id/penalty', verifyToken, requireOwner, async (req, res) =
 app.delete('/api/loans/:id', verifyToken, requireOwner, async (req, res) => {
   try {
     await db.deleteLoan(req.params.id);
+
+    await db.logAudit({
+      user_id: req.user.id,
+      username: req.user.username,
+      action: 'LOAN_DELETED',
+      details: `Deleted loan #${req.params.id}`,
+      ip_address: req.ip
+    });
+
     return res.json({ success: true, message: 'Loan and its installments deleted successfully' });
   } catch (err) {
     console.error('Error deleting loan:', err);
@@ -360,6 +499,14 @@ app.post('/api/payments', verifyToken, requirePermission('COLLECT_PAYMENTS'), as
       notes: notes || ''
     });
 
+    await db.logAudit({
+      user_id: req.user.id,
+      username: req.user.username,
+      action: 'PAYMENT_COLLECTED',
+      details: `Receipt ${paymentResult.receipt_no}: Rs. ${paymentResult.amount_paid} for Loan #${paymentResult.loan_id}`,
+      ip_address: req.ip
+    });
+
     return res.status(201).json({
       success: true,
       message: 'Payment recorded successfully',
@@ -368,6 +515,18 @@ app.post('/api/payments', verifyToken, requirePermission('COLLECT_PAYMENTS'), as
   } catch (err) {
     console.error('Error processing payment:', err);
     return res.status(400).json({ error: err.message || 'Payment processing failed' });
+  }
+});
+
+// SYSTEM AUDIT LOGS (Owner Only)
+app.get('/api/audit-logs', verifyToken, requireOwner, async (req, res) => {
+  try {
+    const limit = parseInt(req.query.limit, 10) || 100;
+    const logs = await db.getAuditLogs(limit);
+    return res.json({ logs });
+  } catch (err) {
+    console.error('Error fetching audit logs:', err);
+    return res.status(500).json({ error: 'Failed to retrieve audit logs' });
   }
 });
 
