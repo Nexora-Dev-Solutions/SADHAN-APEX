@@ -151,6 +151,9 @@ async function initPostgresSchema() {
     ALTER TABLE loans ADD COLUMN IF NOT EXISTS penalty_count INT DEFAULT 0;
     ALTER TABLE loans ADD COLUMN IF NOT EXISTS total_penalties NUMERIC(12, 2) DEFAULT 0.00;
     ALTER TABLE payments ADD COLUMN IF NOT EXISTS installment_no INT;
+
+    ALTER TABLE users ADD COLUMN IF NOT EXISTS status VARCHAR(20) DEFAULT 'ACTIVE';
+    ALTER TABLE users ADD COLUMN IF NOT EXISTS permissions TEXT DEFAULT '["COLLECT_PAYMENTS","ISSUE_LOANS","REGISTER_CLIENTS","VIEW_REPORTS"]';
   `;
   await pgPool.query(schemaSql);
 }
@@ -337,7 +340,7 @@ const db = {
   // USERS
   findUserByUsername: async (username) => {
     if (usePostgres) {
-      const res = await pgPool.query('SELECT * FROM users WHERE username = $1', [username]);
+      const res = await pgPool.query('SELECT id, name, username, password_hash, role, phone, COALESCE(status, \'ACTIVE\') AS status, COALESCE(permissions, \'["COLLECT_PAYMENTS","ISSUE_LOANS","REGISTER_CLIENTS","VIEW_REPORTS"]\') AS permissions, created_at FROM users WHERE username = $1', [username]);
       return res.rows[0];
     }
     loadLocalStore();
@@ -346,33 +349,91 @@ const db = {
 
   findUserById: async (id) => {
     if (usePostgres) {
-      const res = await pgPool.query('SELECT id, name, username, role, phone, created_at FROM users WHERE id = $1', [id]);
-      return res.rows[0];
+      const res = await pgPool.query('SELECT id, name, username, role, phone, COALESCE(status, \'ACTIVE\') AS status, COALESCE(permissions, \'["COLLECT_PAYMENTS","ISSUE_LOANS","REGISTER_CLIENTS","VIEW_REPORTS"]\') AS permissions, created_at FROM users WHERE id = $1', [id]);
+      const row = res.rows[0];
+      if (!row) return null;
+      return {
+        ...row,
+        permissions: typeof row.permissions === 'string' ? JSON.parse(row.permissions || '[]') : (row.permissions || [])
+      };
     }
     loadLocalStore();
     const u = localStore.users.find(u => u.id === parseInt(id, 10));
     if (!u) return null;
     const { password_hash, ...rest } = u;
-    return rest;
+    return {
+      ...rest,
+      status: rest.status || 'ACTIVE',
+      permissions: Array.isArray(rest.permissions) ? rest.permissions : (typeof rest.permissions === 'string' ? JSON.parse(rest.permissions || '[]') : ['COLLECT_PAYMENTS', 'ISSUE_LOANS', 'REGISTER_CLIENTS', 'VIEW_REPORTS'])
+    };
   },
 
   getAllUsers: async () => {
     if (usePostgres) {
-      const res = await pgPool.query('SELECT id, name, username, role, phone, created_at FROM users ORDER BY id ASC');
-      return res.rows;
+      const res = await pgPool.query(`
+        SELECT u.id, u.name, u.username, u.role, u.phone, 
+               COALESCE(u.status, 'ACTIVE') AS status,
+               COALESCE(u.permissions, '["COLLECT_PAYMENTS","ISSUE_LOANS","REGISTER_CLIENTS","VIEW_REPORTS"]') AS permissions,
+               u.created_at,
+               COALESCE(COUNT(DISTINCT l.id) FILTER (WHERE l.status = 'ACTIVE'), 0) AS active_loans_count,
+               COALESCE(SUM(p.amount_paid), 0) AS total_collected
+        FROM users u
+        LEFT JOIN loans l ON l.assigned_agent_id = u.id
+        LEFT JOIN payments p ON p.collector_id = u.id
+        GROUP BY u.id
+        ORDER BY u.id ASC
+      `);
+      return res.rows.map(u => ({
+        ...u,
+        permissions: typeof u.permissions === 'string' ? JSON.parse(u.permissions || '[]') : (u.permissions || [])
+      }));
     }
     loadLocalStore();
-    return localStore.users.map(({ password_hash, ...u }) => u);
+    return localStore.users.map(({ password_hash, ...u }) => {
+      const activeLoans = (localStore.loans || []).filter(l => l.assigned_agent_id === u.id && l.status === 'ACTIVE');
+      const totalCollected = (localStore.payments || []).filter(p => p.collector_id === u.id).reduce((sum, p) => sum + (parseFloat(p.amount_paid) || 0), 0);
+      let perms = [];
+      if (Array.isArray(u.permissions)) perms = u.permissions;
+      else if (typeof u.permissions === 'string') {
+        try { perms = JSON.parse(u.permissions); } catch(e) { perms = []; }
+      } else {
+        perms = u.role === 'OWNER' 
+          ? ['COLLECT_PAYMENTS', 'ISSUE_LOANS', 'REGISTER_CLIENTS', 'VIEW_REPORTS', 'TOPUP_LOANS', 'MANAGE_USERS']
+          : ['COLLECT_PAYMENTS', 'ISSUE_LOANS', 'REGISTER_CLIENTS', 'VIEW_REPORTS'];
+      }
+      return {
+        ...u,
+        status: u.status || 'ACTIVE',
+        permissions: perms,
+        active_loans_count: activeLoans.length,
+        total_collected: totalCollected
+      };
+    });
   },
 
-  createUser: async ({ name, username, password, role, phone }) => {
+  createUser: async ({ name, username, password, role, phone, permissions, status }) => {
     const hash = bcrypt.hashSync(password, 10);
+    const userRole = (role || 'AGENT').toUpperCase();
+    const userStatus = status || 'ACTIVE';
+    const permsArray = Array.isArray(permissions) ? permissions : (
+      userRole === 'OWNER' 
+        ? ['COLLECT_PAYMENTS', 'ISSUE_LOANS', 'REGISTER_CLIENTS', 'VIEW_REPORTS', 'TOPUP_LOANS', 'MANAGE_USERS']
+        : ['COLLECT_PAYMENTS', 'ISSUE_LOANS', 'REGISTER_CLIENTS', 'VIEW_REPORTS']
+    );
+    const permsStr = JSON.stringify(permsArray);
+
     if (usePostgres) {
       const res = await pgPool.query(
-        'INSERT INTO users (name, username, password_hash, role, phone) VALUES ($1, $2, $3, $4, $5) RETURNING id, name, username, role, phone, created_at',
-        [name, username, hash, role, phone]
+        `INSERT INTO users (name, username, password_hash, role, phone, status, permissions) 
+         VALUES ($1, $2, $3, $4, $5, $6, $7) 
+         RETURNING id, name, username, role, phone, status, permissions, created_at`,
+        [name, username, hash, userRole, phone || '', userStatus, permsStr]
       );
-      return res.rows[0];
+      const row = res.rows[0];
+      return {
+        ...row,
+        permissions: permsArray
+      };
     }
     loadLocalStore();
     const newUser = {
@@ -380,14 +441,89 @@ const db = {
       name,
       username,
       password_hash: hash,
-      role,
-      phone,
+      role: userRole,
+      phone: phone || '',
+      status: userStatus,
+      permissions: permsArray,
       created_at: new Date().toISOString()
     };
     localStore.users.push(newUser);
     saveLocalStore();
     const { password_hash, ...rest } = newUser;
     return rest;
+  },
+
+  updateUser: async (id, { name, phone, role, status, permissions, password }) => {
+    const userId = parseInt(id, 10);
+    if (usePostgres) {
+      const userRes = await pgPool.query('SELECT * FROM users WHERE id = $1', [userId]);
+      if (!userRes.rows.length) throw new Error('User not found');
+      const current = userRes.rows[0];
+
+      const newName = name !== undefined ? name : current.name;
+      const newPhone = phone !== undefined ? phone : current.phone;
+      const newRole = role !== undefined ? role.toUpperCase() : current.role;
+      const newStatus = status !== undefined ? status.toUpperCase() : (current.status || 'ACTIVE');
+      let newPermsStr = current.permissions || '[]';
+      if (permissions !== undefined) {
+        newPermsStr = JSON.stringify(Array.isArray(permissions) ? permissions : []);
+      }
+      let newHash = current.password_hash;
+      if (password && password.trim()) {
+        newHash = bcrypt.hashSync(password.trim(), 10);
+      }
+
+      const updateRes = await pgPool.query(
+        `UPDATE users 
+         SET name = $1, phone = $2, role = $3, status = $4, permissions = $5, password_hash = $6 
+         WHERE id = $7 
+         RETURNING id, name, username, role, phone, status, permissions, created_at`,
+        [newName, newPhone, newRole, newStatus, newPermsStr, newHash, userId]
+      );
+      const row = updateRes.rows[0];
+      return {
+        ...row,
+        permissions: typeof row.permissions === 'string' ? JSON.parse(row.permissions || '[]') : row.permissions
+      };
+    }
+    loadLocalStore();
+    const idx = localStore.users.findIndex(u => u.id === userId);
+    if (idx === -1) throw new Error('User not found');
+    const u = localStore.users[idx];
+    if (name !== undefined) u.name = name;
+    if (phone !== undefined) u.phone = phone;
+    if (role !== undefined) u.role = role.toUpperCase();
+    if (status !== undefined) u.status = status.toUpperCase();
+    if (permissions !== undefined) u.permissions = Array.isArray(permissions) ? permissions : [];
+    if (password && password.trim()) {
+      u.password_hash = bcrypt.hashSync(password.trim(), 10);
+    }
+    saveLocalStore();
+    const { password_hash, ...rest } = u;
+    return rest;
+  },
+
+  deleteUser: async (id, currentUserId) => {
+    const userId = parseInt(id, 10);
+    if (userId === parseInt(currentUserId, 10)) {
+      throw new Error('You cannot delete your own account.');
+    }
+    if (usePostgres) {
+      const loanCheck = await pgPool.query('SELECT COUNT(*) FROM loans WHERE assigned_agent_id = $1 AND status = \'ACTIVE\'', [userId]);
+      if (parseInt(loanCheck.rows[0].count, 10) > 0) {
+        throw new Error(`Cannot delete this agent because they currently have ${loanCheck.rows[0].count} active loans assigned. Please reassign their loans first.`);
+      }
+      await pgPool.query('DELETE FROM users WHERE id = $1', [userId]);
+      return { success: true };
+    }
+    loadLocalStore();
+    const hasLoans = (localStore.loans || []).some(l => l.assigned_agent_id === userId && l.status === 'ACTIVE');
+    if (hasLoans) {
+      throw new Error('Cannot delete this agent because they currently have active loans assigned. Please reassign their loans first.');
+    }
+    localStore.users = localStore.users.filter(u => u.id !== userId);
+    saveLocalStore();
+    return { success: true };
   },
 
   // CLIENTS

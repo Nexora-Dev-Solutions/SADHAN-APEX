@@ -37,10 +37,12 @@ export default function ClientsView({
           </p>
         </div>
 
-        <button className="btn btn-primary" onClick={onOpenNewClient} style={{ gap: '8px' }}>
-          <UserPlus size={18} />
-          Register Client & KYC
-        </button>
+        {(currentUser?.role === 'OWNER' || (currentUser?.permissions || []).includes('REGISTER_CLIENTS')) && (
+          <button className="btn btn-primary" onClick={onOpenNewClient} style={{ gap: '8px' }}>
+            <UserPlus size={18} />
+            Register Client & KYC
+          </button>
+        )}
       </div>
 
       {/* Search & Filter Toolbar */}
@@ -210,7 +212,7 @@ export default function ClientsView({
                             <Edit3 size={14} />
                             Edit
                           </button>
-                          {currentUser.role === 'OWNER' && (
+                          {(currentUser.role === 'OWNER' || (currentUser.permissions || []).includes('ISSUE_LOANS')) && (
                             <button
                               className="btn btn-primary btn-sm"
                               style={{ gap: '4px' }}
@@ -347,7 +349,7 @@ export default function ClientsView({
                     Call Client
                   </a>
 
-                  {currentUser.role === 'OWNER' && (
+                  {(currentUser.role === 'OWNER' || (currentUser.permissions || []).includes('ISSUE_LOANS')) && (
                     <button
                       className="btn btn-primary"
                       style={{ gap: '6px' }}

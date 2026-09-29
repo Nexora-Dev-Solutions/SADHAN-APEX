@@ -22,11 +22,13 @@ import LoansView from './views/LoansView';
 import ClientsView from './views/ClientsView';
 import CollectionsView from './views/CollectionsView';
 import ReportsView from './views/ReportsView';
+import UserManagementView from './views/UserManagementView';
 
 import NewLoanModal from './components/NewLoanModal';
 import NewClientModal from './components/NewClientModal';
 import EditClientModal from './components/EditClientModal';
 import EditLoanModal from './components/EditLoanModal';
+import UserModal from './components/UserModal';
 import PaymentModal from './components/PaymentModal';
 import LoanDetailModal from './components/LoanDetailModal';
 import ThermalReceipt from './components/ThermalReceipt';
@@ -68,9 +70,16 @@ export default function App() {
   const [selectedLoanForEdit, setSelectedLoanForEdit] = useState(null);
   const [activeReceipt, setActiveReceipt] = useState(null);
   const [showNotificationCenter, setShowNotificationCenter] = useState(false);
-
+  const [showUserModal, setShowUserModal] = useState(false);
+  const [selectedUserForEdit, setSelectedUserForEdit] = useState(null);
 
   const isOwner = (currentUser?.role || '').toUpperCase() === 'OWNER';
+
+  // Permission helper for UI actions
+  const canPerform = (perm) => {
+    if (isOwner) return true;
+    return (currentUser?.permissions || []).includes(perm);
+  };
 
   // Auto-login on very first visit only; respect explicit logout
   useEffect(() => {
@@ -83,9 +92,9 @@ export default function App() {
     }
   }, [token]);
 
-  // If user is Agent and view is on reports, switch immediately to dashboard
+  // If user is Agent and view is on reports or users, switch immediately to dashboard
   useEffect(() => {
-    if (currentUser && !isOwner && currentView === 'reports') {
+    if (currentUser && !isOwner && (currentView === 'reports' || currentView === 'users')) {
       setCurrentView('dashboard');
     }
   }, [currentUser, isOwner, currentView]);
@@ -372,6 +381,19 @@ export default function App() {
               <span>Reports & Ledger</span>
             </li>
           )}
+
+          {currentUser?.role === 'OWNER' && (
+            <li
+              className={`nav-item ${currentView === 'users' ? 'active' : ''}`}
+              onClick={() => setCurrentView('users')}
+            >
+              <UserCheck size={18} />
+              <span>User Management</span>
+              <span style={{ marginLeft: 'auto', fontSize: '0.75rem', opacity: 0.7 }}>
+                {agents.length}
+              </span>
+            </li>
+          )}
         </ul>
 
         {/* Quick Role Switcher for Testing */}
@@ -500,7 +522,7 @@ export default function App() {
               <span style={{ fontSize: '0.75rem', fontWeight: '700' }}>Logout</span>
             </button>
 
-            {isOwner && (
+            {canPerform('ISSUE_LOANS') && (
               <button
                 className="btn btn-primary btn-sm no-mobile-btn"
                 onClick={() => {
@@ -579,6 +601,23 @@ export default function App() {
             />
           )}
 
+          {currentView === 'users' && isOwner && (
+            <UserManagementView
+              token={token}
+              currentUser={currentUser}
+              users={agents}
+              onOpenCreateUser={() => {
+                setSelectedUserForEdit(null);
+                setShowUserModal(true);
+              }}
+              onOpenEditUser={(user) => {
+                setSelectedUserForEdit(user);
+                setShowUserModal(true);
+              }}
+              onRefreshUsers={loadAllData}
+            />
+          )}
+
           {/* System Footer & Copyright (Visible on Mobile & All Views) */}
           <footer className="system-footer">
             <div style={{ color: '#94a3b8' }}>
@@ -642,6 +681,16 @@ export default function App() {
           >
             <BarChart3 size={20} />
             <span>Reports</span>
+          </div>
+        )}
+
+        {isOwner && (
+          <div
+            className={`mobile-nav-item ${currentView === 'users' ? 'active' : ''}`}
+            onClick={() => setCurrentView('users')}
+          >
+            <UserCheck size={20} />
+            <span>Users</span>
           </div>
         )}
       </nav>
@@ -745,6 +794,23 @@ export default function App() {
           reminders={reminders}
           onClose={() => setShowNotificationCenter(false)}
           onQuickPay={(loan) => setSelectedLoanForPayment(loan)}
+        />
+      )}
+
+      {showUserModal && (
+        <UserModal
+          token={token}
+          userToEdit={selectedUserForEdit}
+          currentUserId={currentUser.id}
+          onClose={() => {
+            setShowUserModal(false);
+            setSelectedUserForEdit(null);
+          }}
+          onSuccess={() => {
+            setShowUserModal(false);
+            setSelectedUserForEdit(null);
+            loadAllData();
+          }}
         />
       )}
     </div>

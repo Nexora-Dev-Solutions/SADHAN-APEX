@@ -38,7 +38,7 @@ export default function LoansView({
           </p>
         </div>
 
-        {currentUser.role === 'OWNER' && (
+        {(currentUser.role === 'OWNER' || (currentUser.permissions || []).includes('ISSUE_LOANS')) && (
           <button className="btn btn-primary" onClick={onOpenNewLoan} style={{ gap: '8px' }}>
             <PlusCircle size={18} />
             Issue Loan (8%)
@@ -191,7 +191,7 @@ export default function LoansView({
                         >
                           Ledger
                         </button>
-                        {currentUser.role === 'OWNER' && (
+                        {(currentUser.role === 'OWNER' || (currentUser.permissions || []).includes('TOPUP_LOANS')) && (
                           <button
                             className="btn btn-secondary btn-sm"
                             style={{ gap: '4px' }}
@@ -202,7 +202,7 @@ export default function LoansView({
                             Top-Up
                           </button>
                         )}
-                        {loan.status === 'ACTIVE' && (
+                        {loan.status === 'ACTIVE' && (currentUser.role === 'OWNER' || (currentUser.permissions || []).includes('COLLECT_PAYMENTS')) && (
                           <button
                             className="btn btn-success btn-sm"
                             style={{ gap: '4px' }}
@@ -316,7 +316,7 @@ export default function LoansView({
                   >
                     Ledger
                   </button>
-                  {currentUser.role === 'OWNER' && (
+                  {(currentUser.role === 'OWNER' || (currentUser.permissions || []).includes('TOPUP_LOANS')) && (
                     <button
                       className="btn btn-secondary"
                       style={{ gap: '4px' }}
@@ -326,7 +326,7 @@ export default function LoansView({
                       Top-Up
                     </button>
                   )}
-                  {loan.status === 'ACTIVE' && (
+                  {loan.status === 'ACTIVE' && (currentUser.role === 'OWNER' || (currentUser.permissions || []).includes('COLLECT_PAYMENTS')) && (
                     <button
                       className="btn btn-success"
                       style={{ gap: '6px' }}

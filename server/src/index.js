@@ -3,7 +3,7 @@ const express = require('express');
 const cors = require('cors');
 const bcrypt = require('bcryptjs');
 const { initDb, db } = require('./db');
-const { generateToken, verifyToken, requireOwner } = require('./auth');
+const { generateToken, verifyToken, requireOwner, requirePermission } = require('./auth');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -35,7 +35,22 @@ app.post('/api/auth/login', async (req, res) => {
       return res.status(401).json({ error: 'Invalid username or password' });
     }
 
-    const token = generateToken(user);
+    if (user.status === 'SUSPENDED' || user.status === 'INACTIVE') {
+      return res.status(403).json({ error: 'Your account has been deactivated or suspended by the business owner.' });
+    }
+
+    let userPerms = [];
+    if (Array.isArray(user.permissions)) {
+      userPerms = user.permissions;
+    } else if (typeof user.permissions === 'string') {
+      try { userPerms = JSON.parse(user.permissions); } catch(e) { userPerms = []; }
+    } else if (user.role === 'OWNER') {
+      userPerms = ['COLLECT_PAYMENTS', 'ISSUE_LOANS', 'REGISTER_CLIENTS', 'VIEW_REPORTS', 'TOPUP_LOANS', 'MANAGE_USERS'];
+    } else {
+      userPerms = ['COLLECT_PAYMENTS', 'ISSUE_LOANS', 'REGISTER_CLIENTS', 'VIEW_REPORTS'];
+    }
+
+    const token = generateToken({ ...user, permissions: userPerms });
     return res.json({
       token,
       user: {
@@ -43,7 +58,9 @@ app.post('/api/auth/login', async (req, res) => {
         name: user.name,
         username: user.username,
         role: user.role,
-        phone: user.phone
+        phone: user.phone,
+        status: user.status || 'ACTIVE',
+        permissions: userPerms
       }
     });
   } catch (err) {
@@ -68,26 +85,59 @@ app.get('/api/users', verifyToken, requireOwner, async (req, res) => {
     const users = await db.getAllUsers();
     return res.json({ users });
   } catch (err) {
+    console.error('Error fetching users:', err);
     return res.status(500).json({ error: 'Failed to retrieve users' });
   }
 });
 
 app.post('/api/users', verifyToken, requireOwner, async (req, res) => {
   try {
-    const { name, username, password, role, phone } = req.body;
+    const { name, username, password, role, phone, permissions, status } = req.body;
     if (!name || !username || !password || !role) {
       return res.status(400).json({ error: 'Name, username, password, and role are required' });
     }
 
-    const existing = await db.findUserByUsername(username);
+    const existing = await db.findUserByUsername(username.trim());
     if (existing) {
       return res.status(400).json({ error: 'Username already taken' });
     }
 
-    const newUser = await db.createUser({ name, username, password, role, phone });
-    return res.status(201).json({ user: newUser });
+    const newUser = await db.createUser({
+      name: name.trim(),
+      username: username.trim(),
+      password,
+      role,
+      phone: phone ? phone.trim() : '',
+      permissions,
+      status
+    });
+    return res.status(201).json({ user: newUser, message: 'User created successfully' });
   } catch (err) {
-    return res.status(500).json({ error: 'Failed to create user' });
+    console.error('Error creating user:', err);
+    return res.status(500).json({ error: err.message || 'Failed to create user' });
+  }
+});
+
+app.put('/api/users/:id', verifyToken, requireOwner, async (req, res) => {
+  try {
+    const { name, phone, role, status, permissions, password } = req.body;
+    const updated = await db.updateUser(req.params.id, {
+      name, phone, role, status, permissions, password
+    });
+    return res.json({ user: updated, message: 'User updated successfully' });
+  } catch (err) {
+    console.error('Error updating user:', err);
+    return res.status(400).json({ error: err.message || 'Failed to update user' });
+  }
+});
+
+app.delete('/api/users/:id', verifyToken, requireOwner, async (req, res) => {
+  try {
+    await db.deleteUser(req.params.id, req.user.id);
+    return res.json({ success: true, message: 'User account deleted successfully' });
+  } catch (err) {
+    console.error('Error deleting user:', err);
+    return res.status(400).json({ error: err.message || 'Failed to delete user' });
   }
 });
 
@@ -101,7 +151,7 @@ app.get('/api/clients', verifyToken, async (req, res) => {
   }
 });
 
-app.post('/api/clients', verifyToken, async (req, res) => {
+app.post('/api/clients', verifyToken, requirePermission('REGISTER_CLIENTS'), async (req, res) => {
   try {
     const {
       name, phone, nic_id, address, notes,
@@ -197,7 +247,7 @@ app.get('/api/loans/:id', verifyToken, async (req, res) => {
   }
 });
 
-app.post('/api/loans', verifyToken, async (req, res) => {
+app.post('/api/loans', verifyToken, requirePermission('ISSUE_LOANS'), async (req, res) => {
   try {
     const {
       client_id,
@@ -278,7 +328,7 @@ app.delete('/api/loans/:id', verifyToken, requireOwner, async (req, res) => {
 
 
 // PAYMENTS & RECEIPT PRINTING (Full & Partial Payments)
-app.post('/api/payments', verifyToken, async (req, res) => {
+app.post('/api/payments', verifyToken, requirePermission('COLLECT_PAYMENTS'), async (req, res) => {
   try {
     const { loan_id, amount_paid, payment_method, notes } = req.body;
 
