@@ -81,178 +81,198 @@ export default function ThermalReceipt({ receipt, onClose }) {
   // Generate 384px wide hardware-exact image for 57mm roll (48mm print head @ 203 DPI)
   const handleSendToThermalApp = async () => {
     try {
-      let estHeight = 620;
-      if (receipt.client_phone) estHeight += 32;
-      if (hasPenalty) estHeight += 85;
-      if (hasPenalty && totalPenalties > 0) estHeight += 32;
-      if (receipt.next_due_date && receipt.next_due_date !== 'Completed') {
-        estHeight += 54;
-        if (receipt.next_due_amount > 0) estHeight += 32;
-      }
-      if (receipt.notes) estHeight += 36;
+      // Helper function: runs in measure mode (ctx === null) or draw mode (ctx provided)
+      const render = (ctx) => {
+        let y = 18;
 
+        const drawCenter = (text, font, isBold = true) => {
+          if (ctx) {
+            ctx.save();
+            ctx.font = `${isBold ? 'bold ' : ''}${font}`;
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'top';
+            ctx.fillText(text, 192, y);
+            ctx.restore();
+          }
+        };
+
+        const drawRow = (label, val, isHeavy = false, isUnderline = false) => {
+          if (ctx) {
+            ctx.save();
+            ctx.font = `bold ${isHeavy ? '19px' : '18px'} Arial, Helvetica, sans-serif`;
+            ctx.textBaseline = 'top';
+            ctx.textAlign = 'left';
+            ctx.fillText(label, 8, y);
+            ctx.textAlign = 'right';
+            ctx.fillText(val, 376, y);
+            if (isUnderline) {
+              const tw = ctx.measureText(val).width;
+              ctx.lineWidth = 2;
+              ctx.beginPath();
+              ctx.moveTo(376 - tw, y + 22);
+              ctx.lineTo(376, y + 22);
+              ctx.stroke();
+            }
+            ctx.restore();
+          }
+          y += 30;
+        };
+
+        const drawDivider = () => {
+          if (ctx) {
+            ctx.save();
+            ctx.strokeStyle = '#000000';
+            ctx.lineWidth = 2.5;
+            ctx.setLineDash([7, 4]);
+            ctx.beginPath();
+            ctx.moveTo(8, y + 8);
+            ctx.lineTo(376, y + 8);
+            ctx.stroke();
+            ctx.restore();
+          }
+          y += 20;
+        };
+
+        // 1. Header
+        drawCenter('SADHAN APEX (PVT) LTD', '24px Arial, sans-serif', true);
+        y += 30;
+        drawCenter('MICRO FINANCIAL SERVICES', '16px Arial, sans-serif', true);
+        y += 22;
+        drawCenter('TEL: +94 76 108 3006', '16px Arial, sans-serif', true);
+        y += 22;
+        drawCenter('OFFICIAL REPAYMENT RECEIPT', '14px Arial, sans-serif', true);
+        y += 22;
+
+        drawDivider();
+
+        // 2. Receipt metadata
+        drawRow('RECEIPT NO:', String(receipt.receipt_no || ''), true);
+        drawRow('DATE/TIME:', formattedDate, false);
+        drawRow('COLLECTOR:', String(receipt.collector_name || 'Staff'), false);
+
+        drawDivider();
+
+        // 3. Client & Loan Details
+        drawRow('CLIENT:', String(receipt.client_name || ''), true);
+        if (receipt.client_phone) {
+          drawRow('CONTACT:', String(receipt.client_phone), false);
+        }
+        drawRow('LOAN REF:', String(receipt.loan_code || ''), true);
+        drawRow('PLAN:', hasPenalty ? `Extended (+${penaltyCount * 8}%)` : '54 Days (58-Lim)', hasPenalty);
+        drawRow('INSTALLMENT:', `#${receipt.current_installment_no || 1} of ${receipt.installment_count || 58}`, true, true);
+
+        drawDivider();
+
+        // 4. Payment
+        drawRow('PAYMENT:', `${receipt.payment_type === 'PARTIAL' ? '*PARTIAL*' : 'FULL'} (${receipt.payment_method || 'CASH'})`, true);
+
+        // 5. Overdue Penalty Box
+        if (hasPenalty) {
+          y += 6;
+          const pBoxTop = y;
+          const boxH = totalPenalties > 0 ? 76 : 56;
+          if (ctx) {
+            ctx.save();
+            ctx.strokeStyle = '#000000';
+            ctx.lineWidth = 2;
+            ctx.setLineDash([5, 3]);
+            ctx.strokeRect(8, pBoxTop, 368, boxH);
+            ctx.restore();
+          }
+
+          y = pBoxTop + 10;
+          drawCenter('*** OVERDUE PENALTY ***', '14px Arial, sans-serif', true);
+          y += 20;
+          drawCenter(`+${penaltyCount * 8}% on remaining balance`, '13px Arial, sans-serif', true);
+          y += 20;
+          if (totalPenalties > 0) {
+            drawCenter(`Added: + Rs. ${Math.round(totalPenalties).toLocaleString()}`, '14px Arial, sans-serif', true);
+          }
+          y = pBoxTop + boxH + 8;
+        }
+
+        // 6. Amount Received Box (with generous 12px internal clearance)
+        y += 8;
+        const boxTopY = y;
+        const boxHeight = 78;
+        if (ctx) {
+          ctx.save();
+          ctx.strokeStyle = '#000000';
+          ctx.lineWidth = 3;
+          ctx.strokeRect(8, boxTopY, 368, boxHeight);
+          ctx.restore();
+        }
+
+        y = boxTopY + 12;
+        drawCenter('AMOUNT RECEIVED', '14px Arial, sans-serif', true);
+        y += 22;
+        drawCenter(`Rs. ${Math.round(Number(receipt.amount_paid)).toLocaleString()}`, '32px Arial, sans-serif', true);
+        y = boxTopY + boxHeight + 14;
+
+        // 7. Balances
+        drawRow('PREV BALANCE:', `Rs. ${Math.round(Number(receipt.previous_balance)).toLocaleString()}`, false);
+        drawRow('REMAINING BAL:', `Rs. ${Math.round(Number(receipt.remaining_balance)).toLocaleString()}`, true);
+
+        if (hasPenalty && totalPenalties > 0) {
+          drawRow('INCL. PENALTY:', `+ Rs. ${Math.round(totalPenalties).toLocaleString()}`, false);
+        }
+
+        // 8. Next Due Date
+        if (receipt.next_due_date && receipt.next_due_date !== 'Completed') {
+          drawDivider();
+          drawRow('NEXT DUE DATE:', formatReceiptDateOnly(receipt.next_due_date), false);
+          if (receipt.next_due_amount > 0) {
+            drawRow('NEXT DUE AMT:', `Rs. ${Math.round(Number(receipt.next_due_amount)).toLocaleString()}`, true);
+          }
+        }
+
+        // 9. Notes
+        if (receipt.notes) {
+          if (ctx) {
+            ctx.save();
+            ctx.font = 'bold 15px Arial, sans-serif';
+            ctx.textBaseline = 'top';
+            ctx.textAlign = 'left';
+            ctx.fillText(`Note: ${receipt.notes}`, 8, y);
+            ctx.restore();
+          }
+          y += 26;
+        }
+
+        drawDivider();
+
+        // 10. Footer & Company Credits (never cut off)
+        drawCenter('Thank you for your payment!', '17px Arial, sans-serif', true);
+        y += 24;
+        drawCenter('Keep this receipt for your records.', '14px Arial, sans-serif', true);
+        y += 22;
+        drawCenter('© Nexora Software Solutions', '16px Arial, sans-serif', true);
+        y += 24;
+
+        // 11. Extra bottom feed space so printer tear cutter doesn't cut through credits
+        y += 70;
+
+        return y;
+      };
+
+      // Pass 1: Measure EXACT required height dynamically
+      const requiredHeight = Math.ceil(render(null));
+
+      // Pass 2: Create canvas sized to exact height
       const canvas = document.createElement('canvas');
       canvas.width = 384; // 48mm hardware print width at 203 DPI (384 dots)
-      canvas.height = estHeight;
+      canvas.height = requiredHeight;
       const ctx = canvas.getContext('2d');
 
       // Solid white background
       ctx.fillStyle = '#ffffff';
-      ctx.fillRect(0, 0, 384, estHeight);
+      ctx.fillRect(0, 0, 384, requiredHeight);
 
       // Black text styling
       ctx.fillStyle = '#000000';
-      let y = 16;
 
-      const drawCenter = (text, font, isBold = true) => {
-        ctx.save();
-        ctx.font = `${isBold ? 'bold ' : ''}${font}`;
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'top';
-        ctx.fillText(text, 192, y);
-        ctx.restore();
-      };
-
-      const drawRow = (label, val, isHeavy = false, isUnderline = false) => {
-        ctx.save();
-        // Clear, large bold 18px font for high visibility on thermal paper
-        ctx.font = `bold ${isHeavy ? '19px' : '18px'} Arial, Helvetica, sans-serif`;
-        ctx.textBaseline = 'top';
-        ctx.textAlign = 'left';
-        ctx.fillText(label, 8, y);
-        ctx.textAlign = 'right';
-        ctx.fillText(val, 376, y);
-        if (isUnderline) {
-          const tw = ctx.measureText(val).width;
-          ctx.lineWidth = 2;
-          ctx.beginPath();
-          ctx.moveTo(376 - tw, y + 22);
-          ctx.lineTo(376, y + 22);
-          ctx.stroke();
-        }
-        ctx.restore();
-        y += 30;
-      };
-
-      const drawDivider = () => {
-        ctx.save();
-        ctx.strokeStyle = '#000000';
-        ctx.lineWidth = 2.5;
-        ctx.setLineDash([7, 4]);
-        ctx.beginPath();
-        ctx.moveTo(8, y + 8);
-        ctx.lineTo(376, y + 8);
-        ctx.stroke();
-        ctx.restore();
-        y += 20;
-      };
-
-      // Header - Large bold headers
-      drawCenter('SADHAN APEX (PVT) LTD', '24px Arial, sans-serif', true);
-      y += 30;
-      drawCenter('MICRO FINANCIAL SERVICES', '16px Arial, sans-serif', true);
-      y += 22;
-      drawCenter('TEL: +94 76 108 3006', '16px Arial, sans-serif', true);
-      y += 22;
-      drawCenter('OFFICIAL REPAYMENT RECEIPT', '14px Arial, sans-serif', true);
-      y += 22;
-
-      drawDivider();
-
-      drawRow('RECEIPT NO:', String(receipt.receipt_no || ''), true);
-      drawRow('DATE/TIME:', formattedDate, false);
-      drawRow('COLLECTOR:', String(receipt.collector_name || 'Staff'), false);
-
-      drawDivider();
-
-      drawRow('CLIENT:', String(receipt.client_name || ''), true);
-      if (receipt.client_phone) {
-        drawRow('CONTACT:', String(receipt.client_phone), false);
-      }
-      drawRow('LOAN REF:', String(receipt.loan_code || ''), true);
-      drawRow('PLAN:', hasPenalty ? `Extended (+${penaltyCount * 8}%)` : '54 Days (58-Lim)', hasPenalty);
-      drawRow('INSTALLMENT:', `#${receipt.current_installment_no || 1} of ${receipt.installment_count || 58}`, true, true);
-
-      drawDivider();
-
-      drawRow('PAYMENT:', `${receipt.payment_type === 'PARTIAL' ? '*PARTIAL*' : 'FULL'} (${receipt.payment_method || 'CASH'})`, true);
-
-      // Overdue Penalty Box
-      if (hasPenalty) {
-        y += 6;
-        const pBoxTop = y;
-        const boxH = totalPenalties > 0 ? 76 : 56;
-        ctx.save();
-        ctx.strokeStyle = '#000000';
-        ctx.lineWidth = 2;
-        ctx.setLineDash([5, 3]);
-        ctx.strokeRect(8, pBoxTop, 368, boxH);
-        ctx.restore();
-
-        y = pBoxTop + 10;
-        drawCenter('*** OVERDUE PENALTY ***', '14px Arial, sans-serif', true);
-        y += 20;
-        drawCenter(`+${penaltyCount * 8}% on remaining balance`, '13px Arial, sans-serif', true);
-        y += 20;
-        if (totalPenalties > 0) {
-          drawCenter(`Added: + Rs. ${Math.round(totalPenalties).toLocaleString()}`, '14px Arial, sans-serif', true);
-        }
-        y = pBoxTop + boxH + 8;
-      }
-
-      // Amount Received Box - Generous padding inside box to eliminate border overlap
-      y += 8;
-      const boxTopY = y;
-      const boxHeight = 78;
-      ctx.save();
-      ctx.strokeStyle = '#000000';
-      ctx.lineWidth = 3;
-      ctx.strokeRect(8, boxTopY, 368, boxHeight);
-      ctx.restore();
-
-      // Clear 12px padding below top line so text never touches or overlaps the border
-      y = boxTopY + 12;
-      drawCenter('AMOUNT RECEIVED', '14px Arial, sans-serif', true);
-      y += 22;
-      drawCenter(`Rs. ${Math.round(Number(receipt.amount_paid)).toLocaleString()}`, '32px Arial, sans-serif', true);
-      
-      // Clean 14px space below the box before next row
-      y = boxTopY + boxHeight + 14;
-
-      drawRow('PREV BALANCE:', `Rs. ${Math.round(Number(receipt.previous_balance)).toLocaleString()}`, false);
-      drawRow('REMAINING BAL:', `Rs. ${Math.round(Number(receipt.remaining_balance)).toLocaleString()}`, true);
-
-      if (hasPenalty && totalPenalties > 0) {
-        drawRow('INCL. PENALTY:', `+ Rs. ${Math.round(totalPenalties).toLocaleString()}`, false);
-      }
-
-      if (receipt.next_due_date && receipt.next_due_date !== 'Completed') {
-        drawDivider();
-        drawRow('NEXT DUE DATE:', formatReceiptDateOnly(receipt.next_due_date), false);
-        if (receipt.next_due_amount > 0) {
-          drawRow('NEXT DUE AMT:', `Rs. ${Math.round(Number(receipt.next_due_amount)).toLocaleString()}`, true);
-        }
-      }
-
-      if (receipt.notes) {
-        ctx.save();
-        ctx.font = 'bold 15px Arial, sans-serif';
-        ctx.textBaseline = 'top';
-        ctx.textAlign = 'left';
-        ctx.fillText(`Note: ${receipt.notes}`, 8, y);
-        ctx.restore();
-        y += 26;
-      }
-
-      drawDivider();
-
-      // Clear & Prominent Credits
-      drawCenter('Thank you for your payment!', '17px Arial, sans-serif', true);
-      y += 24;
-      drawCenter('Keep this receipt for your records.', '14px Arial, sans-serif', true);
-      y += 22;
-      drawCenter('© Nexora Software Solutions', '16px Arial, sans-serif', true);
-      y += 30;
+      // Draw all elements
+      render(ctx);
 
       // Pure Black High-Contrast Binarization
       const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);

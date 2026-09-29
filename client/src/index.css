@@ -1082,7 +1082,7 @@ input[type="date"]::-webkit-calendar-picker-indicator {
     max-width: 100% !important;
     min-width: 100% !important;
     margin: 0 !important;
-    padding: 8mm 6mm !important;
+    padding: 8mm 6mm 30mm 6mm !important;
     border: none !important;
     border-radius: 0 !important;
     box-shadow: none !important;
