@@ -192,7 +192,12 @@ export default function App() {
     setDataRefreshKey(k => k + 1);
   };
 
-  const reminderCount = (reminders?.due_today?.length || 0) + (reminders?.overdue?.length || 0) + (reminders?.penalties?.length || 0);
+  const reminderCount = (() => {
+    const penaltyIds = new Set((reminders?.penalties || []).map(p => String(p.loan_id || p.id || '')));
+    const overdueIds = new Set((reminders?.overdue || []).filter(o => !penaltyIds.has(String(o.loan_id || o.id || ''))).map(o => String(o.loan_id || o.id || '')));
+    const dueTodayCount = (reminders?.due_today || []).filter(d => !penaltyIds.has(String(d.loan_id || d.id || '')) && !overdueIds.has(String(d.loan_id || d.id || ''))).length;
+    return penaltyIds.size + overdueIds.size + dueTodayCount;
+  })();
 
   // If not logged in, render authentication page
   if (!token || !currentUser) {

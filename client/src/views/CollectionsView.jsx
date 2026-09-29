@@ -6,11 +6,15 @@ export default function CollectionsView({
   onOpenPayment
 }) {
   const penaltiesList = reminders?.penalties || [];
+  const penaltyLoanIds = new Set(penaltiesList.map(p => String(p.loan_id || p.id || '')));
 
-  // Group overdue accounts by loan so each account appears only once with highest days late
+  // 1. Overdue accounts: deduplicate by loan and strictly exclude accounts in 58-day limit penalties
   const rawOverdue = reminders?.overdue || [];
   const overdueMap = new Map();
   for (const item of rawOverdue) {
+    const loanIdStr = String(item.loan_id || '');
+    if (penaltyLoanIds.has(loanIdStr)) continue; // Skip if in penalties
+
     const key = item.loan_id || item.loan_code;
     if (!overdueMap.has(key)) {
       overdueMap.set(key, { ...item });
@@ -25,10 +29,17 @@ export default function CollectionsView({
     }
   }
   const overdueList = Array.from(overdueMap.values()).sort((a, b) => b.days_late - a.days_late);
+  const overdueLoanIds = new Set(overdueList.map(o => String(o.loan_id || o.id || '')));
 
+  // 2. Scheduled for today: strictly exclude accounts that are under penalties or overdue
   const rawDueToday = reminders?.due_today || [];
   const dueTodayMap = new Map();
   for (const item of rawDueToday) {
+    const loanIdStr = String(item.loan_id || '');
+    if (penaltyLoanIds.has(loanIdStr) || overdueLoanIds.has(loanIdStr)) {
+      continue; // Skip if already under penalties or overdue
+    }
+
     const key = item.loan_id || item.loan_code;
     if (!dueTodayMap.has(key)) dueTodayMap.set(key, { ...item });
   }

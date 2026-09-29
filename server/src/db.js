@@ -1888,9 +1888,6 @@ const db = {
       }
     }
 
-    const dueToday = Array.from(dueTodayMap.values());
-    const overdue = Array.from(overdueMap.values()).sort((a, b) => b.days_late - a.days_late);
-
     const penalties = penaltyLoansList.map(item => {
       const daysOverdue = item.end_date ? Math.max(1, Math.floor((new Date(todayStr) - new Date(item.end_date)) / 86400000)) : 1;
       const count = parseInt(item.penalty_count, 10) || 1;
@@ -1902,6 +1899,21 @@ const db = {
         message: `${item.client_name} exceeded ${count * 58} installments (${daysOverdue} days overdue). ${count}x 8% overdue penalties applied. Outstanding: Rs. ${Math.round(parseFloat(item.remaining_balance)).toLocaleString()}.`
       };
     });
+
+    // Enforce strict single-category hierarchy:
+    // 1. Penalties accounts ONLY show in Penalties
+    const penaltyLoanIds = new Set(penalties.map(p => String(p.loan_id)));
+
+    // 2. Overdue accounts ONLY show in Overdue (and not in Penalties)
+    const overdue = Array.from(overdueMap.values())
+      .filter(item => !penaltyLoanIds.has(String(item.loan_id)))
+      .sort((a, b) => b.days_late - a.days_late);
+
+    const overdueLoanIds = new Set(overdue.map(o => String(o.loan_id)));
+
+    // 3. Due today accounts ONLY show in Scheduled For Today (and not in Penalties or Overdue)
+    const dueToday = Array.from(dueTodayMap.values())
+      .filter(item => !penaltyLoanIds.has(String(item.loan_id)) && !overdueLoanIds.has(String(item.loan_id)));
 
     return {
       due_today_count: dueToday.length,
