@@ -81,15 +81,15 @@ export default function ThermalReceipt({ receipt, onClose }) {
   // Generate 384px wide hardware-exact image for 57mm roll (48mm print head @ 203 DPI)
   const handleSendToThermalApp = async () => {
     try {
-      let estHeight = 440;
-      if (receipt.client_phone) estHeight += 24;
-      if (hasPenalty) estHeight += 64;
-      if (hasPenalty && totalPenalties > 0) estHeight += 22;
+      let estHeight = 520;
+      if (receipt.client_phone) estHeight += 26;
+      if (hasPenalty) estHeight += 70;
+      if (hasPenalty && totalPenalties > 0) estHeight += 26;
       if (receipt.next_due_date && receipt.next_due_date !== 'Completed') {
-        estHeight += 38;
-        if (receipt.next_due_amount > 0) estHeight += 24;
+        estHeight += 44;
+        if (receipt.next_due_amount > 0) estHeight += 26;
       }
-      if (receipt.notes) estHeight += 30;
+      if (receipt.notes) estHeight += 32;
 
       const canvas = document.createElement('canvas');
       canvas.width = 384; // 48mm hardware print width at 203 DPI (384 dots)
@@ -104,7 +104,7 @@ export default function ThermalReceipt({ receipt, onClose }) {
       ctx.fillStyle = '#000000';
       let y = 16;
 
-      const drawCenter = (text, font, isBold = false) => {
+      const drawCenter = (text, font, isBold = true) => {
         ctx.save();
         ctx.font = `${isBold ? 'bold ' : ''}${font}`;
         ctx.textAlign = 'center';
@@ -113,48 +113,49 @@ export default function ThermalReceipt({ receipt, onClose }) {
         ctx.restore();
       };
 
-      const drawRow = (label, val, isBold = false, isUnderline = false) => {
+      const drawRow = (label, val, isHeavy = false, isUnderline = false) => {
         ctx.save();
-        ctx.font = `${isBold ? 'bold ' : ''}13px 'Courier New', Courier, monospace`;
+        // Use strong bold sans-serif with 15px-16px size for maximum thermal density
+        ctx.font = `bold ${isHeavy ? '16px' : '15px'} Arial, Helvetica, sans-serif`;
         ctx.textBaseline = 'top';
         ctx.textAlign = 'left';
-        ctx.fillText(label, 12, y);
+        ctx.fillText(label, 10, y);
         ctx.textAlign = 'right';
-        ctx.fillText(val, 372, y);
+        ctx.fillText(val, 374, y);
         if (isUnderline) {
           const tw = ctx.measureText(val).width;
-          ctx.lineWidth = 1;
+          ctx.lineWidth = 1.5;
           ctx.beginPath();
-          ctx.moveTo(372 - tw, y + 15);
-          ctx.lineTo(372, y + 15);
+          ctx.moveTo(374 - tw, y + 18);
+          ctx.lineTo(374, y + 18);
           ctx.stroke();
         }
         ctx.restore();
-        y += 22;
+        y += 26;
       };
 
       const drawDivider = () => {
         ctx.save();
         ctx.strokeStyle = '#000000';
-        ctx.lineWidth = 1.5;
-        ctx.setLineDash([5, 4]);
+        ctx.lineWidth = 2;
+        ctx.setLineDash([6, 4]);
         ctx.beginPath();
-        ctx.moveTo(12, y + 6);
-        ctx.lineTo(372, y + 6);
+        ctx.moveTo(10, y + 8);
+        ctx.lineTo(374, y + 8);
         ctx.stroke();
         ctx.restore();
-        y += 14;
+        y += 18;
       };
 
-      // Header
-      drawCenter('SADHAN APEX (PVT) LTD', '18px Arial, sans-serif', true);
-      y += 22;
-      drawCenter('MICRO FINANCIAL SERVICES', '12px Arial, sans-serif', true);
-      y += 16;
-      drawCenter('TEL: +94 76 108 3006', '12px Arial, sans-serif', true);
-      y += 16;
-      drawCenter('OFFICIAL REPAYMENT RECEIPT', '11px Arial, sans-serif', false);
-      y += 16;
+      // Header - Bold and large
+      drawCenter('SADHAN APEX (PVT) LTD', '22px Arial, sans-serif', true);
+      y += 26;
+      drawCenter('MICRO FINANCIAL SERVICES', '14px Arial, sans-serif', true);
+      y += 18;
+      drawCenter('TEL: +94 76 108 3006', '14px Arial, sans-serif', true);
+      y += 18;
+      drawCenter('OFFICIAL REPAYMENT RECEIPT', '13px Arial, sans-serif', true);
+      y += 18;
 
       drawDivider();
 
@@ -178,39 +179,39 @@ export default function ThermalReceipt({ receipt, onClose }) {
 
       // Overdue Penalty Box
       if (hasPenalty) {
-        const boxH = totalPenalties > 0 ? 56 : 40;
+        const boxH = totalPenalties > 0 ? 62 : 46;
         ctx.save();
         ctx.strokeStyle = '#000000';
-        ctx.lineWidth = 1;
+        ctx.lineWidth = 2;
         ctx.setLineDash([4, 3]);
-        ctx.strokeRect(12, y + 2, 360, boxH);
+        ctx.strokeRect(10, y + 2, 364, boxH);
         ctx.restore();
 
         y += 6;
-        drawCenter('*** OVERDUE PENALTY ***', '11px Arial, sans-serif', true);
-        y += 16;
-        drawCenter(`+${penaltyCount * 8}% on remaining balance`, '11px Arial, sans-serif', true);
-        y += 16;
+        drawCenter('*** OVERDUE PENALTY ***', '12px Arial, sans-serif', true);
+        y += 18;
+        drawCenter(`+${penaltyCount * 8}% on remaining balance`, '12px Arial, sans-serif', true);
+        y += 18;
         if (totalPenalties > 0) {
-          drawCenter(`Added: + Rs. ${Math.round(totalPenalties).toLocaleString()}`, '12px Arial, sans-serif', true);
-          y += 18;
+          drawCenter(`Added: + Rs. ${Math.round(totalPenalties).toLocaleString()}`, '13px Arial, sans-serif', true);
+          y += 20;
         } else {
-          y += 4;
+          y += 6;
         }
       }
 
-      // Amount Box
+      // Amount Received Box - Thick bold border & large typography
       y += 4;
       ctx.save();
       ctx.strokeStyle = '#000000';
-      ctx.lineWidth = 2;
-      ctx.strokeRect(12, y, 360, 56);
+      ctx.lineWidth = 3;
+      ctx.strokeRect(10, y, 364, 62);
       ctx.restore();
 
-      drawCenter('AMOUNT RECEIVED', '11px Arial, sans-serif', true);
-      y += 16;
-      drawCenter(`Rs. ${Math.round(Number(receipt.amount_paid)).toLocaleString()}`, '24px Arial, sans-serif', true);
-      y += 46;
+      drawCenter('AMOUNT RECEIVED', '13px Arial, sans-serif', true);
+      y += 18;
+      drawCenter(`Rs. ${Math.round(Number(receipt.amount_paid)).toLocaleString()}`, '28px Arial, sans-serif', true);
+      y += 50;
 
       drawRow('PREV BALANCE:', `Rs. ${Math.round(Number(receipt.previous_balance)).toLocaleString()}`, false);
       drawRow('REMAINING BAL:', `Rs. ${Math.round(Number(receipt.remaining_balance)).toLocaleString()}`, true);
@@ -229,21 +230,41 @@ export default function ThermalReceipt({ receipt, onClose }) {
 
       if (receipt.notes) {
         ctx.save();
-        ctx.font = 'italic 11px Arial, sans-serif';
+        ctx.font = 'bold 13px Arial, sans-serif';
         ctx.textBaseline = 'top';
         ctx.textAlign = 'left';
-        ctx.fillText(`Note: ${receipt.notes}`, 12, y);
+        ctx.fillText(`Note: ${receipt.notes}`, 10, y);
         ctx.restore();
-        y += 20;
+        y += 22;
       }
 
       drawDivider();
 
-      drawCenter('Thank you for your payment!', '12px Arial, sans-serif', true);
+      drawCenter('Thank you for your payment!', '14px Arial, sans-serif', true);
+      y += 20;
+      drawCenter('Keep this receipt for your records.', '12px Arial, sans-serif', true);
       y += 18;
-      drawCenter('Keep this receipt for your records.', '10px Arial, sans-serif', false);
-      y += 16;
-      drawCenter('© Nexora Software Solutions', '10px Arial, sans-serif', false);
+      drawCenter('© Nexora Software Solutions', '11px Arial, sans-serif', true);
+
+      // Contrast Binarization: Convert any anti-aliased grey pixels into pure jet black
+      // This prevents the thermal head from dithering faint scattered dots
+      const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+      const data = imgData.data;
+      for (let i = 0; i < data.length; i += 4) {
+        const brightness = 0.299 * data[i] + 0.587 * data[i + 1] + 0.114 * data[i + 2];
+        if (brightness < 215) {
+          data[i] = 0;       // Red
+          data[i + 1] = 0;   // Green
+          data[i + 2] = 0;   // Blue
+          data[i + 3] = 255; // Alpha
+        } else {
+          data[i] = 255;
+          data[i + 1] = 255;
+          data[i + 2] = 255;
+          data[i + 3] = 255;
+        }
+      }
+      ctx.putImageData(imgData, 0, 0);
 
       canvas.toBlob(async (blob) => {
         if (!blob) return;

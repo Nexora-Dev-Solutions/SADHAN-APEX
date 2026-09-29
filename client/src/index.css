@@ -1075,7 +1075,6 @@ input[type="date"]::-webkit-calendar-picker-indicator {
   }
 
   /* Thermal receipt container stretches across full page width */
-  /* Proportional typography ensures that when iOS A4 is shrunk to 48mm by the printer, text is crisp & full width */
   .thermal-receipt-container {
     display: block !important;
     position: static !important;
@@ -1089,17 +1088,20 @@ input[type="date"]::-webkit-calendar-picker-indicator {
     box-shadow: none !important;
     background: #ffffff !important;
     color: #000000 !important;
-    font-family: 'Courier New', Courier, monospace !important;
-    font-size: 26px !important;
+    font-family: Arial, Helvetica, -apple-system, sans-serif !important;
+    font-size: 28px !important;
+    font-weight: 800 !important;
     line-height: 1.35 !important;
     page-break-inside: avoid !important;
     break-inside: avoid !important;
     box-sizing: border-box !important;
+    -webkit-text-stroke: 0.5px #000000 !important;
   }
 
   .thermal-receipt-container * {
     visibility: visible !important;
     color: #000000 !important;
+    font-weight: 800 !important;
   }
 
   .receipt-header {
@@ -1108,7 +1110,7 @@ input[type="date"]::-webkit-calendar-picker-indicator {
   }
 
   .receipt-title {
-    font-size: 34px !important;
+    font-size: 36px !important;
     font-weight: 900 !important;
     letter-spacing: 0.04em !important;
     text-align: center !important;
@@ -1116,8 +1118,8 @@ input[type="date"]::-webkit-calendar-picker-indicator {
   }
 
   .receipt-subtitle {
-    font-size: 24px !important;
-    font-weight: 700 !important;
+    font-size: 26px !important;
+    font-weight: 800 !important;
     text-align: center !important;
   }
 
@@ -1125,40 +1127,41 @@ input[type="date"]::-webkit-calendar-picker-indicator {
     display: flex !important;
     justify-content: space-between !important;
     width: 100% !important;
-    margin-bottom: 6px !important;
-    font-size: 24px !important;
+    margin-bottom: 8px !important;
+    font-size: 26px !important;
+    font-weight: 800 !important;
   }
 
   .receipt-label {
-    font-size: 24px !important;
-    font-weight: 700 !important;
+    font-size: 26px !important;
+    font-weight: 800 !important;
   }
 
   .receipt-value {
-    font-size: 24px !important;
-    font-weight: 800 !important;
+    font-size: 26px !important;
+    font-weight: 900 !important;
     text-align: right !important;
   }
 
   .receipt-divider {
-    border-top: 2px dashed #000000 !important;
+    border-top: 3px dashed #000000 !important;
     margin: 14px 0 !important;
     width: 100% !important;
   }
 
   .receipt-amount-box {
     background: transparent !important;
-    border: 3px solid #000000 !important;
+    border: 4px solid #000000 !important;
     border-radius: 4px !important;
     padding: 14px 10px !important;
-    margin: 16px 0 !important;
+    margin: 18px 0 !important;
     text-align: center !important;
     width: 100% !important;
     box-sizing: border-box !important;
   }
 
   .receipt-amount-title {
-    font-size: 22px !important;
+    font-size: 24px !important;
     font-weight: 800 !important;
     color: #000000 !important;
     letter-spacing: 0.05em !important;
@@ -1166,7 +1169,7 @@ input[type="date"]::-webkit-calendar-picker-indicator {
   }
 
   .receipt-amount-main {
-    font-size: 44px !important;
+    font-size: 48px !important;
     font-weight: 900 !important;
     color: #000000 !important;
     letter-spacing: 0.03em !important;
@@ -1175,6 +1178,7 @@ input[type="date"]::-webkit-calendar-picker-indicator {
   .receipt-footer {
     text-align: center !important;
     margin-top: 20px !important;
-    font-size: 20px !important;
+    font-size: 22px !important;
+    font-weight: 700 !important;
   }
 }
