@@ -766,9 +766,10 @@ input[type="date"]::-webkit-calendar-picker-indicator {
 }
 
 .receipt-amount-box {
-  background: #000000;
-  color: #ffffff;
-  padding: 6px 8px;
+  background: transparent;
+  color: #000000;
+  border: 1.5px solid #000000;
+  padding: 8px 6px;
   margin: 10px 0;
   text-align: center;
   border-radius: 4px;
@@ -778,12 +779,15 @@ input[type="date"]::-webkit-calendar-picker-indicator {
   font-size: 10px;
   text-transform: uppercase;
   letter-spacing: 0.08em;
+  font-weight: 800;
+  color: #111111;
 }
 
 .receipt-amount-main {
   font-size: 20px;
-  font-weight: 800;
+  font-weight: 900;
   letter-spacing: -0.02em;
+  color: #000000;
 }
 
 .receipt-footer {
@@ -1083,30 +1087,91 @@ input[type="date"]::-webkit-calendar-picker-indicator {
     margin: 0 auto !important;
   }
 
-  /* 5. Cleanly style the receipt slip (Centered on A4 PDF, Full-fit on 80mm roll) */
+  /* 5. Cleanly style the receipt slip (Formatted edge-to-edge for 58mm portable printers) */
   .thermal-receipt-container {
-    position: relative !important;
-    width: 78mm !important;
-    max-width: 78mm !important;
-    margin: 12px auto !important;
-    padding: 6mm 5mm !important;
-    border: 1px solid #d1d5db !important;
-    border-radius: 4px !important;
+    position: static !important;
+    width: 48mm !important;
+    max-width: 48mm !important;
+    min-width: 48mm !important;
+    margin: 0 auto !important;
+    padding: 1.5mm 0.5mm !important;
+    border: none !important;
+    border-radius: 0 !important;
     box-shadow: none !important;
     background: #ffffff !important;
     color: #000000 !important;
+    font-family: 'Courier New', Courier, monospace !important;
+    font-size: 11px !important;
+    line-height: 1.25 !important;
     box-sizing: border-box !important;
     page-break-inside: avoid !important;
     break-inside: avoid !important;
     visibility: visible !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  .thermal-receipt-container.roll-80mm {
+    width: 72mm !important;
+    max-width: 72mm !important;
+    min-width: 72mm !important;
   }
 
   .thermal-receipt-container * {
     visibility: visible !important;
+    color: #000000 !important;
+  }
+
+  .receipt-title {
+    font-size: 14px !important;
+    font-weight: 900 !important;
+  }
+
+  .receipt-subtitle {
+    font-size: 10px !important;
+    font-weight: 700 !important;
+  }
+
+  .receipt-row {
+    margin-bottom: 2px !important;
+  }
+
+  .receipt-label {
+    font-size: 10.5px !important;
+    font-weight: 700 !important;
+  }
+
+  .receipt-value {
+    font-size: 10.5px !important;
+    font-weight: 800 !important;
+  }
+
+  .receipt-divider {
+    border-top: 1px dashed #000000 !important;
+    margin: 4px 0 !important;
+  }
+
+  .receipt-amount-box {
+    background: transparent !important;
+    border: 1.5px solid #000000 !important;
+    padding: 4px 2px !important;
+    margin: 6px 0 !important;
+  }
+
+  .receipt-amount-title {
+    font-size: 9px !important;
+    font-weight: 800 !important;
+    color: #000000 !important;
+  }
+
+  .receipt-amount-main {
+    font-size: 16px !important;
+    font-weight: 900 !important;
+    color: #000000 !important;
   }
 
   @page {
-    size: auto;
-    margin: 0;
+    size: 58mm auto;
+    margin: 0mm !important;
   }
 }

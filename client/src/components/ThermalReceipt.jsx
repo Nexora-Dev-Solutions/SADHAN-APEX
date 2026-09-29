@@ -1,11 +1,66 @@
-import React from 'react';
-import { Printer, X, CheckCircle } from 'lucide-react';
+import React, { useState } from 'react';
+import { Printer, X, CheckCircle, Bluetooth, Share2, Copy, Check, Smartphone } from 'lucide-react';
+import { printDirectWebBluetooth, generateTextReceipt, generateEscPos } from '../utils/thermalPrinter';
 
 export default function ThermalReceipt({ receipt, onClose }) {
   if (!receipt) return null;
 
+  const [paperWidth, setPaperWidth] = useState('58mm'); // '58mm' | '80mm'
+  const [isBluetoothPrinting, setIsBluetoothPrinting] = useState(false);
+  const [btStatus, setBtStatus] = useState('');
+  const [copied, setCopied] = useState(false);
+
   const handlePrint = () => {
     window.print();
+  };
+
+  const handleBluetoothPrint = async () => {
+    setIsBluetoothPrinting(true);
+    setBtStatus('Pairing with Bluetooth printer...');
+    try {
+      await printDirectWebBluetooth(receipt, paperWidth === '80mm' ? 48 : 32);
+      setBtStatus('✓ Printed successfully!');
+      setTimeout(() => setBtStatus(''), 4000);
+    } catch (err) {
+      console.warn('Bluetooth print notice:', err);
+      // If user cancelled device picker, or bluetooth not available
+      setBtStatus(err.message.includes('User cancelled') ? 'Pairing cancelled' : (err.message || 'Bluetooth connection failed'));
+      setTimeout(() => setBtStatus(''), 6000);
+    } finally {
+      setIsBluetoothPrinting(false);
+    }
+  };
+
+  const handleRawBtPrint = () => {
+    try {
+      const escBytes = generateEscPos(receipt, paperWidth === '80mm' ? 48 : 32);
+      let binary = '';
+      for (let i = 0; i < escBytes.byteLength; i++) {
+        binary += String.fromCharCode(escBytes[i]);
+      }
+      const base64 = btoa(binary);
+      // RawBT / Thermal Bluetooth Printer Android intent URL
+      window.location.href = `rawbt:data:application/octet-stream;base64,${base64}`;
+    } catch (err) {
+      handlePrint();
+    }
+  };
+
+  const handleWhatsAppShare = () => {
+    const text = generateTextReceipt(receipt, 32);
+    const phone = (receipt.client_phone || '').replace(/[^0-9]/g, '');
+    const cleanPhone = phone.startsWith('0') ? '94' + phone.slice(1) : phone;
+    const url = cleanPhone
+      ? `https://wa.me/${cleanPhone}?text=${encodeURIComponent(text)}`
+      : `https://wa.me/?text=${encodeURIComponent(text)}`;
+    window.open(url, '_blank');
+  };
+
+  const handleCopyText = () => {
+    const text = generateTextReceipt(receipt, 32);
+    navigator.clipboard.writeText(text);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2500);
   };
 
   const formattedDate = new Date(receipt.created_at || Date.now()).toLocaleString('en-GB', {
@@ -52,16 +107,101 @@ export default function ThermalReceipt({ receipt, onClose }) {
         <div className="modal-header no-print">
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             <Printer size={20} color="#3b82f6" />
-            <h3 style={{ fontSize: '1.1rem', fontWeight: '700' }}>Thermal Receipt Preview</h3>
+            <h3 style={{ fontSize: '1.05rem', fontWeight: '700' }}>Thermal Receipt Terminal</h3>
           </div>
           <button className="btn btn-secondary btn-sm" onClick={onClose}>
             <X size={16} />
           </button>
         </div>
 
+        {/* Paper Size & Direct Bluetooth Bar */}
+        <div className="no-print" style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          padding: '8px 16px',
+          background: 'rgba(255,255,255,0.03)',
+          borderBottom: '1px solid var(--surface-border)',
+          gap: '8px',
+          flexWrap: 'wrap'
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: '600' }}>ROLL WIDTH:</span>
+            <div style={{ display: 'inline-flex', background: 'rgba(0,0,0,0.4)', borderRadius: '6px', padding: '2px', border: '1px solid var(--surface-border)' }}>
+              <button
+                type="button"
+                onClick={() => setPaperWidth('58mm')}
+                style={{
+                  border: 'none',
+                  background: paperWidth === '58mm' ? 'var(--accent-primary)' : 'transparent',
+                  color: paperWidth === '58mm' ? '#fff' : 'var(--text-muted)',
+                  padding: '3px 8px',
+                  borderRadius: '4px',
+                  fontSize: '0.72rem',
+                  fontWeight: '700',
+                  cursor: 'pointer'
+                }}
+              >
+                58mm (Pocket POS)
+              </button>
+              <button
+                type="button"
+                onClick={() => setPaperWidth('80mm')}
+                style={{
+                  border: 'none',
+                  background: paperWidth === '80mm' ? 'var(--accent-primary)' : 'transparent',
+                  color: paperWidth === '80mm' ? '#fff' : 'var(--text-muted)',
+                  padding: '3px 8px',
+                  borderRadius: '4px',
+                  fontSize: '0.72rem',
+                  fontWeight: '700',
+                  cursor: 'pointer'
+                }}
+              >
+                80mm (Counter POS)
+              </button>
+            </div>
+          </div>
+
+          <div style={{ display: 'flex', gap: '6px' }}>
+            <button
+              className="btn btn-secondary btn-sm"
+              onClick={handleWhatsAppShare}
+              title="Share receipt via WhatsApp"
+              style={{ padding: '4px 8px', fontSize: '0.75rem', gap: '4px', color: '#34d399', borderColor: 'rgba(52, 211, 153, 0.3)' }}
+            >
+              <Share2 size={13} />
+              WhatsApp
+            </button>
+            <button
+              className="btn btn-secondary btn-sm"
+              onClick={handleCopyText}
+              title="Copy receipt plain text"
+              style={{ padding: '4px 8px', fontSize: '0.75rem', gap: '4px' }}
+            >
+              {copied ? <Check size={13} color="#10b981" /> : <Copy size={13} />}
+              {copied ? 'Copied' : 'Copy'}
+            </button>
+          </div>
+        </div>
+
+        {btStatus && (
+          <div className="no-print" style={{
+            background: btStatus.includes('✓') ? 'rgba(16, 185, 129, 0.15)' : 'rgba(59, 130, 246, 0.15)',
+            color: btStatus.includes('✓') ? '#34d399' : '#60a5fa',
+            padding: '8px 16px',
+            fontSize: '0.78rem',
+            textAlign: 'center',
+            fontWeight: '600',
+            borderBottom: '1px solid var(--surface-border)'
+          }}>
+            {btStatus}
+          </div>
+        )}
+
         <div className="modal-body" style={{ background: '#0a0e17' }}>
           {/* Thermal Receipt Paper representation */}
-          <div className="thermal-receipt-container">
+          <div className={`thermal-receipt-container ${paperWidth === '80mm' ? 'roll-80mm' : ''}`}>
             <div className="receipt-header">
               <div className="receipt-title" style={{ fontSize: '14px', fontWeight: '800', letterSpacing: '0.04em' }}>
                 SADHAN APEX (PVT) LTD
@@ -235,14 +375,56 @@ export default function ThermalReceipt({ receipt, onClose }) {
           </div>
         </div>
 
-        <div className="modal-footer no-print" style={{ display: 'flex', gap: '8px', width: '100%', padding: '12px 16px' }}>
-          <button className="btn btn-secondary" style={{ flex: 1, justifyContent: 'center' }} onClick={onClose}>
-            Done
-          </button>
-          <button className="btn btn-primary" style={{ flex: 1.5, justifyContent: 'center', gap: '8px', whiteSpace: 'nowrap' }} onClick={handlePrint}>
-            <Printer size={18} />
-            Print Receipt
-          </button>
+        <div className="modal-footer no-print" style={{ display: 'flex', flexDirection: 'column', gap: '8px', width: '100%', padding: '14px 16px' }}>
+          {/* Main Print Actions Row */}
+          <div style={{ display: 'flex', gap: '8px', width: '100%' }}>
+            <button
+              className="btn btn-primary"
+              style={{
+                flex: 1.5,
+                justifyContent: 'center',
+                gap: '8px',
+                background: 'linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%)',
+                boxShadow: '0 4px 12px rgba(37, 99, 235, 0.35)'
+              }}
+              onClick={handleBluetoothPrint}
+              disabled={isBluetoothPrinting}
+            >
+              <Bluetooth size={18} />
+              <span>{isBluetoothPrinting ? 'Connecting...' : 'Direct Bluetooth Print'}</span>
+            </button>
+
+            <button
+              className="btn btn-secondary"
+              style={{ flex: 1, justifyContent: 'center', gap: '6px' }}
+              onClick={handlePrint}
+              title="Standard browser print (optimized for 58mm paper)"
+            >
+              <Printer size={16} />
+              <span>System Print</span>
+            </button>
+          </div>
+
+          {/* Secondary Actions Row */}
+          <div style={{ display: 'flex', gap: '8px', width: '100%' }}>
+            <button
+              className="btn btn-secondary btn-sm"
+              style={{ flex: 1, justifyContent: 'center', gap: '6px', fontSize: '0.76rem' }}
+              onClick={handleRawBtPrint}
+              title="Open directly in RawBT or Thermal Bluetooth Printer Android app"
+            >
+              <Smartphone size={14} />
+              <span>Thermal App Print</span>
+            </button>
+
+            <button
+              className="btn btn-secondary btn-sm"
+              style={{ width: '80px', justifyContent: 'center' }}
+              onClick={onClose}
+            >
+              Done
+            </button>
+          </div>
         </div>
       </div>
     </div>
