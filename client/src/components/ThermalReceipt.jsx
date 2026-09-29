@@ -179,39 +179,45 @@ export default function ThermalReceipt({ receipt, onClose }) {
 
       // Overdue Penalty Box
       if (hasPenalty) {
-        const boxH = totalPenalties > 0 ? 72 : 52;
+        y += 6;
+        const pBoxTop = y;
+        const boxH = totalPenalties > 0 ? 76 : 56;
         ctx.save();
         ctx.strokeStyle = '#000000';
-        ctx.lineWidth = 2.5;
+        ctx.lineWidth = 2;
         ctx.setLineDash([5, 3]);
-        ctx.strokeRect(8, y + 2, 368, boxH);
+        ctx.strokeRect(8, pBoxTop, 368, boxH);
         ctx.restore();
 
-        y += 8;
+        y = pBoxTop + 10;
         drawCenter('*** OVERDUE PENALTY ***', '14px Arial, sans-serif', true);
         y += 20;
-        drawCenter(`+${penaltyCount * 8}% on remaining balance`, '14px Arial, sans-serif', true);
+        drawCenter(`+${penaltyCount * 8}% on remaining balance`, '13px Arial, sans-serif', true);
         y += 20;
         if (totalPenalties > 0) {
-          drawCenter(`Added: + Rs. ${Math.round(totalPenalties).toLocaleString()}`, '15px Arial, sans-serif', true);
-          y += 22;
-        } else {
-          y += 6;
+          drawCenter(`Added: + Rs. ${Math.round(totalPenalties).toLocaleString()}`, '14px Arial, sans-serif', true);
         }
+        y = pBoxTop + boxH + 8;
       }
 
-      // Amount Received Box - High-impact, deep black
-      y += 6;
+      // Amount Received Box - Generous padding inside box to eliminate border overlap
+      y += 8;
+      const boxTopY = y;
+      const boxHeight = 78;
       ctx.save();
       ctx.strokeStyle = '#000000';
-      ctx.lineWidth = 3.5;
-      ctx.strokeRect(8, y, 368, 68);
+      ctx.lineWidth = 3;
+      ctx.strokeRect(8, boxTopY, 368, boxHeight);
       ctx.restore();
 
-      drawCenter('AMOUNT RECEIVED', '15px Arial, sans-serif', true);
-      y += 20;
+      // Clear 12px padding below top line so text never touches or overlaps the border
+      y = boxTopY + 12;
+      drawCenter('AMOUNT RECEIVED', '14px Arial, sans-serif', true);
+      y += 22;
       drawCenter(`Rs. ${Math.round(Number(receipt.amount_paid)).toLocaleString()}`, '32px Arial, sans-serif', true);
-      y += 56;
+      
+      // Clean 14px space below the box before next row
+      y = boxTopY + boxHeight + 14;
 
       drawRow('PREV BALANCE:', `Rs. ${Math.round(Number(receipt.previous_balance)).toLocaleString()}`, false);
       drawRow('REMAINING BAL:', `Rs. ${Math.round(Number(receipt.remaining_balance)).toLocaleString()}`, true);
