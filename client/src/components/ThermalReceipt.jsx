@@ -1,5 +1,5 @@
 import React from 'react';
-import { Printer, X, Share2 } from 'lucide-react';
+import { Printer, X, Share2, Smartphone } from 'lucide-react';
 
 export default function ThermalReceipt({ receipt, onClose }) {
   if (!receipt) return null;
@@ -78,9 +78,211 @@ export default function ThermalReceipt({ receipt, onClose }) {
     }
   }
 
+  // Generate 384px wide hardware-exact image for 57mm roll (48mm print head @ 203 DPI)
+  const handleSendToThermalApp = async () => {
+    try {
+      let estHeight = 440;
+      if (receipt.client_phone) estHeight += 24;
+      if (hasPenalty) estHeight += 64;
+      if (hasPenalty && totalPenalties > 0) estHeight += 22;
+      if (receipt.next_due_date && receipt.next_due_date !== 'Completed') {
+        estHeight += 38;
+        if (receipt.next_due_amount > 0) estHeight += 24;
+      }
+      if (receipt.notes) estHeight += 30;
+
+      const canvas = document.createElement('canvas');
+      canvas.width = 384; // 48mm hardware print width at 203 DPI (384 dots)
+      canvas.height = estHeight;
+      const ctx = canvas.getContext('2d');
+
+      // Solid white background
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(0, 0, 384, estHeight);
+
+      // Black text styling
+      ctx.fillStyle = '#000000';
+      let y = 16;
+
+      const drawCenter = (text, font, isBold = false) => {
+        ctx.save();
+        ctx.font = `${isBold ? 'bold ' : ''}${font}`;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'top';
+        ctx.fillText(text, 192, y);
+        ctx.restore();
+      };
+
+      const drawRow = (label, val, isBold = false, isUnderline = false) => {
+        ctx.save();
+        ctx.font = `${isBold ? 'bold ' : ''}13px 'Courier New', Courier, monospace`;
+        ctx.textBaseline = 'top';
+        ctx.textAlign = 'left';
+        ctx.fillText(label, 12, y);
+        ctx.textAlign = 'right';
+        ctx.fillText(val, 372, y);
+        if (isUnderline) {
+          const tw = ctx.measureText(val).width;
+          ctx.lineWidth = 1;
+          ctx.beginPath();
+          ctx.moveTo(372 - tw, y + 15);
+          ctx.lineTo(372, y + 15);
+          ctx.stroke();
+        }
+        ctx.restore();
+        y += 22;
+      };
+
+      const drawDivider = () => {
+        ctx.save();
+        ctx.strokeStyle = '#000000';
+        ctx.lineWidth = 1.5;
+        ctx.setLineDash([5, 4]);
+        ctx.beginPath();
+        ctx.moveTo(12, y + 6);
+        ctx.lineTo(372, y + 6);
+        ctx.stroke();
+        ctx.restore();
+        y += 14;
+      };
+
+      // Header
+      drawCenter('SADHAN APEX (PVT) LTD', '18px Arial, sans-serif', true);
+      y += 22;
+      drawCenter('MICRO FINANCIAL SERVICES', '12px Arial, sans-serif', true);
+      y += 16;
+      drawCenter('TEL: +94 76 108 3006', '12px Arial, sans-serif', true);
+      y += 16;
+      drawCenter('OFFICIAL REPAYMENT RECEIPT', '11px Arial, sans-serif', false);
+      y += 16;
+
+      drawDivider();
+
+      drawRow('RECEIPT NO:', String(receipt.receipt_no || ''), true);
+      drawRow('DATE/TIME:', formattedDate, false);
+      drawRow('COLLECTOR:', String(receipt.collector_name || 'Staff'), false);
+
+      drawDivider();
+
+      drawRow('CLIENT:', String(receipt.client_name || ''), true);
+      if (receipt.client_phone) {
+        drawRow('CONTACT:', String(receipt.client_phone), false);
+      }
+      drawRow('LOAN REF:', String(receipt.loan_code || ''), true);
+      drawRow('PLAN:', hasPenalty ? `Extended (+${penaltyCount * 8}%)` : '54 Days (58-Lim)', hasPenalty);
+      drawRow('INSTALLMENT:', `#${receipt.current_installment_no || 1} of ${receipt.installment_count || 58}`, true, true);
+
+      drawDivider();
+
+      drawRow('PAYMENT:', `${receipt.payment_type === 'PARTIAL' ? '*PARTIAL*' : 'FULL'} (${receipt.payment_method || 'CASH'})`, true);
+
+      // Overdue Penalty Box
+      if (hasPenalty) {
+        const boxH = totalPenalties > 0 ? 56 : 40;
+        ctx.save();
+        ctx.strokeStyle = '#000000';
+        ctx.lineWidth = 1;
+        ctx.setLineDash([4, 3]);
+        ctx.strokeRect(12, y + 2, 360, boxH);
+        ctx.restore();
+
+        y += 6;
+        drawCenter('*** OVERDUE PENALTY ***', '11px Arial, sans-serif', true);
+        y += 16;
+        drawCenter(`+${penaltyCount * 8}% on remaining balance`, '11px Arial, sans-serif', true);
+        y += 16;
+        if (totalPenalties > 0) {
+          drawCenter(`Added: + Rs. ${Math.round(totalPenalties).toLocaleString()}`, '12px Arial, sans-serif', true);
+          y += 18;
+        } else {
+          y += 4;
+        }
+      }
+
+      // Amount Box
+      y += 4;
+      ctx.save();
+      ctx.strokeStyle = '#000000';
+      ctx.lineWidth = 2;
+      ctx.strokeRect(12, y, 360, 56);
+      ctx.restore();
+
+      drawCenter('AMOUNT RECEIVED', '11px Arial, sans-serif', true);
+      y += 16;
+      drawCenter(`Rs. ${Math.round(Number(receipt.amount_paid)).toLocaleString()}`, '24px Arial, sans-serif', true);
+      y += 46;
+
+      drawRow('PREV BALANCE:', `Rs. ${Math.round(Number(receipt.previous_balance)).toLocaleString()}`, false);
+      drawRow('REMAINING BAL:', `Rs. ${Math.round(Number(receipt.remaining_balance)).toLocaleString()}`, true);
+
+      if (hasPenalty && totalPenalties > 0) {
+        drawRow('INCL. PENALTY:', `+ Rs. ${Math.round(totalPenalties).toLocaleString()}`, false);
+      }
+
+      if (receipt.next_due_date && receipt.next_due_date !== 'Completed') {
+        drawDivider();
+        drawRow('NEXT DUE DATE:', formatReceiptDateOnly(receipt.next_due_date), false);
+        if (receipt.next_due_amount > 0) {
+          drawRow('NEXT DUE AMT:', `Rs. ${Math.round(Number(receipt.next_due_amount)).toLocaleString()}`, true);
+        }
+      }
+
+      if (receipt.notes) {
+        ctx.save();
+        ctx.font = 'italic 11px Arial, sans-serif';
+        ctx.textBaseline = 'top';
+        ctx.textAlign = 'left';
+        ctx.fillText(`Note: ${receipt.notes}`, 12, y);
+        ctx.restore();
+        y += 20;
+      }
+
+      drawDivider();
+
+      drawCenter('Thank you for your payment!', '12px Arial, sans-serif', true);
+      y += 18;
+      drawCenter('Keep this receipt for your records.', '10px Arial, sans-serif', false);
+      y += 16;
+      drawCenter('© Nexora Software Solutions', '10px Arial, sans-serif', false);
+
+      canvas.toBlob(async (blob) => {
+        if (!blob) return;
+        const fileName = `Receipt-${receipt.receipt_no || 'loan'}.png`;
+        const file = new File([blob], fileName, { type: 'image/png' });
+
+        if (navigator.canShare && navigator.canShare({ files: [file] })) {
+          try {
+            await navigator.share({
+              files: [file],
+              title: `Receipt ${receipt.receipt_no}`,
+              text: `Thermal receipt for ${receipt.client_name}`
+            });
+            return;
+          } catch (shareErr) {
+            if (shareErr.name === 'AbortError') return;
+            console.warn('Share error, downloading fallback:', shareErr);
+          }
+        }
+
+        // Direct download fallback
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = fileName;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        setTimeout(() => URL.revokeObjectURL(url), 3000);
+      }, 'image/png');
+    } catch (e) {
+      console.error('Failed to generate thermal receipt image:', e);
+      window.print();
+    }
+  };
+
   return (
     <div className="modal-overlay thermal-receipt-modal">
-      <div className="modal-content" style={{ maxWidth: '380px' }}>
+      <div className="modal-content thermal-modal-content" style={{ maxWidth: '380px' }}>
         <div className="modal-header no-print">
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             <Printer size={18} color="#3b82f6" />
@@ -263,23 +465,41 @@ export default function ThermalReceipt({ receipt, onClose }) {
           </div>
         </div>
 
-        <div className="modal-footer no-print" style={{ display: 'flex', gap: '8px', width: '100%', padding: '12px 16px' }}>
-          <button className="btn btn-secondary" style={{ flex: 1, justifyContent: 'center' }} onClick={onClose}>
+        <div className="modal-footer no-print" style={{ display: 'flex', flexDirection: 'column', gap: '8px', width: '100%', padding: '12px 16px' }}>
+          <div style={{ display: 'flex', gap: '8px', width: '100%' }}>
+            <button
+              className="btn btn-primary"
+              style={{
+                flex: 1.2,
+                justifyContent: 'center',
+                gap: '8px',
+                fontWeight: '700',
+                background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+                boxShadow: '0 4px 12px rgba(16, 185, 129, 0.3)'
+              }}
+              onClick={handleSendToThermalApp}
+              title="Open direct 384px image in Thermal Bluetooth Printer app"
+            >
+              <Smartphone size={18} />
+              Send to Thermal App
+            </button>
+            <button
+              className="btn btn-secondary"
+              style={{
+                flex: 0.9,
+                justifyContent: 'center',
+                gap: '8px',
+                fontWeight: '600'
+              }}
+              onClick={handlePrint}
+              title="Print via standard AirPrint dialog"
+            >
+              <Printer size={17} />
+              AirPrint
+            </button>
+          </div>
+          <button className="btn btn-ghost btn-sm" style={{ width: '100%', justifyContent: 'center', color: '#94a3b8' }} onClick={onClose}>
             Done
-          </button>
-          <button
-            className="btn btn-primary"
-            style={{
-              flex: 1.8,
-              justifyContent: 'center',
-              gap: '8px',
-              fontWeight: '700',
-              background: 'linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%)'
-            }}
-            onClick={handlePrint}
-          >
-            <Printer size={18} />
-            Print Receipt
           </button>
         </div>
       </div>

@@ -1015,10 +1015,11 @@ input[type="date"]::-webkit-calendar-picker-indicator {
   }
 }
 
-/* PRINT MEDIA QUERY FOR 57MM / 58MM PHYSICAL THERMAL PRINTERS */
+/* PRINT MEDIA QUERY FOR PHYSICAL THERMAL PRINTERS & AIRPRINT */
 @media print {
   @page {
-    size: 58mm auto;
+    /* Support direct roll printers when available, but remove margins */
+    size: auto;
     margin: 0 !important;
   }
 
@@ -1031,13 +1032,14 @@ input[type="date"]::-webkit-calendar-picker-indicator {
   html, body {
     width: 100% !important;
     max-width: 100% !important;
+    min-width: 100% !important;
     margin: 0 !important;
     padding: 0 !important;
     background: #ffffff !important;
     color: #000000 !important;
   }
 
-  /* 2. Completely remove non-receipt elements from print layout */
+  /* Completely remove non-receipt elements from print layout */
   .sidebar,
   .top-bar,
   .content-body,
@@ -1052,42 +1054,47 @@ input[type="date"]::-webkit-calendar-picker-indicator {
     display: none !important;
   }
 
-  /* 3. Keep layout wrapper 100% full-width without desktop margins */
+  /* Full-width wrapper without dialog borders or centering margins */
   #root,
   .app-container,
   .main-wrapper,
   .thermal-receipt-modal,
   .thermal-receipt-modal .modal-content,
-  .thermal-receipt-modal .modal-body {
+  .thermal-receipt-modal .modal-body,
+  .thermal-modal-content {
     display: block !important;
     position: static !important;
     width: 100% !important;
     max-width: 100% !important;
+    min-width: 100% !important;
     margin: 0 !important;
     padding: 0 !important;
     border: none !important;
     box-shadow: none !important;
-    background: transparent !important;
+    background: #ffffff !important;
   }
 
-  /* 4. Thermal receipt container fills the full 48mm-57mm roll */
+  /* Thermal receipt container stretches across full page width */
+  /* Proportional typography ensures that when iOS A4 is shrunk to 48mm by the printer, text is crisp & full width */
   .thermal-receipt-container {
     display: block !important;
     position: static !important;
     width: 100% !important;
     max-width: 100% !important;
+    min-width: 100% !important;
     margin: 0 !important;
-    padding: 2mm 1mm !important;
+    padding: 8mm 6mm !important;
     border: none !important;
     border-radius: 0 !important;
     box-shadow: none !important;
     background: #ffffff !important;
     color: #000000 !important;
     font-family: 'Courier New', Courier, monospace !important;
-    font-size: 12px !important;
-    line-height: 1.28 !important;
+    font-size: 26px !important;
+    line-height: 1.35 !important;
     page-break-inside: avoid !important;
     break-inside: avoid !important;
+    box-sizing: border-box !important;
   }
 
   .thermal-receipt-container * {
@@ -1097,18 +1104,19 @@ input[type="date"]::-webkit-calendar-picker-indicator {
 
   .receipt-header {
     text-align: center !important;
-    margin-bottom: 6px !important;
+    margin-bottom: 16px !important;
   }
 
   .receipt-title {
-    font-size: 15px !important;
+    font-size: 34px !important;
     font-weight: 900 !important;
-    letter-spacing: 0.02em !important;
+    letter-spacing: 0.04em !important;
     text-align: center !important;
+    margin-bottom: 4px !important;
   }
 
   .receipt-subtitle {
-    font-size: 11px !important;
+    font-size: 24px !important;
     font-weight: 700 !important;
     text-align: center !important;
   }
@@ -1117,50 +1125,56 @@ input[type="date"]::-webkit-calendar-picker-indicator {
     display: flex !important;
     justify-content: space-between !important;
     width: 100% !important;
-    margin-bottom: 2px !important;
+    margin-bottom: 6px !important;
+    font-size: 24px !important;
   }
 
   .receipt-label {
-    font-size: 11.5px !important;
+    font-size: 24px !important;
     font-weight: 700 !important;
   }
 
   .receipt-value {
-    font-size: 11.5px !important;
+    font-size: 24px !important;
     font-weight: 800 !important;
     text-align: right !important;
   }
 
   .receipt-divider {
-    border-top: 1px dashed #000000 !important;
-    margin: 4px 0 !important;
+    border-top: 2px dashed #000000 !important;
+    margin: 14px 0 !important;
     width: 100% !important;
   }
 
   .receipt-amount-box {
     background: transparent !important;
-    border: 2px solid #000000 !important;
-    padding: 6px 4px !important;
-    margin: 6px 0 !important;
+    border: 3px solid #000000 !important;
+    border-radius: 4px !important;
+    padding: 14px 10px !important;
+    margin: 16px 0 !important;
     text-align: center !important;
     width: 100% !important;
+    box-sizing: border-box !important;
   }
 
   .receipt-amount-title {
-    font-size: 10px !important;
+    font-size: 22px !important;
     font-weight: 800 !important;
     color: #000000 !important;
     letter-spacing: 0.05em !important;
+    margin-bottom: 4px !important;
   }
 
   .receipt-amount-main {
-    font-size: 19px !important;
+    font-size: 44px !important;
     font-weight: 900 !important;
     color: #000000 !important;
+    letter-spacing: 0.03em !important;
   }
 
   .receipt-footer {
     text-align: center !important;
-    margin-top: 6px !important;
+    margin-top: 20px !important;
+    font-size: 20px !important;
   }
 }
