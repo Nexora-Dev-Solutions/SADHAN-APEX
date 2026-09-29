@@ -42,8 +42,8 @@ export default function App() {
   );
 
   // Login form state
-  const [loginUsername, setLoginUsername] = useState('owner');
-  const [loginPassword, setLoginPassword] = useState('owner123');
+  const [loginUsername, setLoginUsername] = useState('');
+  const [loginPassword, setLoginPassword] = useState('');
   const [loginError, setLoginError] = useState('');
   const [isLoggingIn, setIsLoggingIn] = useState(false);
 
@@ -81,14 +81,10 @@ export default function App() {
     return (currentUser?.permissions || []).includes(perm);
   };
 
-  // Auto-login on very first visit only; respect explicit logout
+  // Load data when authenticated
   useEffect(() => {
-    const hasExplicitlyLoggedOut = localStorage.getItem('loan_logged_out') === 'true';
     if (token) {
       loadAllData();
-    } else if (!hasExplicitlyLoggedOut && !localStorage.getItem('loan_token')) {
-      // First visit convenience login
-      handleLogin('owner', 'owner123');
     }
   }, [token]);
 
@@ -142,15 +138,6 @@ export default function App() {
     localStorage.removeItem('loan_token');
     localStorage.removeItem('loan_user');
     setCurrentView('dashboard');
-  };
-
-  const quickSwitchUser = (targetRole) => {
-    if (targetRole === 'OWNER') {
-      handleLogin('owner', 'owner123');
-    } else {
-      if (currentView === 'reports') setCurrentView('dashboard');
-      handleLogin('agent1', 'agent123');
-    }
   };
 
   const loadAllData = async () => {
@@ -263,9 +250,11 @@ export default function App() {
               <input
                 type="text"
                 className="form-input"
+                placeholder="Enter username"
                 value={loginUsername}
                 onChange={(e) => setLoginUsername(e.target.value)}
                 required
+                autoComplete="username"
               />
             </div>
 
@@ -274,40 +263,21 @@ export default function App() {
               <input
                 type="password"
                 className="form-input"
+                placeholder="Enter password"
                 value={loginPassword}
                 onChange={(e) => setLoginPassword(e.target.value)}
                 required
+                autoComplete="current-password"
               />
             </div>
 
-            <button type="submit" className="btn btn-primary" style={{ width: '100%', marginTop: '10px' }} disabled={isLoggingIn}>
+            <button type="submit" className="btn btn-primary" style={{ width: '100%', marginTop: '14px', padding: '11px' }} disabled={isLoggingIn}>
               {isLoggingIn ? 'Authenticating...' : 'Sign In to Terminal'}
             </button>
           </form>
 
-          {/* Quick Demo Switcher Buttons */}
-          <div style={{ marginTop: '26px', borderTop: '1px solid var(--surface-border)', paddingTop: '20px' }}>
-            <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', textAlign: 'center', marginBottom: '10px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-              Instant Demo Access
-            </div>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
-              <button
-                type="button"
-                className="btn btn-secondary btn-sm"
-                onClick={() => { setLoginUsername('owner'); setLoginPassword('owner123'); handleLogin('owner', 'owner123'); }}
-              >
-                Owner Mode
-              </button>
-              <button
-                type="button"
-                className="btn btn-secondary btn-sm"
-                onClick={() => { setLoginUsername('agent1'); setLoginPassword('agent123'); handleLogin('agent1', 'agent123'); }}
-              >
-                Agent Mode
-              </button>
-            </div>
-
-            <div style={{ textAlign: 'center', marginTop: '18px', fontSize: '0.72rem', color: 'var(--text-muted)' }}>
+          <div style={{ marginTop: '26px', borderTop: '1px solid var(--surface-border)', paddingTop: '16px' }}>
+            <div style={{ textAlign: 'center', fontSize: '0.72rem', color: 'var(--text-muted)' }}>
               © {new Date().getFullYear()} <strong>Nexora Software Solutions</strong> • All Rights Reserved
             </div>
           </div>
@@ -395,29 +365,6 @@ export default function App() {
             </li>
           )}
         </ul>
-
-        {/* Quick Role Switcher for Testing */}
-        <div style={{ padding: '12px 14px', background: 'rgba(255,255,255,0.02)', margin: '8px 12px', borderRadius: 'var(--radius-md)', border: '1px solid var(--surface-border)' }}>
-          <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginBottom: '6px', fontWeight: '600' }}>
-            SIMULATE ROLE:
-          </div>
-          <div style={{ display: 'flex', gap: '6px' }}>
-            <button
-              className={`btn btn-sm ${currentUser.role === 'OWNER' ? 'btn-primary' : 'btn-secondary'}`}
-              style={{ flex: 1, padding: '4px 6px', fontSize: '0.75rem' }}
-              onClick={() => quickSwitchUser('OWNER')}
-            >
-              Owner
-            </button>
-            <button
-              className={`btn btn-sm ${currentUser.role === 'AGENT' ? 'btn-primary' : 'btn-secondary'}`}
-              style={{ flex: 1, padding: '4px 6px', fontSize: '0.75rem' }}
-              onClick={() => quickSwitchUser('AGENT')}
-            >
-              Agent
-            </button>
-          </div>
-        </div>
 
         {/* User Card */}
         <div className="sidebar-user">
