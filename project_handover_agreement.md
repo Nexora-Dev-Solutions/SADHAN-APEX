@@ -1,7 +1,7 @@
 # SOFTWARE HANDOVER & PROJECT ACCEPTANCE AGREEMENT
 
 <p align="center">
-  <img src="nexora-logo.png" alt="Nexora Software Solutions Logo" width="220" />
+  <img src="nexora-logo.png" alt="Nexora Software Solutions Logo" width="100" height="100" style="border-radius: 50%; object-fit: contain; background: #090e17; border: 3px solid #0f172a; padding: 8px; box-shadow: 0 4px 14px rgba(15,23,42,0.18);" />
 </p>
 
 **Document Reference:** `NXR-AGR-2026-LP01`  

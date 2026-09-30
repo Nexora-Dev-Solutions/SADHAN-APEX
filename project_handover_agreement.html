@@ -126,14 +126,24 @@
     .logo-container {
       display: flex;
       align-items: center;
+      justify-content: center;
+      width: 94px;
+      height: 94px;
+      border-radius: 50%;
+      overflow: hidden;
+      border: 2.5px solid #0f172a;
+      box-shadow: 0 4px 14px rgba(15, 23, 42, 0.16);
+      background: #090e17;
+      flex-shrink: 0;
     }
 
     .logo-img {
-      max-height: 85px;
-      width: auto;
+      width: 100%;
+      height: 100%;
       object-fit: contain;
+      padding: 8px;
       display: block;
-      transition: all 0.2s ease;
+      transition: all 0.25s ease;
     }
 
     .header-meta-box {
@@ -694,10 +704,14 @@
 
       if (style === 'dark') {
         img.src = LOGO_DARK;
+        img.style.objectFit = 'cover';
+        img.style.padding = '0';
         btnDark.classList.add('active');
         btnTrans.classList.remove('active');
       } else {
         img.src = LOGO_TRANSPARENT;
+        img.style.objectFit = 'contain';
+        img.style.padding = '8px';
         btnTrans.classList.add('active');
         btnDark.classList.remove('active');
       }
