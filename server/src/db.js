@@ -142,6 +142,7 @@ async function initPostgresSchema() {
       id SERIAL PRIMARY KEY,
       user_id INT,
       username VARCHAR(50),
+      role VARCHAR(50),
       action VARCHAR(100) NOT NULL,
       details TEXT,
       ip_address VARCHAR(50),
@@ -164,6 +165,7 @@ async function initPostgresSchema() {
 
     ALTER TABLE users ADD COLUMN IF NOT EXISTS status VARCHAR(20) DEFAULT 'ACTIVE';
     ALTER TABLE users ADD COLUMN IF NOT EXISTS permissions TEXT DEFAULT '["COLLECT_PAYMENTS","ISSUE_LOANS","REGISTER_CLIENTS","VIEW_REPORTS"]';
+    ALTER TABLE audit_logs ADD COLUMN IF NOT EXISTS role VARCHAR(50);
   `;
   await pgPool.query(schemaSql);
 }
@@ -2377,13 +2379,13 @@ const db = {
     return transactions.slice(offset, offset + limit);
   },
 
-  logAudit: async ({ user_id = null, username = 'SYSTEM', action, details = '', ip_address = '' }) => {
+  logAudit: async ({ user_id = null, username = 'SYSTEM', role = null, action, details = '', ip_address = '' }) => {
     try {
       const detailsStr = typeof details === 'object' ? JSON.stringify(details) : String(details);
       if (usePostgres) {
         await pgPool.query(
-          'INSERT INTO audit_logs (user_id, username, action, details, ip_address) VALUES ($1, $2, $3, $4, $5)',
-          [user_id, username, action, detailsStr, ip_address]
+          'INSERT INTO audit_logs (user_id, username, role, action, details, ip_address) VALUES ($1, $2, $3, $4, $5, $6)',
+          [user_id, username, role, action, detailsStr, ip_address]
         );
       } else {
         loadLocalStore();
@@ -2392,6 +2394,7 @@ const db = {
           id: localStore.audit_logs.length + 1,
           user_id,
           username,
+          role,
           action,
           details: detailsStr,
           ip_address,
@@ -2407,17 +2410,37 @@ const db = {
   getAuditLogs: async (limit = 100) => {
     try {
       if (usePostgres) {
-        const res = await pgPool.query(
-          'SELECT * FROM audit_logs ORDER BY created_at DESC LIMIT $1',
-          [limit]
-        );
+        const res = await pgPool.query(`
+          SELECT 
+            a.id,
+            a.user_id,
+            a.username,
+            COALESCE(a.role, u.role, CASE WHEN a.username = 'SYSTEM' THEN 'SYSTEM' ELSE 'STAFF' END) AS role,
+            a.action,
+            a.details,
+            a.ip_address,
+            a.created_at
+          FROM audit_logs a
+          LEFT JOIN users u ON a.user_id = u.id
+          ORDER BY a.created_at DESC
+          LIMIT $1
+        `, [limit]);
         return res.rows;
       }
       loadLocalStore();
+      const usersMap = {};
+      (localStore.users || []).forEach(u => {
+        if (u.id) usersMap[u.id] = u.role;
+        if (u.username) usersMap[u.username] = u.role;
+      });
       return (localStore.audit_logs || [])
         .slice()
         .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
-        .slice(0, limit);
+        .slice(0, limit)
+        .map(log => ({
+          ...log,
+          role: log.role || usersMap[log.user_id] || usersMap[log.username] || (log.username === 'SYSTEM' ? 'SYSTEM' : 'STAFF')
+        }));
     } catch (e) {
       console.error('Error fetching audit logs:', e.message);
       return [];

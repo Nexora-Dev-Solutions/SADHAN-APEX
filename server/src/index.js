@@ -77,6 +77,7 @@ app.post('/api/auth/login', loginLimiter, async (req, res) => {
     if (!user) {
       await db.logAudit({
         username: username.slice(0, 50),
+        role: 'VISITOR',
         action: 'LOGIN_FAILED',
         details: 'User does not exist',
         ip_address: clientIp
@@ -89,6 +90,7 @@ app.post('/api/auth/login', loginLimiter, async (req, res) => {
       await db.logAudit({
         user_id: user.id,
         username: user.username,
+        role: user.role,
         action: 'LOGIN_FAILED',
         details: 'Incorrect password',
         ip_address: clientIp
@@ -100,6 +102,7 @@ app.post('/api/auth/login', loginLimiter, async (req, res) => {
       await db.logAudit({
         user_id: user.id,
         username: user.username,
+        role: user.role,
         action: 'LOGIN_BLOCKED',
         details: 'Account suspended/inactive',
         ip_address: clientIp
@@ -123,6 +126,7 @@ app.post('/api/auth/login', loginLimiter, async (req, res) => {
     await db.logAudit({
       user_id: user.id,
       username: user.username,
+      role: user.role,
       action: 'LOGIN_SUCCESS',
       details: `Role: ${user.role}`,
       ip_address: clientIp
@@ -197,6 +201,7 @@ app.post('/api/users', verifyToken, requireOwner, async (req, res) => {
     await db.logAudit({
       user_id: req.user.id,
       username: req.user.username,
+      role: req.user.role,
       action: 'USER_CREATED',
       details: `Created user ${newUser.username} (${newUser.role})`,
       ip_address: req.ip
@@ -219,6 +224,7 @@ const handleUserUpdate = async (req, res) => {
     await db.logAudit({
       user_id: req.user.id,
       username: req.user.username,
+      role: req.user.role,
       action: 'USER_UPDATED',
       details: `Updated user #${req.params.id} (${updated.username}) status: ${updated.status}`,
       ip_address: req.ip
@@ -241,6 +247,7 @@ const handleUserDelete = async (req, res) => {
     await db.logAudit({
       user_id: req.user.id,
       username: req.user.username,
+      role: req.user.role,
       action: 'USER_DELETED',
       details: `Deleted user #${req.params.id}`,
       ip_address: req.ip
@@ -292,6 +299,7 @@ app.post('/api/clients', verifyToken, requirePermission('REGISTER_CLIENTS'), asy
     await db.logAudit({
       user_id: req.user.id,
       username: req.user.username,
+      role: req.user.role,
       action: 'CLIENT_CREATED',
       details: `Created client ${newClient.name} (NIC: ${newClient.nic_id || 'N/A'})`,
       ip_address: req.ip
@@ -338,6 +346,7 @@ app.delete('/api/clients/:id', verifyToken, requireOwner, async (req, res) => {
     await db.logAudit({
       user_id: req.user.id,
       username: req.user.username,
+      role: req.user.role,
       action: 'CLIENT_DELETED',
       details: `Deleted client #${req.params.id}`,
       ip_address: req.ip
@@ -414,6 +423,7 @@ app.post('/api/loans', verifyToken, requirePermission('ISSUE_LOANS'), async (req
     await db.logAudit({
       user_id: req.user.id,
       username: req.user.username,
+      role: req.user.role,
       action: 'LOAN_ISSUED',
       details: `Issued loan ${newLoan.loan_code} Rs. ${newLoan.principal_amount} for Client #${client_id}`,
       ip_address: req.ip
@@ -464,6 +474,7 @@ app.delete('/api/loans/:id', verifyToken, requireOwner, async (req, res) => {
     await db.logAudit({
       user_id: req.user.id,
       username: req.user.username,
+      role: req.user.role,
       action: 'LOAN_DELETED',
       details: `Deleted loan #${req.params.id}`,
       ip_address: req.ip
@@ -502,6 +513,7 @@ app.post('/api/payments', verifyToken, requirePermission('COLLECT_PAYMENTS'), as
     await db.logAudit({
       user_id: req.user.id,
       username: req.user.username,
+      role: req.user.role,
       action: 'PAYMENT_COLLECTED',
       details: `Receipt ${paymentResult.receipt_no}: Rs. ${paymentResult.amount_paid} for Loan #${paymentResult.loan_id}`,
       ip_address: req.ip

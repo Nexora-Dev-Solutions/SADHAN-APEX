@@ -478,9 +478,9 @@ export default function UserManagementView({
             <tr>
               <th>Timestamp</th>
               <th>Initiator</th>
+              <th>Role</th>
               <th>Action Performed</th>
               <th>Audit Details</th>
-              <th>Origin IP</th>
             </tr>
           </thead>
           <tbody>
@@ -494,6 +494,7 @@ export default function UserManagementView({
               auditLogs.map((log) => {
                 const isSuccess = log.action.includes('SUCCESS') || log.action.includes('CREATED') || log.action.includes('COLLECTED') || log.action.includes('ISSUED');
                 const isFailure = log.action.includes('FAILED') || log.action.includes('BLOCKED') || log.action.includes('DELETED');
+                const roleUpper = (log.role || '').toUpperCase();
 
                 return (
                   <tr key={`audit-row-${log.id}`}>
@@ -511,6 +512,22 @@ export default function UserManagementView({
                     <td>
                       <span style={{
                         display: 'inline-block',
+                        padding: '2px 8px',
+                        borderRadius: '4px',
+                        fontSize: '0.72rem',
+                        fontWeight: '700',
+                        letterSpacing: '0.04em',
+                        textTransform: 'uppercase',
+                        background: roleUpper === 'OWNER' ? 'rgba(234, 179, 8, 0.15)' : roleUpper === 'AGENT' ? 'rgba(6, 182, 212, 0.15)' : 'rgba(148, 163, 184, 0.15)',
+                        color: roleUpper === 'OWNER' ? '#facc15' : roleUpper === 'AGENT' ? '#22d3ee' : '#94a3b8',
+                        border: `1px solid ${roleUpper === 'OWNER' ? 'rgba(234, 179, 8, 0.3)' : roleUpper === 'AGENT' ? 'rgba(6, 182, 212, 0.3)' : 'rgba(148, 163, 184, 0.3)'}`
+                      }}>
+                        {log.role || (log.username === 'SYSTEM' ? 'SYSTEM' : 'STAFF')}
+                      </span>
+                    </td>
+                    <td>
+                      <span style={{
+                        display: 'inline-block',
                         padding: '3px 8px',
                         borderRadius: '4px',
                         fontSize: '0.72rem',
@@ -523,11 +540,8 @@ export default function UserManagementView({
                         {log.action}
                       </span>
                     </td>
-                    <td style={{ fontSize: '0.82rem', maxWidth: '380px', wordBreak: 'break-word' }}>
+                    <td style={{ fontSize: '0.82rem', maxWidth: '420px', wordBreak: 'break-word' }}>
                       {log.details || '—'}
-                    </td>
-                    <td style={{ fontFamily: 'var(--font-mono)', fontSize: '0.75rem', color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>
-                      {log.ip_address || '—'}
                     </td>
                   </tr>
                 );
