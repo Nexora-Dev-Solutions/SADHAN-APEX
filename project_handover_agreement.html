@@ -521,8 +521,9 @@
     <h2>2. Project Overview</h2>
     <ul style="font-size: 9.5pt;">
       <li><strong>Project Name:</strong> SADHAN APEX (PVT) LTD</li>
-      <li><strong>Cloud Backend API:</strong> Hosted on Render Cloud Infrastructure</li>
-      <li><strong>Cloud Database:</strong> PostgreSQL Serverless Cloud Database (Neon Engine)</li>
+      <li><strong>Custom Domain:</strong> Top-level .lk Domain (e.g. <code>apex.org.lk</code>) &nbsp;&bull;&nbsp; <em>LKR 1,000 / year</em></li>
+      <li><strong>Cloud Backend API:</strong> Hosted on Railway Cloud Infrastructure (Node.js/Express)</li>
+      <li><strong>Cloud Database:</strong> Neon Serverless PostgreSQL Database <em>(Usage-based, approx. $15/month)</em></li>
       <li><strong>Primary Business Operations:</strong> 58-installment daily microfinance issuance, compounding cycle penalty engine (+8%), field agent collection tracking, and 58mm mobile Bluetooth thermal receipts.</li>
     </ul>
 
@@ -568,44 +569,61 @@
       <li><strong>User Management:</strong> Owner-only permissions to create collector accounts and manage access.</li>
     </ul>
 
-    <!-- Section 4: Architecture -->
-    <h2 style="margin-top: 20px;">4. System Architecture &amp; Hosting</h2>
+    <!-- Section 4: Architecture & Operational Expenses -->
+    <h2 style="margin-top: 20px;">4. System Architecture, Hosting &amp; Operational Cloud Expenses</h2>
     <table class="content-table">
       <thead>
         <tr>
-          <th>Layer</th>
-          <th>Technology</th>
-          <th>Hosting Provider</th>
+          <th>Component</th>
+          <th>Provider / Platform</th>
+          <th>Technology / Scope</th>
+          <th>Recurring Cost (Payable by Client)</th>
           <th>Status</th>
         </tr>
       </thead>
       <tbody>
         <tr>
+          <td><strong>Custom Domain</strong></td>
+          <td>LK Domain Registry</td>
+          <td>Top-level .lk Domain (e.g. <code>apex.org.lk</code>)</td>
+          <td><strong style="color: #0f172a;">LKR 1,000 / year</strong></td>
+          <td>Annual Renewal</td>
+        </tr>
+        <tr>
           <td><strong>Frontend UI</strong></td>
-          <td>React 18, Vite, Lucide Icons, Vanilla CSS</td>
           <td>Netlify Global CDN</td>
+          <td>React 18, Vite, Vanilla CSS</td>
+          <td><strong style="color: #059669;">Free ($0 / month)</strong></td>
           <td>Active / Production</td>
         </tr>
         <tr>
           <td><strong>Backend API</strong></td>
+          <td>Railway Cloud</td>
           <td>Node.js, Express.js REST API</td>
-          <td>Render Cloud</td>
+          <td><strong style="color: #0f172a;">~$5.00 / month</strong></td>
           <td>Active / Production</td>
         </tr>
         <tr>
-          <td><strong>Database</strong></td>
+          <td><strong>Database Engine</strong></td>
+          <td>Neon Serverless</td>
           <td>PostgreSQL Relational Engine</td>
-          <td>Neon.tech Cloud</td>
+          <td><strong style="color: #b45309;">~$15.00 / month (Usage-Based) ⚠️</strong></td>
           <td>Active / Production</td>
         </tr>
         <tr>
           <td><strong>Source Code</strong></td>
-          <td>Git Version Control</td>
-          <td>GitHub (Private Repository)</td>
-          <td>Committed &amp; Deployed</td>
+          <td>GitHub Private</td>
+          <td>Git Version Control Repository</td>
+          <td><strong style="color: #059669;">Free ($0 / month)</strong></td>
+          <td>Committed &amp; Maintained</td>
         </tr>
       </tbody>
     </table>
+
+    <div style="background: #fffbeb; border: 1.5px solid #fde68a; border-radius: 6px; padding: 10px 14px; margin-top: 10px; font-size: 8.8pt; color: #92400e; line-height: 1.5;">
+      <strong>⚠️ IMPORTANT NOTICE REGARDING DATABASE USAGE-BASED BILLING:</strong><br>
+      The PostgreSQL database is hosted on <strong>Neon Serverless</strong>, which operates on dynamic <strong>usage-based metering</strong> (compute runtime, memory usage, and storage). While standard day-to-day operations for this scale average <strong>approximately $15 USD per month</strong>, actual monthly invoices will fluctuate based on daily transaction frequency, query workload, and portfolio size. All cloud infrastructure subscriptions and domain renewals remain the direct operational responsibility of the Client.
+    </div>
 
     <!-- Section 5: Financial Terms -->
     <h2>5. Financial Terms &amp; Payment Schedule</h2>
@@ -622,7 +640,7 @@
     <h2>6. Warranty, Maintenance &amp; Support</h2>
     <ol style="font-size: 9.5pt;">
       <li><strong>Complimentary Support Period:</strong> The Service Provider grants <strong>______ months</strong> of free bug fixes and operational support commencing from the date of this signed agreement.</li>
-      <li><strong>Exclusions:</strong> Major functional additions, alterations outside Section 3, or third-party cloud hosting subscription upgrades after free tier limits remain the responsibility of the Client.</li>
+      <li><strong>Exclusions:</strong> Major functional additions or workflow alterations outside Section 3 are quoted separately. Ongoing third-party cloud hosting and domain subscription renewals (LK Domain LKR 1,000/yr, Netlify Free, Railway ~$5/mo, and Neon usage-based database billing ~$15/mo) are directly billed by respective providers and remain the ongoing operational responsibility of the Client.</li>
       <li><strong>Annual Maintenance (Optional):</strong> Rs. ____________________ per year/month for ongoing priority support.</li>
     </ol>
 

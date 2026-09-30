@@ -28,8 +28,9 @@ This Software Handover and Acceptance Agreement (the **"Agreement"**) is entered
 ## 2. PROJECT OVERVIEW
 
 - **Project Name:** SADHAN APEX (PVT) LTD
-- **Backend API URL:** Hosted on Render Cloud (`____________________________________`)
-- **Database System:** PostgreSQL Cloud Database (Neon Serverless)
+- **Custom Domain:** Top-level `.lk` Domain (e.g., `apex.org.lk`)
+- **Backend API Infrastructure:** Hosted on Railway Cloud (`____________________________________`)
+- **Database System:** PostgreSQL Cloud Database (Neon Serverless — Usage-Based)
 - **Primary Business Logic:** 58-installment daily microfinance loan issuance, automated cycle penalty calculation, real-time field collections tracking, and mobile POS thermal receipt generation.
 
 ---
@@ -74,14 +75,18 @@ The system has been developed, tested, and deployed to production. Below is the 
 
 ---
 
-## 4. SYSTEM ARCHITECTURE & HOSTING
+## 4. SYSTEM ARCHITECTURE, HOSTING & OPERATIONAL CLOUD EXPENSES
 
-| Layer | Technology | Hosting Provider | Deployment Status |
-| :--- | :--- | :--- | :--- |
-| **Frontend UI** | React 18, Vite, Lucide Icons, Vanilla CSS | Netlify | Production Active |
-| **Backend API** | Node.js, Express.js, REST API | Render | Production Active |
-| **Database** | PostgreSQL (Relational Engine) | Neon.tech Cloud | Production Active |
-| **Code Repository** | Git / GitHub Version Control | GitHub (`Hasitha-D/loanpro-manager`) | Up to Date |
+| Component / Layer | Platform / Provider | Technology / Scope | Recurring Fee (Payable by Client) | Deployment Status |
+| :--- | :--- | :--- | :--- | :--- |
+| **Custom Domain** | LK Domain Registry | Top-level `.lk` Domain (e.g. `apex.org.lk`) | **LKR 1,000 / year** | Annual Renewal |
+| **Frontend UI** | Netlify Global CDN | React 18, Vite, Lucide Icons, Vanilla CSS | **Free** ($0 / month) | Production Active |
+| **Backend API** | Railway Cloud | Node.js, Express.js REST API | **~$5.00 / month** | Production Active |
+| **Database Engine** | Neon Serverless | PostgreSQL Cloud Database | **~$15.00 / month (Usage-Based)** ⚠️ | Production Active |
+| **Code Repository** | GitHub | Private Git Version Control | **Free** ($0 / month) | Maintained & Updated |
+
+> ⚠️ **IMPORTANT NOTICE — DATABASE USAGE-BASED BILLING:**  
+> The Neon PostgreSQL database operates on a **dynamic, usage-based model** (scaling compute active hours, query consumption, and data storage). While normal day-to-day operations are estimated at approximately **$15 USD per month**, the actual monthly charge will fluctuate depending directly on real-time transaction volume, data load, and database activity. All domain renewals and cloud hosting fees remain the direct operational responsibility of the Client.
 
 ---
 
@@ -105,7 +110,7 @@ The system has been developed, tested, and deployed to production. Below is the 
    - The Service Provider provides **______ months** of complimentary technical support and bug fixing commencing from the date of this signed agreement.
 2. **Exclusions from Free Warranty:**
    - Feature requests, workflow alterations, and brand new functional modules not defined in Section 3 will be quoted separately.
-   - Database/cloud hosting fees (e.g. Render, Netlify, Neon domain/server tiers) after trial quotas expire remain the responsibility of the Client.
+   - Ongoing third-party cloud infrastructure, database, and domain renewal fees (LK Domain LKR 1,000/yr, Netlify Free, Railway ~$5/mo, and Neon usage-based database fees ~$15/mo) are billed directly by respective providers and remain the ongoing operational responsibility of the Client.
 3. **Post-Warranty Annual Maintenance (Optional):**
    - Maintenance Fee: Rs. ____________________ per year / month (optional).
 
