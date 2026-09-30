@@ -1,5 +1,9 @@
 # SOFTWARE HANDOVER & PROJECT ACCEPTANCE AGREEMENT
 
+<p align="center">
+  <img src="nexora-logo.png" alt="Nexora Software Solutions Logo" width="220" />
+</p>
+
 **Document Reference:** `NXR-AGR-2026-LP01`  
 **Date of Agreement:** `____ / ____ / 2026`  
 
