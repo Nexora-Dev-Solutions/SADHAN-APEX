@@ -27,8 +27,7 @@ This Software Handover and Acceptance Agreement (the **"Agreement"**) is entered
 
 ## 2. PROJECT OVERVIEW
 
-- **Project Name:** LoanPro Manager — 58-Installment Micro-Loan Portfolio & Field Recovery System
-- **Web Application URL:** `https://loanpro-manager.netlify.app`
+- **Project Name:** SADHAN APEX (PVT) LTD
 - **Backend API URL:** Hosted on Render Cloud (`____________________________________`)
 - **Database System:** PostgreSQL Cloud Database (Neon Serverless)
 - **Primary Business Logic:** 58-installment daily microfinance loan issuance, automated cycle penalty calculation, real-time field collections tracking, and mobile POS thermal receipt generation.
@@ -134,4 +133,4 @@ By signing below, the Client confirms that:
 | **Name:** ___________________________________ | **Name:** ___________________________________ |
 | **Designation:** ____________________________ | **Designation:** ____________________________ |
 | **Date:** `____ / ____ / 2026` | **Date:** `____ / ____ / 2026` |
-| <br>**Company Seal / Stamp:**<br><br><br><br> | <br>**Company Seal / Stamp:**<br><br><br><br> |
+| <br>**Company Seal / Stamp:**<br><br><img src="nexora-company-seal.jpg" alt="Nexora Official Seal" width="120" height="120" style="border-radius: 50%; object-fit: contain; mix-blend-mode: multiply;" /><br> | <br>**Company Seal / Stamp:**<br><br><br><br> |
