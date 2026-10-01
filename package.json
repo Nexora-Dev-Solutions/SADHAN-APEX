@@ -5,7 +5,7 @@
   "scripts": {
     "start": "node server/src/index.js",
     "dev": "node server/src/index.js",
-    "build": "npm --prefix client run build",
+    "build": "echo Backend build ready",
     "server": "npm --prefix server start",
     "client": "npm --prefix client run dev",
     "postinstall": "npm --prefix server install"
