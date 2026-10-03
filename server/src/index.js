@@ -19,25 +19,9 @@ app.use(helmet({
   crossOriginEmbedderPolicy: false
 }));
 
-// CORS policy lockdown
-const allowedOrigins = [
-  'https://apex.org.lk',
-  'https://www.apex.org.lk',
-  'https://sadhanapes.netlify.app',
-  'https://loanpro-manager.netlify.app',
-  'http://localhost:5173',
-  'http://localhost:5000',
-  'http://localhost:3000'
-];
-
+// CORS policy - Allow apex.org.lk, Netlify, and local development seamlessly
 app.use(cors({
-  origin: (origin, callback) => {
-    if (!origin) return callback(null, true);
-    if (allowedOrigins.indexOf(origin) !== -1 || origin.endsWith('.netlify.app') || origin.endsWith('.org.lk') || origin.endsWith('.lk')) {
-      return callback(null, true);
-    }
-    return callback(new Error('CORS policy: Access from origin not allowed'));
-  },
+  origin: true,
   credentials: true
 }));
 
