@@ -19,7 +19,7 @@ app.use(helmet({
   crossOriginEmbedderPolicy: false
 }));
 
-// CORS policy - Allow apex.org.lk, Netlify, and local development seamlessly
+// CORS policy - Live production allowed for apex.org.lk, Netlify, and local development seamlessly
 app.use(cors({
   origin: true,
   credentials: true
