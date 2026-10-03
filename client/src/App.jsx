@@ -154,6 +154,12 @@ export default function App() {
         fetch('/api/reminders', { headers })
       ]);
 
+      // If token expired or session invalid, log out cleanly to show login form
+      if (dashRes.status === 401 || loansRes.status === 401 || clientsRes.status === 401) {
+        handleLogout();
+        return;
+      }
+
       const [dashData, loansData, clientsData, remindersData] = await Promise.all([
         dashRes.json(),
         loansRes.json(),
@@ -763,3 +769,4 @@ export default function App() {
     </div>
   );
 }
+
