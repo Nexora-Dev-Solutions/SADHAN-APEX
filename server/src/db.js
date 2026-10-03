@@ -22,8 +22,13 @@ if (process.env.DATABASE_URL) {
 
   pgPool = new Pool({
     connectionString: process.env.DATABASE_URL,
-    ssl: isSsl ? { rejectUnauthorized: false } : false
+    ssl: isSsl ? { rejectUnauthorized: false } : false,
+    max: 10,
+    idleTimeoutMillis: 30000,
+    connectionTimeoutMillis: 10000
   });
+
+  pgPool.on('error', (err) => console.warn('Neon idle connection reset:', err.message));
 }
 
 
