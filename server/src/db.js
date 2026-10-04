@@ -1005,24 +1005,10 @@ const db = {
     const rawTotalPayable = principal + rawTotalInterest;
     const rawInstallment = (rawTotalPayable / maxSlots);
 
-    // 2. Round off installment cleanly:
-    let installmentAmount = 0;
-    if (rawInstallment >= 1000) {
-      installmentAmount = Math.round(rawInstallment / 100) * 100;
-    } else if (rawInstallment >= 300) {
-      installmentAmount = Math.round(rawInstallment / 50) * 50;
-    } else if (rawInstallment > 0) {
-      installmentAmount = Math.round(rawInstallment / 10) * 10 || 10;
-    }
-
-    if (principal > 0 && rate > 0 && (installmentAmount * maxSlots) < rawTotalPayable) {
-      if (rawInstallment >= 1000) {
-        installmentAmount = Math.ceil(rawInstallment / 100) * 100;
-      } else if (rawInstallment >= 300) {
-        installmentAmount = Math.ceil(rawInstallment / 50) * 50;
-      } else {
-        installmentAmount = Math.ceil(rawInstallment / 10) * 10;
-      }
+    // 2. Installment calculation (clean exact rupee, rounded to nearest 10 only if fractional cents exist):
+    let installmentAmount = Math.round(rawInstallment);
+    if (rawInstallment % 1 !== 0) {
+      installmentAmount = Math.ceil(rawInstallment / 10) * 10;
     }
 
     // 3. Derive total payable directly from installments (all 58 scheduled)
@@ -1162,23 +1148,9 @@ const db = {
         const rawNewPayable = newPrincipal + rawNewInterest;
         const rawNewInst = count > 0 ? (rawNewPayable / count) : 0;
 
-        let newInstAmount = 0;
-        if (rawNewInst >= 1000) {
-          newInstAmount = Math.round(rawNewInst / 100) * 100;
-        } else if (rawNewInst >= 300) {
-          newInstAmount = Math.round(rawNewInst / 50) * 50;
-        } else if (rawNewInst > 0) {
-          newInstAmount = Math.round(rawNewInst / 10) * 10 || 10;
-        }
-
-        if (count > 0 && newPrincipal > 0 && newRate > 0 && (newInstAmount * count) < rawNewPayable) {
-          if (rawNewInst >= 1000) {
-            newInstAmount = Math.ceil(rawNewInst / 100) * 100;
-          } else if (rawNewInst >= 300) {
-            newInstAmount = Math.ceil(rawNewInst / 50) * 50;
-          } else {
-            newInstAmount = Math.ceil(rawNewInst / 10) * 10;
-          }
+        let newInstAmount = Math.round(rawNewInst);
+        if (rawNewInst % 1 !== 0) {
+          newInstAmount = Math.ceil(rawNewInst / 10) * 10;
         }
 
         const newTotalPayable = Math.round(newInstAmount * count);
@@ -1257,23 +1229,9 @@ const db = {
     const rawNewPayable = newPrincipal + rawNewInterest;
     const rawNewInst = count > 0 ? (rawNewPayable / count) : 0;
 
-    let newInstAmount = 0;
-    if (rawNewInst >= 1000) {
-      newInstAmount = Math.round(rawNewInst / 100) * 100;
-    } else if (rawNewInst >= 300) {
-      newInstAmount = Math.round(rawNewInst / 50) * 50;
-    } else if (rawNewInst > 0) {
-      newInstAmount = Math.round(rawNewInst / 10) * 10 || 10;
-    }
-
-    if (count > 0 && newPrincipal > 0 && newRate > 0 && (newInstAmount * count) < rawNewPayable) {
-      if (rawNewInst >= 1000) {
-        newInstAmount = Math.ceil(rawNewInst / 100) * 100;
-      } else if (rawNewInst >= 300) {
-        newInstAmount = Math.ceil(rawNewInst / 50) * 50;
-      } else {
-        newInstAmount = Math.ceil(rawNewInst / 10) * 10;
-      }
+    let newInstAmount = Math.round(rawNewInst);
+    if (rawNewInst % 1 !== 0) {
+      newInstAmount = Math.ceil(rawNewInst / 10) * 10;
     }
 
     const newTotalPayable = Math.round(newInstAmount * count);

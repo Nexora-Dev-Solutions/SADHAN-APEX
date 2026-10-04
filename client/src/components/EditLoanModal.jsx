@@ -40,24 +40,9 @@ export default function EditLoanModal({ loan, token, agents, currentUser, onClos
   const rawNewPayable = calculatedNewPrincipal + rawNewInterest;
   const rawNewInst = currentCount > 0 ? (rawNewPayable / currentCount) : 0;
 
-  let calculatedNewInstAmt = 0;
-  if (rawNewInst >= 1000) {
-    calculatedNewInstAmt = Math.round(rawNewInst / 100) * 100;
-  } else if (rawNewInst >= 300) {
-    calculatedNewInstAmt = Math.round(rawNewInst / 50) * 50;
-  } else if (rawNewInst > 0) {
-    calculatedNewInstAmt = Math.round(rawNewInst / 10) * 10 || 10;
-  }
-
-  // Safety: Ensure installments cover raw payable
-  if (currentCount > 0 && calculatedNewPrincipal > 0 && calculatedRate > 0 && (calculatedNewInstAmt * currentCount) < rawNewPayable) {
-    if (rawNewInst >= 1000) {
-      calculatedNewInstAmt = Math.ceil(rawNewInst / 100) * 100;
-    } else if (rawNewInst >= 300) {
-      calculatedNewInstAmt = Math.ceil(rawNewInst / 50) * 50;
-    } else {
-      calculatedNewInstAmt = Math.ceil(rawNewInst / 10) * 10;
-    }
+  let calculatedNewInstAmt = Math.round(rawNewInst);
+  if (rawNewInst % 1 !== 0) {
+    calculatedNewInstAmt = Math.ceil(rawNewInst / 10) * 10;
   }
 
   const calculatedTotalPayable = Math.round(calculatedNewInstAmt * currentCount);
