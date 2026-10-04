@@ -1000,20 +1000,10 @@ const db = {
     const months = (frequency === 'DAILY' && maxSlots === 58) ? 2 : (frequency === 'MONTHLY' ? maxSlots : Math.max(1, Math.round(maxSlots / 29)));
     const totalInterestRatePct = rate * months;
 
-    // 1. Calculate total interest & standard daily installment based on full term (all 58 installments)
-    const rawTotalInterest = (principal * totalInterestRatePct) / 100;
-    const rawTotalPayable = principal + rawTotalInterest;
-    const rawInstallment = (rawTotalPayable / maxSlots);
-
-    // 2. Installment calculation (clean exact rupee, rounded to nearest 10 only if fractional cents exist):
-    let installmentAmount = Math.round(rawInstallment);
-    if (rawInstallment % 1 !== 0) {
-      installmentAmount = Math.ceil(rawInstallment / 10) * 10;
-    }
-
-    // 3. Derive total payable directly from installments (all 58 scheduled)
-    const totalPayable = Math.round(installmentAmount * maxSlots);
-    const totalInterest = Math.max(0, Math.round(totalPayable - principal));
+    // 1. Calculate total interest & total payable (no artificial rounding)
+    const totalInterest = Math.round((principal * totalInterestRatePct) / 100);
+    const totalPayable = Math.round(principal + totalInterest);
+    const installmentAmount = Math.round(totalPayable / maxSlots);
 
     let start = new Date(start_date || new Date().toISOString().split('T')[0]);
     if (isNaN(start.getTime())) {
@@ -1144,17 +1134,9 @@ const db = {
         const months = (loan.frequency === 'DAILY' && count === 58) ? 2 : (loan.frequency === 'MONTHLY' ? count : Math.max(1, Math.round(count / 29)));
         const totalRate = newRate * months;
 
-        const rawNewInterest = (newPrincipal * totalRate) / 100;
-        const rawNewPayable = newPrincipal + rawNewInterest;
-        const rawNewInst = count > 0 ? (rawNewPayable / count) : 0;
-
-        let newInstAmount = Math.round(rawNewInst);
-        if (rawNewInst % 1 !== 0) {
-          newInstAmount = Math.ceil(rawNewInst / 10) * 10;
-        }
-
-        const newTotalPayable = Math.round(newInstAmount * count);
-        const newTotalInterest = Math.max(0, Math.round(newTotalPayable - newPrincipal));
+        const newTotalInterest = Math.round((newPrincipal * totalRate) / 100);
+        const newTotalPayable = Math.round(newPrincipal + newTotalInterest);
+        const newInstAmount = count > 0 ? Math.round(newTotalPayable / count) : 0;
         const currentPaid = parseFloat(loan.total_paid);
         const newRemaining = Math.max(0, Math.round(newTotalPayable - currentPaid));
         const newAgent = assigned_agent_id !== undefined ? (assigned_agent_id ? parseInt(assigned_agent_id, 10) : null) : loan.assigned_agent_id;
@@ -1225,17 +1207,9 @@ const db = {
     const months = (loan.frequency === 'DAILY' && count === 58) ? 2 : (loan.frequency === 'MONTHLY' ? count : Math.max(1, Math.round(count / 29)));
     const totalRate = newRate * months;
 
-    const rawNewInterest = (newPrincipal * totalRate) / 100;
-    const rawNewPayable = newPrincipal + rawNewInterest;
-    const rawNewInst = count > 0 ? (rawNewPayable / count) : 0;
-
-    let newInstAmount = Math.round(rawNewInst);
-    if (rawNewInst % 1 !== 0) {
-      newInstAmount = Math.ceil(rawNewInst / 10) * 10;
-    }
-
-    const newTotalPayable = Math.round(newInstAmount * count);
-    const newTotalInterest = Math.max(0, Math.round(newTotalPayable - newPrincipal));
+    const newTotalInterest = Math.round((newPrincipal * totalRate) / 100);
+    const newTotalPayable = Math.round(newPrincipal + newTotalInterest);
+    const newInstAmount = count > 0 ? Math.round(newTotalPayable / count) : 0;
     const currentPaid = parseFloat(loan.total_paid);
     const newRemaining = Math.max(0, Math.round(newTotalPayable - currentPaid));
 

@@ -29,18 +29,9 @@ export default function NewLoanModal({ token, clients, agents, currentUser, onCl
   const months = (frequency === 'DAILY' && parsedCount === 58) ? 2 : (frequency === 'MONTHLY' ? parsedCount : Math.max(1, Math.round(parsedCount / 29)));
   const totalInterestRatePct = parsedRate * months;
 
-  const rawInterest = (parsedPrincipal * totalInterestRatePct) / 100;
-  const rawTotalPayable = parsedPrincipal + rawInterest;
-  const rawInstallment = parsedCount > 0 ? (rawTotalPayable / parsedCount) : 0;
-
-  // Installment calculation (clean exact rupee, rounded to nearest 10 only if fractional cents exist):
-  let installmentAmount = Math.round(rawInstallment);
-  if (rawInstallment % 1 !== 0) {
-    installmentAmount = Math.ceil(rawInstallment / 10) * 10;
-  }
-
-  const totalPayable = parsedCount > 0 && parsedPrincipal > 0 ? (installmentAmount * parsedCount) : 0;
-  const totalInterest = Math.max(0, totalPayable - parsedPrincipal);
+  const totalInterest = Math.round((parsedPrincipal * totalInterestRatePct) / 100);
+  const totalPayable = parsedPrincipal > 0 ? (parsedPrincipal + totalInterest) : 0;
+  const installmentAmount = parsedCount > 0 ? Math.round(totalPayable / parsedCount) : 0;
 
   const stepDays = frequency === 'DAILY' ? 1 : frequency === 'WEEKLY' ? 7 : 30;
   let endDate = '';

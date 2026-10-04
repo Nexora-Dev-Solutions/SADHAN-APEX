@@ -36,17 +36,9 @@ export default function EditLoanModal({ loan, token, agents, currentUser, onClos
   const months = (loan.frequency === 'DAILY' && currentCount === 58) ? 2 : (loan.frequency === 'MONTHLY' ? currentCount : Math.max(1, Math.round(currentCount / 29)));
   const totalRatePct = calculatedRate * months;
 
-  const rawNewInterest = (calculatedNewPrincipal * totalRatePct) / 100;
-  const rawNewPayable = calculatedNewPrincipal + rawNewInterest;
-  const rawNewInst = currentCount > 0 ? (rawNewPayable / currentCount) : 0;
-
-  let calculatedNewInstAmt = Math.round(rawNewInst);
-  if (rawNewInst % 1 !== 0) {
-    calculatedNewInstAmt = Math.ceil(rawNewInst / 10) * 10;
-  }
-
-  const calculatedTotalPayable = Math.round(calculatedNewInstAmt * currentCount);
-  const calculatedInterest = Math.max(0, calculatedTotalPayable - calculatedNewPrincipal);
+  const calculatedInterest = Math.round((calculatedNewPrincipal * totalRatePct) / 100);
+  const calculatedTotalPayable = Math.round(calculatedNewPrincipal + calculatedInterest);
+  const calculatedNewInstAmt = currentCount > 0 ? Math.round(calculatedTotalPayable / currentCount) : 0;
   const calculatedNewRemaining = Math.max(0, Math.round(calculatedTotalPayable - currentPaid));
 
   const handleUpdate = async (e) => {
