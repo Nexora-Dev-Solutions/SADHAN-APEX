@@ -1005,9 +1005,13 @@ const db = {
     const totalPayable = Math.round(principal + totalInterest);
     const installmentAmount = Math.round(totalPayable / maxSlots);
 
-    let start = new Date(start_date || new Date().toISOString().split('T')[0]);
-    if (isNaN(start.getTime())) {
-      start = new Date();
+    let start;
+    if (start_date && typeof start_date === 'string' && start_date.includes('-')) {
+      const [y, m, d] = start_date.split('T')[0].split('-').map(Number);
+      start = new Date(Date.UTC(y, m - 1, d));
+    } else {
+      const now = new Date();
+      start = new Date(Date.UTC(now.getFullYear(), now.getMonth(), now.getDate()));
     }
 
     // Calculate end date based on frequency (58 days)
@@ -1041,9 +1045,9 @@ const db = {
         );
         const newLoan = loanRes.rows[0];
 
-        // Insert all 58 installment slots as active scheduled installments
+        // Insert all 58 installment slots as active scheduled installments (starting from the next day after issue date)
         for (let i = 1; i <= maxSlots; i++) {
-          const instDate = new Date(start.getTime() + (i - 1) * stepDays * 86400000);
+          const instDate = new Date(start.getTime() + i * stepDays * 86400000);
           await client.query(
             `INSERT INTO installments (loan_id, installment_no, due_date, expected_amount, paid_amount, status)
              VALUES ($1, $2, $3, $4, 0.00, 'PENDING')`,
@@ -1085,10 +1089,10 @@ const db = {
     };
     localStore.loans.push(newLoan);
 
-    // Generate all 58 installments
+    // Generate all 58 installments (starting from the next day after issue date)
     for (let i = 1; i <= maxSlots; i++) {
       const instId = localStore.installments.length ? Math.max(...localStore.installments.map(inst => inst.id)) + 1 : 1;
-      const instDate = new Date(start.getTime() + (i - 1) * stepDays * 86400000);
+      const instDate = new Date(start.getTime() + i * stepDays * 86400000);
       localStore.installments.push({
         id: instId,
         loan_id: newId,
@@ -1311,7 +1315,7 @@ const db = {
 
             let cycle = currentCount + 1;
             while (true) {
-              const cycleDue = new Date(start.getTime() + (cycle * 58 - 1) * stepDays * 86400000);
+              const cycleDue = new Date(start.getTime() + (cycle * 58) * stepDays * 86400000);
               const cycleDueStr = cycleDue.toISOString().split('T')[0];
 
               if (todayStr > cycleDueStr) {
@@ -1352,7 +1356,7 @@ const db = {
 
         let cycle = currentCount + 1;
         while (true) {
-          const cycleDue = new Date(start.getTime() + (cycle * 58 - 1) * stepDays * 86400000);
+          const cycleDue = new Date(start.getTime() + (cycle * 58) * stepDays * 86400000);
           const cycleDueStr = cycleDue.toISOString().split('T')[0];
 
           if (todayStr > cycleDueStr) {
@@ -1441,7 +1445,7 @@ const db = {
 
         // Append new 58-installment set slots up to targetSlots
         for (let i = maxExistingNo + 1; i <= targetSlots; i++) {
-          const instDate = new Date(start.getTime() + (i - 1) * stepDays * 86400000);
+          const instDate = new Date(start.getTime() + i * stepDays * 86400000);
           await client.query(
             `INSERT INTO installments (loan_id, installment_no, due_date, expected_amount, paid_amount, status)
              VALUES ($1, $2, $3, $4, 0.00, 'PENDING')`,
@@ -1535,7 +1539,7 @@ const db = {
     });
 
     for (let i = maxExistingNo + 1; i <= targetSlots; i++) {
-      const instDate = new Date(start.getTime() + (i - 1) * stepDays * 86400000);
+      const instDate = new Date(start.getTime() + i * stepDays * 86400000);
       const instId = localStore.installments.length ? Math.max(...localStore.installments.map(inst => inst.id)) + 1 : 1;
       localStore.installments.push({
         id: instId,
@@ -1681,6 +1685,8 @@ const db = {
         return {
           ...payment,
           loan_code: loan.loan_code,
+          loan_start_date: loan.start_date instanceof Date ? loan.start_date.toISOString().split('T')[0] : String(loan.start_date).split('T')[0],
+          start_date: loan.start_date instanceof Date ? loan.start_date.toISOString().split('T')[0] : String(loan.start_date).split('T')[0],
           installment_count: loan.installment_count,
           current_installment_no: affectedInstallmentNo || 1,
           installment_no: affectedInstallmentNo || 1,
@@ -1789,6 +1795,8 @@ const db = {
     return {
       ...newPayment,
       loan_code: loan.loan_code,
+      loan_start_date: loan.start_date,
+      start_date: loan.start_date,
       installment_count: loan.installment_count,
       current_installment_no: affectedInstallmentNo || 1,
       installment_no: affectedInstallmentNo || 1,
@@ -2227,6 +2235,8 @@ const db = {
           p.*,
           COALESCE(p.installment_no, 1) AS current_installment_no,
           l.loan_code,
+          l.start_date AS loan_start_date,
+          l.start_date AS start_date,
           l.installment_amount,
           l.installment_count,
           l.penalty_applied,
@@ -2283,6 +2293,8 @@ const db = {
         ...p,
         current_installment_no: p.installment_no || 1,
         loan_code: loan.loan_code || 'LN-UNKNOWN',
+        loan_start_date: loan.start_date,
+        start_date: loan.start_date,
         installment_amount: loan.installment_amount || 0,
         installment_count: loan.installment_count || 58,
         penalty_applied: Boolean(loan.penalty_applied || pCount > 0),

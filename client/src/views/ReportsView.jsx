@@ -775,7 +775,7 @@ export default function ReportsView({ token, currentUser, onReprintReceipt, data
                             <button
                               className="btn btn-secondary btn-sm"
                               style={{ gap: '4px', padding: '5px 9px', fontSize: '0.76rem' }}
-                              onClick={() => onReprintReceipt(t)}
+                              onClick={() => onReprintReceipt({ ...t, is_reprint: true })}
                               title="Reprint thermal receipt slip"
                             >
                               <Printer size={13} color="#38bdf8" />
@@ -938,7 +938,7 @@ export default function ReportsView({ token, currentUser, onReprintReceipt, data
                       <button
                         className="btn btn-secondary btn-sm"
                         style={{ gap: '5px', padding: '6px 12px', fontSize: '0.78rem' }}
-                        onClick={() => onReprintReceipt(t)}
+                        onClick={() => onReprintReceipt({ ...t, is_reprint: true })}
                       >
                         <Printer size={13} color="#38bdf8" />
                         Reprint

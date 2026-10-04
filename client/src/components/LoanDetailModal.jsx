@@ -375,7 +375,14 @@ export default function LoanDetailModal({ loanId, token, currentUser, onClose, o
                             loan_code: loan.loan_code,
                             client_name: loan.client_name,
                             client_phone: loan.client_phone,
-                            installment_count: loan.installment_count
+                            installment_count: loan.installment_count,
+                            loan_start_date: loan.start_date,
+                            start_date: loan.start_date,
+                            penalty_applied: loan.penalty_applied,
+                            penalty_count: loan.penalty_count,
+                            total_penalties: loan.total_penalties,
+                            loan_notes: loan.notes,
+                            is_reprint: true
                           })}
                         >
                           <Printer size={12} />

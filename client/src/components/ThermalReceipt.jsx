@@ -8,38 +8,6 @@ export default function ThermalReceipt({ receipt, onClose }) {
     window.print();
   };
 
-  const handleWhatsAppShare = () => {
-    const lines = [
-      'SADHAN APEX (PVT) LTD',
-      'TEL: +94 76 108 3006',
-      '--------------------------------',
-      `RECEIPT NO: ${receipt.receipt_no}`,
-      `DATE: ${formattedDate}`,
-      `COLLECTOR: ${receipt.collector_name || 'Staff'}`,
-      '--------------------------------',
-      `CLIENT: ${receipt.client_name}`,
-      receipt.client_phone ? `CONTACT: ${receipt.client_phone}` : '',
-      `LOAN REF: ${receipt.loan_code}`,
-      `INSTALLMENT: #${receipt.current_installment_no || 1} of ${receipt.installment_count || 58}`,
-      '================================',
-      `AMOUNT RECEIVED: Rs. ${Math.round(Number(receipt.amount_paid)).toLocaleString()}`,
-      '================================',
-      `PREV BALANCE: Rs. ${Math.round(Number(receipt.previous_balance)).toLocaleString()}`,
-      `REMAINING BAL: Rs. ${Math.round(Number(receipt.remaining_balance)).toLocaleString()}`,
-      receipt.next_due_date && receipt.next_due_date !== 'Completed' ? `NEXT DUE: ${formatReceiptDateOnly(receipt.next_due_date)}` : '',
-      receipt.next_due_amount > 0 ? `NEXT AMOUNT: Rs. ${Math.round(Number(receipt.next_due_amount)).toLocaleString()}` : '',
-      '--------------------------------',
-      'Thank you for your payment!'
-    ].filter(Boolean).join('\n');
-
-    const phone = (receipt.client_phone || '').replace(/[^0-9]/g, '');
-    const cleanPhone = phone.startsWith('0') ? '94' + phone.slice(1) : phone;
-    const url = cleanPhone
-      ? `https://wa.me/${cleanPhone}?text=${encodeURIComponent(lines)}`
-      : `https://wa.me/?text=${encodeURIComponent(lines)}`;
-    window.open(url, '_blank');
-  };
-
   const formattedDate = new Date(receipt.created_at || Date.now()).toLocaleString('en-GB', {
     day: '2-digit',
     month: 'short',
@@ -62,6 +30,8 @@ export default function ThermalReceipt({ receipt, onClose }) {
     return !isNaN(dateObj.getTime()) ? dateObj.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : str;
   };
 
+  const issuedDateFormatted = formatReceiptDateOnly(receipt.loan_start_date || receipt.start_date);
+
   const pCountFromReceipt = parseInt(receipt.penalty_count, 10);
   const pCountFromNotes = receipt.loan_notes ? (receipt.loan_notes.match(/\[Penalty/g) || []).length : 0;
   const penaltyCount = !isNaN(pCountFromReceipt) && pCountFromReceipt > 0
@@ -77,6 +47,45 @@ export default function ThermalReceipt({ receipt, onClose }) {
       totalPenalties = matches.reduce((sum, m) => sum + parseFloat(m.replace(/[^\d.]/g, '') || 0), 0);
     }
   }
+
+  const handleWhatsAppShare = () => {
+    const lines = [
+      receipt.is_reprint ? '*** DUPLICATE REPRINT ***' : '',
+      'SADHAN APEX (PVT) LTD',
+      'TEL: +94 76 108 3006',
+      '--------------------------------',
+      `RECEIPT NO: ${receipt.receipt_no}`,
+      `DATE: ${formattedDate}`,
+      `COLLECTOR: ${receipt.collector_name || 'Staff'}`,
+      '--------------------------------',
+      `CLIENT: ${receipt.client_name}`,
+      receipt.client_phone ? `CONTACT: ${receipt.client_phone}` : '',
+      `LOAN REF: ${receipt.loan_code}`,
+      issuedDateFormatted ? `ISSUED DATE: ${issuedDateFormatted}` : '',
+      `PLAN: ${hasPenalty ? `Extended (+${penaltyCount * 8}%)` : '58 Days (2-Month)'}`,
+      `INSTALLMENT: #${receipt.current_installment_no || 1} of ${receipt.installment_count || 58}`,
+      hasPenalty
+        ? `OVERDUE PENALTY: ${penaltyCount} Cycle(s) (+${penaltyCount * 8}%) | Surcharge: Rs. ${Math.round(totalPenalties).toLocaleString()}`
+        : (receipt.is_reprint ? 'OVERDUE PENALTY: None (Rs. 0)' : ''),
+      '================================',
+      `AMOUNT RECEIVED: Rs. ${Math.round(Number(receipt.amount_paid)).toLocaleString()}`,
+      '================================',
+      `PREV BALANCE: Rs. ${Math.round(Number(receipt.previous_balance)).toLocaleString()}`,
+      `REMAINING BAL: Rs. ${Math.round(Number(receipt.remaining_balance)).toLocaleString()}`,
+      hasPenalty && totalPenalties > 0 ? `INCL. PENALTY: + Rs. ${Math.round(totalPenalties).toLocaleString()}` : '',
+      receipt.next_due_date && receipt.next_due_date !== 'Completed' ? `NEXT DUE: ${formatReceiptDateOnly(receipt.next_due_date)}` : '',
+      receipt.next_due_amount > 0 ? `NEXT AMOUNT: Rs. ${Math.round(Number(receipt.next_due_amount)).toLocaleString()}` : '',
+      '--------------------------------',
+      'Thank you for your payment!'
+    ].filter(Boolean).join('\n');
+
+    const phone = (receipt.client_phone || '').replace(/[^0-9]/g, '');
+    const cleanPhone = phone.startsWith('0') ? '94' + phone.slice(1) : phone;
+    const url = cleanPhone
+      ? `https://wa.me/${cleanPhone}?text=${encodeURIComponent(lines)}`
+      : `https://wa.me/?text=${encodeURIComponent(lines)}`;
+    window.open(url, '_blank');
+  };
 
   // Generate 384px wide hardware-exact image for 57mm roll (48mm print head @ 203 DPI)
   const handleSendToThermalApp = async () => {
@@ -134,6 +143,10 @@ export default function ThermalReceipt({ receipt, onClose }) {
         };
 
         // 1. Header
+        if (receipt.is_reprint) {
+          drawCenter('*** DUPLICATE REPRINT ***', '16px Arial, sans-serif', true);
+          y += 24;
+        }
         drawCenter('SADHAN APEX (PVT) LTD', '24px Arial, sans-serif', true);
         y += 30;
         drawCenter('MICRO FINANCIAL SERVICES', '16px Arial, sans-serif', true);
@@ -158,6 +171,9 @@ export default function ThermalReceipt({ receipt, onClose }) {
           drawRow('CONTACT:', String(receipt.client_phone), false);
         }
         drawRow('LOAN REF:', String(receipt.loan_code || ''), true);
+        if (issuedDateFormatted) {
+          drawRow('ISSUED DATE:', issuedDateFormatted, false);
+        }
         drawRow('PLAN:', hasPenalty ? `Extended (+${penaltyCount * 8}%)` : '58 Days (2-Month)', hasPenalty);
         drawRow('INSTALLMENT:', `#${receipt.current_installment_no || 1} of ${receipt.installment_count || 58}`, true, true);
 
@@ -170,7 +186,7 @@ export default function ThermalReceipt({ receipt, onClose }) {
         if (hasPenalty) {
           y += 6;
           const pBoxTop = y;
-          const boxH = totalPenalties > 0 ? 76 : 56;
+          const boxH = totalPenalties > 0 ? 80 : 60;
           if (ctx) {
             ctx.save();
             ctx.strokeStyle = '#000000';
@@ -181,14 +197,16 @@ export default function ThermalReceipt({ receipt, onClose }) {
           }
 
           y = pBoxTop + 10;
-          drawCenter('*** OVERDUE PENALTY ***', '14px Arial, sans-serif', true);
+          drawCenter(receipt.is_reprint ? '*** OVERDUE PENALTY RECORD ***' : '*** OVERDUE PENALTY ***', '14px Arial, sans-serif', true);
           y += 20;
-          drawCenter(`+${penaltyCount * 8}% on remaining balance`, '13px Arial, sans-serif', true);
+          drawCenter(`Cycles Exceeded: ${penaltyCount} (+${penaltyCount * 8}% Surcharge)`, '13px Arial, sans-serif', true);
           y += 20;
           if (totalPenalties > 0) {
-            drawCenter(`Added: + Rs. ${Math.round(totalPenalties).toLocaleString()}`, '14px Arial, sans-serif', true);
+            drawCenter(`Added Penalty Surcharge: + Rs. ${Math.round(totalPenalties).toLocaleString()}`, '13px Arial, sans-serif', true);
           }
           y = pBoxTop + boxH + 8;
+        } else if (receipt.is_reprint) {
+          drawRow('OVERDUE PENALTY:', 'None (Rs. 0)', false);
         }
 
         // 6. Amount Received Box (with generous 12px internal clearance)
@@ -334,7 +352,9 @@ export default function ThermalReceipt({ receipt, onClose }) {
         <div className="modal-header no-print">
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             <Printer size={18} color="#3b82f6" />
-            <h3 style={{ fontSize: '1rem', fontWeight: '700' }}>Thermal Receipt (58mm)</h3>
+            <h3 style={{ fontSize: '1rem', fontWeight: '700' }}>
+              {receipt.is_reprint ? 'Receipt Reprint (58mm)' : 'Thermal Receipt (58mm)'}
+            </h3>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
             <button
@@ -355,6 +375,22 @@ export default function ThermalReceipt({ receipt, onClose }) {
         <div className="modal-body" style={{ background: '#0a0e17', padding: '14px 10px' }}>
           {/* Thermal Receipt Paper - EXACT 48mm hardware print width */}
           <div className="thermal-receipt-container">
+            {receipt.is_reprint && (
+              <div style={{
+                textAlign: 'center',
+                fontSize: '11px',
+                fontWeight: '900',
+                letterSpacing: '1px',
+                background: '#000000',
+                color: '#ffffff',
+                padding: '3px 0',
+                marginBottom: '8px',
+                borderRadius: '2px'
+              }}>
+                *** DUPLICATE REPRINT ***
+              </div>
+            )}
+
             <div className="receipt-header">
               <div className="receipt-title">
                 SADHAN APEX (PVT) LTD
@@ -401,6 +437,12 @@ export default function ThermalReceipt({ receipt, onClose }) {
               <span className="receipt-label">LOAN REF:</span>
               <span className="receipt-value">{receipt.loan_code}</span>
             </div>
+            {issuedDateFormatted && (
+              <div className="receipt-row">
+                <span className="receipt-label">ISSUED DATE:</span>
+                <span className="receipt-value">{issuedDateFormatted}</span>
+              </div>
+            )}
             <div className="receipt-row">
               <span className="receipt-label">PLAN:</span>
               <span className="receipt-value" style={{ fontWeight: hasPenalty ? '800' : 'normal' }}>
@@ -424,27 +466,33 @@ export default function ThermalReceipt({ receipt, onClose }) {
             </div>
 
             {/* Overdue Penalty Notice */}
-            {hasPenalty && (
+            {hasPenalty ? (
               <div style={{
                 margin: '6px 0',
-                padding: '4px 6px',
-                border: '1px dashed #000',
+                padding: '5px 6px',
+                border: '1.5px dashed #000',
                 borderRadius: '3px',
-                textAlign: 'center'
+                textAlign: 'center',
+                background: receipt.is_reprint ? '#f4f4f4' : 'transparent'
               }}>
-                <div style={{ fontSize: '9px', fontWeight: '900' }}>
-                  *** OVERDUE PENALTY ***
+                <div style={{ fontSize: '9.5px', fontWeight: '900' }}>
+                  {receipt.is_reprint ? '*** OVERDUE PENALTY RECORD ***' : '*** OVERDUE PENALTY ***'}
                 </div>
-                <div style={{ fontSize: '8.5px', fontWeight: '700', color: '#111' }}>
-                  +{penaltyCount * 8}% on remaining balance
+                <div style={{ fontSize: '8.5px', fontWeight: '700', color: '#111', marginTop: '2px' }}>
+                  Cycles Exceeded: {penaltyCount} (+${penaltyCount * 8}% Surcharge)
                 </div>
                 {totalPenalties > 0 && (
-                  <div style={{ fontSize: '9px', fontWeight: '800' }}>
-                    Added: + Rs. {Math.round(totalPenalties).toLocaleString()}
+                  <div style={{ fontSize: '9px', fontWeight: '800', marginTop: '2px' }}>
+                    Added Penalty Surcharge: + Rs. {Math.round(totalPenalties).toLocaleString()}
                   </div>
                 )}
               </div>
-            )}
+            ) : receipt.is_reprint ? (
+              <div className="receipt-row" style={{ fontSize: '9px', color: '#444' }}>
+                <span className="receipt-label">OVERDUE PENALTY:</span>
+                <span className="receipt-value" style={{ fontWeight: '700' }}>None (Rs. 0)</span>
+              </div>
+            ) : null}
 
             {/* Prominent Amount Box - Clean border to prevent thermal ink smear */}
             <div className="receipt-amount-box">
