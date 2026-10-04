@@ -994,12 +994,16 @@ const db = {
     const principal = parseFloat(principal_amount);
     const rate = parseFloat(interest_rate_pct) || 8.00;
     const maxSlots = parseInt(installment_count, 10) || 58;
-    const baseScheduleCount = 54; // Standard 54-day payback schedule before 58-day limit
 
-    // 1. Calculate raw interest & standard daily installment based on 54 installments
-    const rawTotalInterest = (principal * rate) / 100;
+    // 58 installments = 2 months (29 days Month 1 + 29 days Month 2)
+    // Interest is 8% per month -> 2 months = 16% total interest for standard 58-day loan
+    const months = (frequency === 'DAILY' && maxSlots === 58) ? 2 : (frequency === 'MONTHLY' ? maxSlots : Math.max(1, Math.round(maxSlots / 29)));
+    const totalInterestRatePct = rate * months;
+
+    // 1. Calculate total interest & standard daily installment based on full term (all 58 installments)
+    const rawTotalInterest = (principal * totalInterestRatePct) / 100;
     const rawTotalPayable = principal + rawTotalInterest;
-    const rawInstallment = (rawTotalPayable / baseScheduleCount);
+    const rawInstallment = (rawTotalPayable / maxSlots);
 
     // 2. Round off installment cleanly:
     let installmentAmount = 0;
@@ -1011,7 +1015,7 @@ const db = {
       installmentAmount = Math.round(rawInstallment / 10) * 10 || 10;
     }
 
-    if (principal > 0 && rate > 0 && (installmentAmount * baseScheduleCount) <= principal) {
+    if (principal > 0 && rate > 0 && (installmentAmount * maxSlots) < rawTotalPayable) {
       if (rawInstallment >= 1000) {
         installmentAmount = Math.ceil(rawInstallment / 100) * 100;
       } else if (rawInstallment >= 300) {
@@ -1021,8 +1025,8 @@ const db = {
       }
     }
 
-    // 3. Derive total payable directly from clean rounded installments (54 scheduled)
-    const totalPayable = Math.round(installmentAmount * baseScheduleCount);
+    // 3. Derive total payable directly from installments (all 58 scheduled)
+    const totalPayable = Math.round(installmentAmount * maxSlots);
     const totalInterest = Math.max(0, Math.round(totalPayable - principal));
 
     let start = new Date(start_date || new Date().toISOString().split('T')[0]);
@@ -1030,7 +1034,7 @@ const db = {
       start = new Date();
     }
 
-    // Calculate end date based on frequency (58 days max)
+    // Calculate end date based on frequency (58 days)
     let stepDays = 1;
     if (frequency === 'WEEKLY') stepDays = 7;
     if (frequency === 'MONTHLY') stepDays = 30;
@@ -1061,15 +1065,13 @@ const db = {
         );
         const newLoan = loanRes.rows[0];
 
-        // Insert 58 installment slots (Slots 1-54 scheduled, 55-58 buffer)
+        // Insert all 58 installment slots as active scheduled installments
         for (let i = 1; i <= maxSlots; i++) {
           const instDate = new Date(start.getTime() + (i - 1) * stepDays * 86400000);
-          const expAmt = (i <= baseScheduleCount) ? installmentAmount : 0.00;
-          const initialStatus = (i <= baseScheduleCount) ? 'PENDING' : 'BLANK';
           await client.query(
             `INSERT INTO installments (loan_id, installment_no, due_date, expected_amount, paid_amount, status)
-             VALUES ($1, $2, $3, $4, 0.00, $5)`,
-            [newLoan.id, i, instDate.toISOString().split('T')[0], expAmt, initialStatus]
+             VALUES ($1, $2, $3, $4, 0.00, 'PENDING')`,
+            [newLoan.id, i, instDate.toISOString().split('T')[0], installmentAmount]
           );
         }
 
@@ -1107,20 +1109,18 @@ const db = {
     };
     localStore.loans.push(newLoan);
 
-    // Generate installments
+    // Generate all 58 installments
     for (let i = 1; i <= maxSlots; i++) {
       const instId = localStore.installments.length ? Math.max(...localStore.installments.map(inst => inst.id)) + 1 : 1;
       const instDate = new Date(start.getTime() + (i - 1) * stepDays * 86400000);
-      const expAmt = (i <= baseScheduleCount) ? installmentAmount : 0.00;
-      const initialStatus = (i <= baseScheduleCount) ? 'PENDING' : 'BLANK';
       localStore.installments.push({
         id: instId,
         loan_id: newId,
         installment_no: i,
         due_date: instDate.toISOString().split('T')[0],
-        expected_amount: expAmt,
+        expected_amount: installmentAmount,
         paid_amount: 0.00,
-        status: initialStatus
+        status: 'PENDING'
       });
     }
 
@@ -1155,8 +1155,10 @@ const db = {
 
         const newRate = interest_rate_pct !== undefined ? parseFloat(interest_rate_pct) : parseFloat(loan.interest_rate_pct);
         const count = parseInt(loan.installment_count, 10) || 58;
+        const months = (loan.frequency === 'DAILY' && count === 58) ? 2 : (loan.frequency === 'MONTHLY' ? count : Math.max(1, Math.round(count / 29)));
+        const totalRate = newRate * months;
 
-        const rawNewInterest = (newPrincipal * newRate) / 100;
+        const rawNewInterest = (newPrincipal * totalRate) / 100;
         const rawNewPayable = newPrincipal + rawNewInterest;
         const rawNewInst = count > 0 ? (rawNewPayable / count) : 0;
 
@@ -1169,7 +1171,7 @@ const db = {
           newInstAmount = Math.round(rawNewInst / 10) * 10 || 10;
         }
 
-        if (count > 0 && newPrincipal > 0 && newRate > 0 && (newInstAmount * count) <= newPrincipal) {
+        if (count > 0 && newPrincipal > 0 && newRate > 0 && (newInstAmount * count) < rawNewPayable) {
           if (rawNewInst >= 1000) {
             newInstAmount = Math.ceil(rawNewInst / 100) * 100;
           } else if (rawNewInst >= 300) {
@@ -1248,8 +1250,10 @@ const db = {
 
     const newRate = interest_rate_pct !== undefined ? parseFloat(interest_rate_pct) : parseFloat(loan.interest_rate_pct);
     const count = parseInt(loan.installment_count, 10) || 58;
+    const months = (loan.frequency === 'DAILY' && count === 58) ? 2 : (loan.frequency === 'MONTHLY' ? count : Math.max(1, Math.round(count / 29)));
+    const totalRate = newRate * months;
 
-    const rawNewInterest = (newPrincipal * newRate) / 100;
+    const rawNewInterest = (newPrincipal * totalRate) / 100;
     const rawNewPayable = newPrincipal + rawNewInterest;
     const rawNewInst = count > 0 ? (rawNewPayable / count) : 0;
 
@@ -1262,7 +1266,7 @@ const db = {
       newInstAmount = Math.round(rawNewInst / 10) * 10 || 10;
     }
 
-    if (count > 0 && newPrincipal > 0 && newRate > 0 && (newInstAmount * count) <= newPrincipal) {
+    if (count > 0 && newPrincipal > 0 && newRate > 0 && (newInstAmount * count) < rawNewPayable) {
       if (rawNewInst >= 1000) {
         newInstAmount = Math.ceil(rawNewInst / 100) * 100;
       } else if (rawNewInst >= 300) {

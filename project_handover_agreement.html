@@ -532,7 +532,7 @@
     
     <h3>A. Core Loan Management Engine (58-Installment Model)</h3>
     <ul style="font-size: 9.5pt;">
-      <li><strong>Fixed 8% Interest Calculation:</strong> Deterministic computation of standard loan terms based on principal and fixed interest.</li>
+      <li><strong>8% Monthly Interest Model (16% for 58-Day 2-Month Term):</strong> Standard 58-day cycle divided into two 29-day billing cycles at 8% per month (16% total interest, e.g. Rs. 10,000 principal + Rs. 1,600 interest = Rs. 11,600 total at Rs. 200/day).</li>
       <li><strong>58-Day Lifecycle:</strong> Automated generation of 58 scheduled daily installment records upon loan issuance.</li>
       <li><strong>Loan Top-Up &amp; Adjustment:</strong> Administrative capability to add top-up amounts to active accounts with real-time recalculation of remaining balance.</li>
       <li><strong>Status Lifecycle:</strong> Real-time state transitions across <code>ACTIVE</code>, <code>OVERDUE</code>, <code>PENALTY</code>, and <code>COMPLETED</code>.</li>

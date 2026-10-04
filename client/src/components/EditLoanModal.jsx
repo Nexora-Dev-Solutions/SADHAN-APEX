@@ -33,10 +33,12 @@ export default function EditLoanModal({ loan, token, agents, currentUser, onClos
   const calculatedNewPrincipal = activeTab === 'topup' ? currentPrincipal + parsedTopup : (parseFloat(editPrincipal) || currentPrincipal);
   const calculatedRate = parseFloat(interestRate) || currentRate;
 
-  const scheduleCount = currentCount === 58 ? 54 : currentCount;
-  const rawNewInterest = (calculatedNewPrincipal * calculatedRate) / 100;
+  const months = (loan.frequency === 'DAILY' && currentCount === 58) ? 2 : (loan.frequency === 'MONTHLY' ? currentCount : Math.max(1, Math.round(currentCount / 29)));
+  const totalRatePct = calculatedRate * months;
+
+  const rawNewInterest = (calculatedNewPrincipal * totalRatePct) / 100;
   const rawNewPayable = calculatedNewPrincipal + rawNewInterest;
-  const rawNewInst = scheduleCount > 0 ? (rawNewPayable / scheduleCount) : 0;
+  const rawNewInst = currentCount > 0 ? (rawNewPayable / currentCount) : 0;
 
   let calculatedNewInstAmt = 0;
   if (rawNewInst >= 1000) {
@@ -47,8 +49,8 @@ export default function EditLoanModal({ loan, token, agents, currentUser, onClos
     calculatedNewInstAmt = Math.round(rawNewInst / 10) * 10 || 10;
   }
 
-  // Safety: A loan with interest must NEVER round down so much that profit drops to 0 or below principal
-  if (scheduleCount > 0 && calculatedNewPrincipal > 0 && calculatedRate > 0 && (calculatedNewInstAmt * scheduleCount) <= calculatedNewPrincipal) {
+  // Safety: Ensure installments cover raw payable
+  if (currentCount > 0 && calculatedNewPrincipal > 0 && calculatedRate > 0 && (calculatedNewInstAmt * currentCount) < rawNewPayable) {
     if (rawNewInst >= 1000) {
       calculatedNewInstAmt = Math.ceil(rawNewInst / 100) * 100;
     } else if (rawNewInst >= 300) {
@@ -58,7 +60,7 @@ export default function EditLoanModal({ loan, token, agents, currentUser, onClos
     }
   }
 
-  const calculatedTotalPayable = Math.round(calculatedNewInstAmt * scheduleCount);
+  const calculatedTotalPayable = Math.round(calculatedNewInstAmt * currentCount);
   const calculatedInterest = Math.max(0, calculatedTotalPayable - calculatedNewPrincipal);
   const calculatedNewRemaining = Math.max(0, Math.round(calculatedTotalPayable - currentPaid));
 
@@ -251,7 +253,12 @@ export default function EditLoanModal({ loan, token, agents, currentUser, onClos
                   </div>
 
                   <div className="form-group">
-                    <label className="form-label">Interest Rate (%)</label>
+                    <label className="form-label">
+                      Monthly Interest Rate (%)
+                      <span style={{ color: '#38bdf8', fontSize: '0.74rem', marginLeft: '6px' }}>
+                        ({currentCount} Inst: {totalRatePct}%)
+                      </span>
+                    </label>
                     <input
                       type="number"
                       step="0.5"
@@ -314,7 +321,7 @@ export default function EditLoanModal({ loan, token, agents, currentUser, onClos
                   <div style={{ fontWeight: '700' }}>Rs. {calculatedNewPrincipal.toLocaleString()}</div>
                 </div>
                 <div>
-                  <div style={{ color: 'var(--text-muted)', fontSize: '0.76rem' }}>Interest ({calculatedRate}%):</div>
+                  <div style={{ color: 'var(--text-muted)', fontSize: '0.76rem' }}>Interest ({calculatedRate}%/mo × {months}m = {totalRatePct}%):</div>
                   <div style={{ fontWeight: '700', color: '#34d399' }}>+ Rs. {calculatedInterest.toLocaleString()}</div>
                 </div>
                 <div>

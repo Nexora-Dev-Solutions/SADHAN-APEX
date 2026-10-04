@@ -26,16 +26,17 @@ export default function NewLoanModal({ token, clients, agents, currentUser, onCl
   const parsedPrincipal = parseFloat(principal) || 0;
   const parsedRate = parseFloat(interestRate) || 0;
   const parsedCount = parseInt(installmentCount, 10) || 58;
-  const baseScheduleCount = parsedCount === 58 ? 54 : parsedCount;
+  const months = (frequency === 'DAILY' && parsedCount === 58) ? 2 : (frequency === 'MONTHLY' ? parsedCount : Math.max(1, Math.round(parsedCount / 29)));
+  const totalInterestRatePct = parsedRate * months;
 
-  const rawInterest = (parsedPrincipal * parsedRate) / 100;
+  const rawInterest = (parsedPrincipal * totalInterestRatePct) / 100;
   const rawTotalPayable = parsedPrincipal + rawInterest;
-  const rawInstallment = baseScheduleCount > 0 ? (rawTotalPayable / baseScheduleCount) : 0;
+  const rawInstallment = parsedCount > 0 ? (rawTotalPayable / parsedCount) : 0;
 
   // Round installment cleanly:
-  // - >= 1000: round to nearest 100 (e.g. 1788 -> 1800)
-  // - 300 to 1000: round to nearest 50 (e.g. 430 -> 450)
-  // - < 300: round to nearest 10 (e.g. 116 -> 120)
+  // - >= 1000: round to nearest 100 (e.g. 1000, 1400, 2000)
+  // - 300 to 1000: round to nearest 50 (e.g. 400, 500)
+  // - < 300: round to nearest 10 (e.g. 200)
   let installmentAmount = 0;
   if (rawInstallment >= 1000) {
     installmentAmount = Math.round(rawInstallment / 100) * 100;
@@ -45,8 +46,8 @@ export default function NewLoanModal({ token, clients, agents, currentUser, onCl
     installmentAmount = Math.round(rawInstallment / 10) * 10 || 10;
   }
 
-  // Safety: A loan with interest must NEVER round down so much that profit drops to 0 or below principal
-  if (baseScheduleCount > 0 && parsedPrincipal > 0 && parsedRate > 0 && (installmentAmount * baseScheduleCount) <= parsedPrincipal) {
+  // Safety: A loan with interest must cover total payable
+  if (parsedCount > 0 && parsedPrincipal > 0 && parsedRate > 0 && (installmentAmount * parsedCount) < rawTotalPayable) {
     if (rawInstallment >= 1000) {
       installmentAmount = Math.ceil(rawInstallment / 100) * 100;
     } else if (rawInstallment >= 300) {
@@ -56,7 +57,7 @@ export default function NewLoanModal({ token, clients, agents, currentUser, onCl
     }
   }
 
-  const totalPayable = baseScheduleCount > 0 && parsedPrincipal > 0 ? (installmentAmount * baseScheduleCount) : 0;
+  const totalPayable = parsedCount > 0 && parsedPrincipal > 0 ? (installmentAmount * parsedCount) : 0;
   const totalInterest = Math.max(0, totalPayable - parsedPrincipal);
 
   const stepDays = frequency === 'DAILY' ? 1 : frequency === 'WEEKLY' ? 7 : 30;
@@ -202,7 +203,12 @@ export default function NewLoanModal({ token, clients, agents, currentUser, onCl
               </div>
 
               <div className="form-group">
-                <label className="form-label">Loan Term Interest (%)</label>
+                <label className="form-label">
+                  Monthly Interest Rate (%)
+                  <span style={{ color: '#38bdf8', fontSize: '0.74rem', marginLeft: '6px' }}>
+                    (58 Days = 2 Mos: {totalInterestRatePct}%)
+                  </span>
+                </label>
                 <input
                   type="number"
                   step="0.5"
@@ -224,7 +230,8 @@ export default function NewLoanModal({ token, clients, agents, currentUser, onCl
                   value={installmentCount}
                   onChange={(e) => setInstallmentCount(e.target.value)}
                 >
-                  <option value="58">54 Days Scheduled (58-Day Limit)</option>
+                  <option value="58">58 Days (2 Months / 29+29 Days)</option>
+                  <option value="29">29 Days (1 Month)</option>
                   <option value="30">30 Installments</option>
                   <option value="60">60 Installments</option>
                   <option value="100">100 Installments</option>
@@ -277,7 +284,7 @@ export default function NewLoanModal({ token, clients, agents, currentUser, onCl
                   <div style={{ fontWeight: '600' }}>Rs. {parsedPrincipal.toLocaleString()}</div>
                 </div>
                 <div>
-                  <div style={{ color: 'var(--text-muted)', fontSize: '0.76rem' }}>Interest ({parsedRate}%):</div>
+                  <div style={{ color: 'var(--text-muted)', fontSize: '0.76rem' }}>Interest ({parsedRate}%/mo × {months}m = {totalInterestRatePct}%):</div>
                   <div style={{ fontWeight: '600', color: '#34d399' }}>+ Rs. {Math.round(totalInterest).toLocaleString()}</div>
                 </div>
                 <div>
@@ -290,11 +297,11 @@ export default function NewLoanModal({ token, clients, agents, currentUser, onCl
                 </div>
                 <div>
                   <div style={{ color: 'var(--text-muted)', fontSize: '0.76rem' }}>Scheduled Payback:</div>
-                  <div style={{ fontWeight: '600', color: '#60a5fa' }}>{baseScheduleCount} {frequency === 'DAILY' ? 'days' : frequency === 'WEEKLY' ? 'weeks' : 'months'}</div>
+                  <div style={{ fontWeight: '600', color: '#60a5fa' }}>{parsedCount} {frequency === 'DAILY' ? 'days' : frequency === 'WEEKLY' ? 'weeks' : 'months'}</div>
                 </div>
                 <div>
-                  <div style={{ color: 'var(--text-muted)', fontSize: '0.76rem' }}>Limit Window:</div>
-                  <div style={{ fontWeight: '500' }}>{parsedCount} days (8% penalty after)</div>
+                  <div style={{ color: 'var(--text-muted)', fontSize: '0.76rem' }}>Term Breakdown:</div>
+                  <div style={{ fontWeight: '500' }}>{parsedCount === 58 ? '29 Days (M1) + 29 Days (M2)' : `${parsedCount} installments`}</div>
                 </div>
               </div>
             </div>

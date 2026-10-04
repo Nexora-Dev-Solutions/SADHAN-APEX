@@ -330,7 +330,7 @@ export default function DashboardView({
                   <div style={{ fontWeight: '800', color: '#60a5fa', fontSize: '0.95rem' }}>
                     Rs. {Math.round(Number(loan.installment_amount)).toLocaleString()}
                   </div>
-                  <div style={{ fontSize: '0.68rem', color: 'var(--text-muted)' }}>54x ({loan.frequency})</div>
+                  <div style={{ fontSize: '0.68rem', color: 'var(--text-muted)' }}>{loan.installment_count}x ({loan.frequency})</div>
                 </div>
 
                 <div>
@@ -338,7 +338,7 @@ export default function DashboardView({
                   <div style={{ fontWeight: '800', color: loan.remaining_balance > 0 ? '#f87171' : '#10b981', fontSize: '1rem' }}>
                     Rs. {Math.round(Number(loan.remaining_balance)).toLocaleString()}
                   </div>
-                  <div style={{ fontSize: '0.68rem', color: '#34d399' }}>54-Plan</div>
+                  <div style={{ fontSize: '0.68rem', color: '#34d399' }}>58-Plan</div>
                 </div>
               </div>
 

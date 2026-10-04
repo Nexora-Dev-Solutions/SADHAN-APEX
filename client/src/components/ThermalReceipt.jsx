@@ -158,7 +158,7 @@ export default function ThermalReceipt({ receipt, onClose }) {
           drawRow('CONTACT:', String(receipt.client_phone), false);
         }
         drawRow('LOAN REF:', String(receipt.loan_code || ''), true);
-        drawRow('PLAN:', hasPenalty ? `Extended (+${penaltyCount * 8}%)` : '54 Days (58-Lim)', hasPenalty);
+        drawRow('PLAN:', hasPenalty ? `Extended (+${penaltyCount * 8}%)` : '58 Days (2-Month)', hasPenalty);
         drawRow('INSTALLMENT:', `#${receipt.current_installment_no || 1} of ${receipt.installment_count || 58}`, true, true);
 
         drawDivider();
@@ -404,7 +404,7 @@ export default function ThermalReceipt({ receipt, onClose }) {
             <div className="receipt-row">
               <span className="receipt-label">PLAN:</span>
               <span className="receipt-value" style={{ fontWeight: hasPenalty ? '800' : 'normal' }}>
-                {hasPenalty ? `Extended (+${penaltyCount * 8}%)` : '54 Days (58-Lim)'}
+                {hasPenalty ? `Extended (+${penaltyCount * 8}%)` : '58 Days (2-Month)'}
               </span>
             </div>
             <div className="receipt-row">

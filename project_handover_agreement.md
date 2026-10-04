@@ -40,7 +40,7 @@ This Software Handover and Acceptance Agreement (the **"Agreement"**) is entered
 The system has been developed, tested, and deployed to production. Below is the functional scope delivered:
 
 ### A. Core Loan Management Engine (58-Installment Model)
-- **Flat 8% Interest Calculation:** Computes standard loan terms based on principal and fixed 8% interest rate.
+- **8% Monthly Interest Model (16% for 58-Day 2-Month Term):** Standard 58-day loan cycle is divided into two 29-day monthly billing cycles (29 days Month 1 + 29 days Month 2) with 8% interest per month, totaling 16% total interest (e.g., Rs. 10,000 principal + Rs. 1,600 interest = Rs. 11,600 total payable at clean Rs. 200/day).
 - **58-Day Repayment Lifecycle:** Automatic generation of 58 scheduled daily installment records upon loan creation.
 - **Top-Up & Adjustment:** Capability for administrators to top-up active loans and adjust principal/interest with real-time recalculation of remaining balance.
 - **Status Workflows:** Automated state transitions across `ACTIVE`, `OVERDUE`, `PENALTY`, and `COMPLETED`.

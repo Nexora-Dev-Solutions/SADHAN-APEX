@@ -143,13 +143,13 @@ export default function LoansView({
                     <td>
                       <div>Rs. {Number(loan.principal_amount).toLocaleString()}</div>
                       <span style={{ fontSize: '0.72rem', color: '#34d399', fontWeight: '700' }}>
-                        {loan.interest_rate_pct}% interest
+                        {loan.interest_rate_pct}%/mo interest
                       </span>
                     </td>
                     <td>
                       <div style={{ fontWeight: '700' }}>Rs. {Math.round(Number(loan.installment_amount)).toLocaleString()}</div>
                       <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
-                        54x ({loan.frequency})
+                        {loan.installment_count}x ({loan.frequency})
                       </span>
                     </td>
                     <td>
