@@ -1644,10 +1644,23 @@ const db = {
           );
         }
 
-        // Generate receipt number
-        const countRes = await client.query('SELECT COUNT(*) FROM payments');
-        const receiptSeq = parseInt(countRes.rows[0].count, 10) + 1;
-        const receiptNo = `REC-${String(receiptSeq).padStart(5, '0')}`;
+        // Exclusively lock payments table in this transaction to serialize concurrent submissions
+        await client.query('LOCK TABLE payments IN EXCLUSIVE MODE');
+
+        // Robust receipt number generation: find maximum existing numeric sequence and increment
+        const maxRes = await client.query(
+          "SELECT COALESCE(MAX(CAST(SUBSTRING(receipt_no FROM '[0-9]+') AS INTEGER)), 0) AS max_seq FROM payments"
+        );
+        let receiptSeq = Math.max(parseInt(maxRes.rows[0].max_seq, 10) + 1, 1);
+        let receiptNo = `REC-${String(receiptSeq).padStart(5, '0')}`;
+
+        // Uniqueness collision safeguard
+        while (true) {
+          const check = await client.query('SELECT 1 FROM payments WHERE receipt_no = $1', [receiptNo]);
+          if (check.rows.length === 0) break;
+          receiptSeq++;
+          receiptNo = `REC-${String(receiptSeq).padStart(5, '0')}`;
+        }
 
         const isPartial = payAmount < parseFloat(loan.installment_amount);
         const payRes = await client.query(
@@ -1764,7 +1777,17 @@ const db = {
     }
 
     const payId = localStore.payments.length ? Math.max(...localStore.payments.map(p => p.id)) + 1 : 1;
-    const receiptNo = `REC-${String(payId).padStart(5, '0')}`;
+    const maxSeq = localStore.payments.reduce((max, p) => {
+      const m = String(p.receipt_no || '').match(/\d+/);
+      const n = m ? parseInt(m[0], 10) : 0;
+      return Math.max(max, n);
+    }, 0);
+    let receiptSeq = Math.max(maxSeq + 1, 1);
+    let receiptNo = `REC-${String(receiptSeq).padStart(5, '0')}`;
+    while (localStore.payments.some(p => p.receipt_no === receiptNo)) {
+      receiptSeq++;
+      receiptNo = `REC-${String(receiptSeq).padStart(5, '0')}`;
+    }
     const isPartial = payAmount < parseFloat(loan.installment_amount);
 
     const newPayment = {

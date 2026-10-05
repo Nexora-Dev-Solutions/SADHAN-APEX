@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { DollarSign, X, Check, AlertCircle } from 'lucide-react';
 
 export default function PaymentModal({ loan, token, onClose, onSuccess }) {
@@ -13,6 +13,7 @@ export default function PaymentModal({ loan, token, onClose, onSuccess }) {
   const [paymentMethod, setPaymentMethod] = useState('CASH');
   const [notes, setNotes] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const submittingRef = useRef(false);
   const [error, setError] = useState('');
 
   const parsedAmount = parseFloat(amountPaid) || 0;
@@ -20,6 +21,8 @@ export default function PaymentModal({ loan, token, onClose, onSuccess }) {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (submittingRef.current || isSubmitting) return;
+
     setError('');
 
     if (parsedAmount <= 0) {
@@ -32,6 +35,7 @@ export default function PaymentModal({ loan, token, onClose, onSuccess }) {
       return;
     }
 
+    submittingRef.current = true;
     setIsSubmitting(true);
     try {
       const res = await fetch('/api/payments', {
@@ -57,6 +61,7 @@ export default function PaymentModal({ loan, token, onClose, onSuccess }) {
     } catch (err) {
       setError(err.message);
     } finally {
+      submittingRef.current = false;
       setIsSubmitting(false);
     }
   };
