@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { UserPlus, X, Check, AlertTriangle, ShieldCheck, Briefcase } from 'lucide-react';
 import { parseSriLankanNic } from '../utils/nicHelper';
 import ClientPhotoCapture from './ClientPhotoCapture';
@@ -35,6 +35,7 @@ export default function NewClientModal({ token, onClose, onSuccess }) {
   const [kycStatus, setKycStatus] = useState('VERIFIED');
 
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const submittingRef = useRef(false);
   const [error, setError] = useState('');
 
   const nicValidation = validateSriLankanNic(nicId);
@@ -43,6 +44,8 @@ export default function NewClientModal({ token, onClose, onSuccess }) {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (submittingRef.current || isSubmitting) return;
+
     setError('');
 
     if (!name.trim()) {
@@ -65,6 +68,7 @@ export default function NewClientModal({ token, onClose, onSuccess }) {
       return;
     }
 
+    submittingRef.current = true;
     setIsSubmitting(true);
     try {
       const res = await fetch('/api/clients', {
@@ -94,6 +98,7 @@ export default function NewClientModal({ token, onClose, onSuccess }) {
     } catch (err) {
       setError(err.message);
     } finally {
+      submittingRef.current = false;
       setIsSubmitting(false);
     }
   };

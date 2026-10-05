@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { PlusCircle, X, Calculator, Calendar, UserCheck } from 'lucide-react';
 
 export default function NewLoanModal({ token, clients, agents, currentUser, onClose, onSuccess, initialClientId }) {
@@ -14,6 +14,7 @@ export default function NewLoanModal({ token, clients, agents, currentUser, onCl
   const [frequency, setFrequency] = useState('DAILY');
   const [startDate, setStartDate] = useState(new Date().toISOString().split('T')[0]);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const submittingRef = useRef(false);
   const [error, setError] = useState('');
 
   useEffect(() => {
@@ -48,6 +49,8 @@ export default function NewLoanModal({ token, clients, agents, currentUser, onCl
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (submittingRef.current || isSubmitting) return;
+
     setError('');
 
     if (!clientId) {
@@ -65,6 +68,7 @@ export default function NewLoanModal({ token, clients, agents, currentUser, onCl
       return;
     }
 
+    submittingRef.current = true;
     setIsSubmitting(true);
     try {
       const res = await fetch('/api/loans', {
@@ -93,6 +97,7 @@ export default function NewLoanModal({ token, clients, agents, currentUser, onCl
     } catch (err) {
       setError(err.message);
     } finally {
+      submittingRef.current = false;
       setIsSubmitting(false);
     }
   };

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { Edit3, PlusCircle, Trash2, X, Check, AlertTriangle, ArrowRight, DollarSign } from 'lucide-react';
 
 export default function EditLoanModal({ loan, token, agents, currentUser, onClose, onSuccess, onDeleted }) {
@@ -23,6 +23,8 @@ export default function EditLoanModal({ loan, token, agents, currentUser, onClos
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const submittingRef = useRef(false);
+  const deletingRef = useRef(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [error, setError] = useState('');
 
@@ -43,6 +45,8 @@ export default function EditLoanModal({ loan, token, agents, currentUser, onClos
 
   const handleUpdate = async (e) => {
     e.preventDefault();
+    if (submittingRef.current || isSubmitting || isDeleting) return;
+
     setError('');
 
     if (activeTab === 'topup' && parsedTopup <= 0) {
@@ -55,6 +59,7 @@ export default function EditLoanModal({ loan, token, agents, currentUser, onClos
       return;
     }
 
+    submittingRef.current = true;
     setIsSubmitting(true);
     try {
       const payload = activeTab === 'topup'
@@ -86,12 +91,16 @@ export default function EditLoanModal({ loan, token, agents, currentUser, onClos
     } catch (err) {
       setError(err.message);
     } finally {
+      submittingRef.current = false;
       setIsSubmitting(false);
     }
   };
 
   const handleDelete = async () => {
+    if (deletingRef.current || isDeleting || isSubmitting) return;
+
     setError('');
+    deletingRef.current = true;
     setIsDeleting(true);
     try {
       const res = await fetch(`/api/loans/${loan.id}`, {
@@ -108,6 +117,7 @@ export default function EditLoanModal({ loan, token, agents, currentUser, onClos
     } catch (err) {
       setError(err.message);
     } finally {
+      deletingRef.current = false;
       setIsDeleting(false);
     }
   };

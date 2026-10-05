@@ -842,6 +842,8 @@ const db = {
       const client = await pgPool.connect();
       try {
         await client.query('BEGIN');
+        // Delete installments for all client loans first to prevent FK constraint violation
+        await client.query('DELETE FROM installments WHERE loan_id IN (SELECT id FROM loans WHERE client_id = $1)', [clientId]);
         await client.query('DELETE FROM payments WHERE client_id = $1', [clientId]);
         await client.query('DELETE FROM loans WHERE client_id = $1', [clientId]);
         const res = await client.query('DELETE FROM clients WHERE id = $1 RETURNING id', [clientId]);
@@ -1021,13 +1023,29 @@ const db = {
     const endDate = new Date(start.getTime() + maxSlots * stepDays * 86400000);
     const endDateStr = endDate.toISOString().split('T')[0];
 
-    const timestamp = Date.now().toString().slice(-4);
-    const loanCode = `LN-${new Date().getFullYear()}-${timestamp}`;
-
     if (usePostgres) {
       const client = await pgPool.connect();
       try {
         await client.query('BEGIN');
+
+        // Verify client exists
+        const clientCheck = await client.query('SELECT id, name FROM clients WHERE id = $1', [client_id]);
+        if (clientCheck.rows.length === 0) {
+          throw new Error('Selected client does not exist or has been deleted.');
+        }
+
+        // Generate guaranteed unique loan code
+        let loanCode;
+        while (true) {
+          const rand = Math.floor(1000 + Math.random() * 9000);
+          const candidate = `LN-${new Date().getFullYear()}-${rand}`;
+          const check = await client.query('SELECT 1 FROM loans WHERE loan_code = $1', [candidate]);
+          if (check.rows.length === 0) {
+            loanCode = candidate;
+            break;
+          }
+        }
+
         const loanRes = await client.query(
           `INSERT INTO loans (
             loan_code, client_id, created_by, assigned_agent_id,
@@ -1066,10 +1084,20 @@ const db = {
     }
 
     loadLocalStore();
+    let localLoanCode;
+    while (true) {
+      const rand = Math.floor(1000 + Math.random() * 9000);
+      const candidate = `LN-${new Date().getFullYear()}-${rand}`;
+      if (!localStore.loans.some(l => l.loan_code === candidate)) {
+        localLoanCode = candidate;
+        break;
+      }
+    }
+
     const newId = localStore.loans.length ? Math.max(...localStore.loans.map(l => l.id)) + 1 : 1;
     const newLoan = {
       id: newId,
-      loan_code: loanCode,
+      loan_code: localLoanCode,
       client_id: parseInt(client_id, 10),
       created_by: parseInt(created_by, 10),
       assigned_agent_id: assigned_agent_id ? parseInt(assigned_agent_id, 10) : null,
@@ -1585,6 +1613,13 @@ const db = {
         const loan = loanRes.rows[0];
 
         const prevBalance = parseFloat(loan.remaining_balance);
+        if (prevBalance <= 0 || loan.status === 'COMPLETED') {
+          throw new Error('This loan is already fully settled (Remaining Balance: Rs. 0.00).');
+        }
+        if (payAmount > prevBalance) {
+          throw new Error(`Payment amount (Rs. ${payAmount}) cannot exceed the remaining loan balance (Rs. ${prevBalance}).`);
+        }
+
         const newBalance = Math.max(0, Math.round((prevBalance - payAmount) * 100) / 100);
         const newTotalPaid = Math.round((parseFloat(loan.total_paid) + payAmount) * 100) / 100;
         const newStatus = newBalance <= 0 ? 'COMPLETED' : 'ACTIVE';
@@ -1726,6 +1761,13 @@ const db = {
     if (!loan) throw new Error('Loan not found');
 
     const prevBalance = parseFloat(loan.remaining_balance);
+    if (prevBalance <= 0 || loan.status === 'COMPLETED') {
+      throw new Error('This loan is already fully settled (Remaining Balance: Rs. 0.00).');
+    }
+    if (payAmount > prevBalance) {
+      throw new Error(`Payment amount (Rs. ${payAmount}) cannot exceed the remaining loan balance (Rs. ${prevBalance}).`);
+    }
+
     const newBalance = Math.max(0, Math.round((prevBalance - payAmount) * 100) / 100);
     const newTotalPaid = Math.round((parseFloat(loan.total_paid) + payAmount) * 100) / 100;
     const newStatus = newBalance <= 0 ? 'COMPLETED' : 'ACTIVE';

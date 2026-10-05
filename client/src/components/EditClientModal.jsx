@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { Edit3, X, Trash2, Check, AlertTriangle, ShieldCheck } from 'lucide-react';
 import { parseSriLankanNic } from '../utils/nicHelper';
 import ClientPhotoCapture from './ClientPhotoCapture';
@@ -39,6 +39,8 @@ export default function EditClientModal({ client, token, currentUser, onClose, o
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const submittingRef = useRef(false);
+  const deletingRef = useRef(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [error, setError] = useState('');
 
@@ -50,6 +52,8 @@ export default function EditClientModal({ client, token, currentUser, onClose, o
 
   const handleUpdate = async (e) => {
     e.preventDefault();
+    if (submittingRef.current || isSubmitting || isDeleting) return;
+
     setError('');
 
     if (!name.trim()) {
@@ -72,6 +76,7 @@ export default function EditClientModal({ client, token, currentUser, onClose, o
       return;
     }
 
+    submittingRef.current = true;
     setIsSubmitting(true);
     try {
       const res = await fetch(`/api/clients/${client.id}`, {
@@ -100,12 +105,16 @@ export default function EditClientModal({ client, token, currentUser, onClose, o
     } catch (err) {
       setError(err.message);
     } finally {
+      submittingRef.current = false;
       setIsSubmitting(false);
     }
   };
 
   const handleDelete = async () => {
+    if (deletingRef.current || isDeleting || isSubmitting) return;
+
     setError('');
+    deletingRef.current = true;
     setIsDeleting(true);
     try {
       const res = await fetch(`/api/clients/${client.id}`, {
@@ -122,6 +131,7 @@ export default function EditClientModal({ client, token, currentUser, onClose, o
     } catch (err) {
       setError(err.message);
     } finally {
+      deletingRef.current = false;
       setIsDeleting(false);
     }
   };

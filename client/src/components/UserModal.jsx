@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { X, User, Shield, Key, Phone, Check, AlertCircle, Lock } from 'lucide-react';
 
 const ALL_PERMISSIONS = [
@@ -26,6 +26,7 @@ export default function UserModal({ token, userToEdit, currentUserId, onClose, o
   );
   const [permissions, setPermissions] = useState(initialPerms);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const submittingRef = useRef(false);
   const [error, setError] = useState('');
 
   const isSelf = isEditing && String(userToEdit.id) === String(currentUserId);
@@ -56,6 +57,8 @@ export default function UserModal({ token, userToEdit, currentUserId, onClose, o
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (submittingRef.current || isSubmitting) return;
+
     setError('');
 
     if (!name.trim()) {
@@ -78,6 +81,7 @@ export default function UserModal({ token, userToEdit, currentUserId, onClose, o
       return;
     }
 
+    submittingRef.current = true;
     setIsSubmitting(true);
     try {
       const url = isEditing ? `/api/users/${userToEdit.id}` : '/api/users';
@@ -127,6 +131,7 @@ export default function UserModal({ token, userToEdit, currentUserId, onClose, o
     } catch (err) {
       setError(err.message);
     } finally {
+      submittingRef.current = false;
       setIsSubmitting(false);
     }
   };
